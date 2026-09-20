@@ -1,0 +1,19 @@
+{
+  "package": "EyeMakkah — مجتمع مكة الرقمي (Groups 1–5, cumulative)",
+  "date": "2026-09-20",
+  "zero_build": true,
+  "deploy": "Vercel drag-and-drop",
+  "navigation": ["الرئيسية", "اكتشف", "المجتمع", "خطتي"],
+  "inventory_objects": 169,
+  "communities": 50,
+  "clubs": 10,
+  "seeded_contributions": 72,
+  "validated_journeys": 48,
+  "automated_runtime_journeys": 23,
+  "font_target": "29LT Zarid Sans",
+  "font_fallback_ar": "Tajawal",
+  "font_fallback_latin": "Inter",
+  "bundled_proprietary_fonts": false,
+  "media": "drawn editorial scenes in-app; real photos only for real named public subjects (see PHOTO_SOURCES.md)",
+  "files": ["index.html", "app.js", "vercel.json", "robots.txt", "README.md", "PHOTO_SOURCES.md", "manifest.json"]
+}

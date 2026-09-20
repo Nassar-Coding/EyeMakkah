@@ -2219,6 +2219,15 @@ function scoreObject(o, ctx) {
   return { score: s, why: uniq(why) };
 }
 
+/* Some explanations say more about *you* than others; show those first. */
+const GENERIC_REASON = /^(مفتوح الآن|يبدأ قريبًا|جارٍ الآن|ينتهي قريبًا|يناسب هذا الوقت من اليوم)$/;
+function reasonRank(r) {
+  if (/اخترت|تتفاعل|تهتم|أول زيارة|خطتك|مجتمع|جديد عليك|محفوظ/.test(r)) return 3;
+  if (/قريب منك|في /.test(r)) return 2;
+  if (GENERIC_REASON.test(r)) return 0;
+  return 1;
+}
+
 /* Diversity-aware ranking: no module should read like one category on repeat. */
 function rank(list, ctx, opts = {}) {
   const { limit = 8, maxPerCategory = 2, maxPerNeighborhood = 3, types, exclude = [] } = opts;
@@ -2229,13 +2238,19 @@ function rank(list, ctx, opts = {}) {
     .filter((x) => x.score > -500)
     .sort((a, b) => b.score - a.score);
 
-  const out = [], cats = {}, nbs = {};
+  const out = [], cats = {}, nbs = {}, usedReasons = new Set();
   for (const x of scored) {
     const c = x.o.category, n = x.o.neighborhood;
     if ((cats[c] || 0) >= maxPerCategory) continue;
     if ((nbs[n] || 0) >= maxPerNeighborhood) continue;
     cats[c] = (cats[c] || 0) + 1; nbs[n] = (nbs[n] || 0) + 1;
-    out.push(x);
+    /* one module should not repeat the same explanation on every row: prefer the
+       most specific reason that has not been used yet in this list */
+    const ordered = x.why.slice().sort((a, b) => reasonRank(b) - reasonRank(a));
+    const fresh = ordered.find((r) => !usedReasons.has(r));
+    const why = fresh ? [fresh, ...ordered.filter((r) => r !== fresh)] : ordered;
+    if (why[0]) usedReasons.add(why[0]);
+    out.push({ ...x, why });
     if (out.length >= limit) break;
   }
   return out;
@@ -3816,6 +3831,11 @@ function ScreenObject({ id }) {
   const next = nextOccurrence(o);
   const provider = o.provider ? PROV[o.provider] : null;
   const contribs = contributionsFor(o.id, state);
+  /* if this object has little of its own, borrow relevant knowledge from the
+     communities it belongs to rather than showing an empty section */
+  const related = useMemo(() => contribs.length >= 2 ? [] : allContributions(state)
+    .filter((k) => !k.parent && k.obj !== o.id && k.communities.some((c) => o.communities.includes(c)))
+    .sort((a, b) => (b.helpful || 0) - (a.helpful || 0)).slice(0, 2), [contribs.length, o.id, state]);
   const planItem = state.plan.find((p) => p.obj === o.id);
   const linked = o.linked ? getObj(o.linked) : null;
   const cs = uniq(o.communities.map((c) => COM[c]).filter(Boolean).map((c) => c.id));
@@ -3944,9 +3964,16 @@ function ScreenObject({ id }) {
           </div>
           <button className="press" onClick={() => setAskOpen(true)} style={{ fontSize: 12.5, fontWeight: 800, color: T.green, whiteSpace: "nowrap" }}>اسأل</button>
         </div>
-        {contribs.length ? contribs.slice(0, 3).map((k) => <CommunitySnippet key={k.id} k={k} compact />) : (
+        {contribs.slice(0, 3).map((k) => <CommunitySnippet key={k.id} k={k} compact />)}
+        {!contribs.length && !related.length && (
           <div style={{ padding: "14px 0", fontSize: 13, color: T.muted, lineHeight: 1.8 }}>
             لا توجد مساهمات عن {alType(o)} بعد. لو زرته، تجربتك ستفيد غيرك أكثر من أي تقييم بالنجوم.
+          </div>
+        )}
+        {related.length > 0 && (
+          <div style={{ marginTop: contribs.length ? 10 : 0 }}>
+            <div style={{ fontSize: 12, color: T.muted, fontWeight: 700, marginBottom: 2 }}>من مجتمعات مرتبطة</div>
+            {related.map((k) => <CommunitySnippet key={k.id} k={k} compact />)}
           </div>
         )}
         {cs.length > 0 && (
