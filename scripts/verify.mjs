@@ -29,6 +29,19 @@ page.on("pageerror", (e) => errors.push("pageerror: " + e.message));
 
 const appText = () => page.evaluate(() => document.querySelector(".em").innerText);
 const shot = async (name) => { await page.screenshot({ path: `${shotDir}/${name}.png` }); };
+const goTab = async (label) => {
+  for (let i = 0; i < 6; i++) {
+    const map = { "الرئيسية": "home", "اكتشف": "discover", "المجتمع": "community", "خطتي": "plan" };
+    const nav = page.locator(`[data-nav="${map[label]}"]`);
+    if (await nav.count() && await nav.first().isVisible().catch(() => false)) { await nav.first().click(); await page.waitForTimeout(500); return; }
+    const close = page.getByLabel("إغلاق");
+    if (await close.count() && await close.first().isVisible().catch(() => false)) { await close.first().click(); await page.waitForTimeout(250); continue; }
+    const back = page.getByLabel("رجوع");
+    if (await back.count() && await back.first().isVisible().catch(() => false)) { await back.first().click(); await page.waitForTimeout(250); continue; }
+    await page.waitForTimeout(200);
+  }
+  throw new Error("could not reach tab " + label);
+};
 const tapText = async (text, opts = {}) => {
   const el = page.getByText(text, { exact: false }).first();
   await el.waitFor({ state: "visible", timeout: opts.timeout || 6000 });
@@ -132,6 +145,68 @@ await step("community: open a thread and answer", async () => {
   if (!/مقهى الدراسة بالششة يفتح/.test(b)) throw new Error("answer not posted");
 });
 await shot("09-thread");
+
+const openByName = async (name) => {
+  await goTab("الرئيسية");
+  await tapText("ابحث عن مكان أو تجربة أو مجتمع");
+  await page.keyboard.type(name);
+  await page.waitForTimeout(900);
+  await page.getByText(name, { exact: false }).first().click();
+  await page.waitForTimeout(700);
+};
+
+await step("participation: join → start → complete a free activity", async () => {
+  await openByName("ورشة خط للمبتدئين");
+  await page.getByText("انضم — سأحضر", { exact: true }).click();
+  await page.waitForTimeout(500);
+  let b = await appText();
+  if (!/سأحضر/.test(b)) throw new Error("join state not shown");
+  await page.getByText("ابدأ الآن", { exact: true }).click();
+  await page.waitForTimeout(500);
+  b = await appText();
+  if (!/جارٍ الآن/.test(b)) throw new Error("active state not reached");
+  await page.getByText("أكملت هذا", { exact: true }).click();
+  await page.waitForTimeout(600);
+  b = await appText();
+  if (!/استمتعت؟|شارك صورة|اكتب نصيحة عملية/.test(b)) throw new Error("completion prompts missing");
+});
+await shot("10-participate");
+
+await step("booking handoff never self-confirms", async () => {
+  await page.getByText("لاحقًا", { exact: true }).click().catch(() => {});
+  await page.waitForTimeout(300);
+  await openByName("معرض الوحي");
+  await page.getByText("احجز", { exact: true }).click();
+  await page.waitForTimeout(400);
+  await page.getByText(/تابع إلى/).first().click();
+  await page.waitForTimeout(500);
+  const b = await appText();
+  if (!/انتقلت لإكمال الحجز/.test(b)) throw new Error("outbound state wording missing");
+  if (/^مؤكد$/m.test(b)) throw new Error("became confirmed without confirmation");
+  await page.getByText("أكملت الحجز — أكّده", { exact: true }).click();
+  await page.waitForTimeout(500);
+  const b2 = await appText();
+  if (!/مؤكد/.test(b2)) throw new Error("explicit confirmation did not apply");
+});
+await shot("10b-handoff");
+await shot("10-participate");
+
+await step("plan separates saved / planned / confirmed / completed", async () => {
+  await goTab("خطتي");
+  const b = await appText();
+  if (!/كل حالة تعني شيئًا مختلفًا/.test(b)) throw new Error("plan header missing");
+  if (!/مكتمل/.test(b)) throw new Error("completed bucket missing");
+  if (!/مؤكد/.test(b)) throw new Error("confirmed bucket missing");
+  if (!/ماذا بعد؟/.test(b)) throw new Error("what-next missing after completion");
+});
+await shot("11-plan");
+
+await step("home offers an assembled outing", async () => {
+  await goTab("الرئيسية");
+  const b = await appText();
+  if (!/وش تسوي الليلة؟|عندك ساعتان؟/.test(b)) throw new Error("no going-out module");
+});
+await shot("12-outing");
 
 console.log("\n──────── verification ────────");
 for (const [s, n] of results) console.log(`${s === "PASS" ? "✓" : "✗"} ${n}`);

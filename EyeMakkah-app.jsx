@@ -108,25 +108,32 @@ const t0 = NOW.getTime();
 const at = (offsetHours) => new Date(t0 + offsetHours * HOUR);
 const daysAgo = (d) => new Date(t0 - d * DAY);
 
+/* Makkah runs on UTC+03:00 with no daylight saving. The prototype must read the
+   clock in Makkah time whatever timezone the device or server happens to use. */
+const TZ = 3 * HOUR;
+const mk = (d) => new Date(new Date(d).getTime() + TZ);   // read with getUTC*
+const mkHour = (d = NOW) => { const l = mk(d); return l.getUTCHours() + l.getUTCMinutes() / 60; };
+const mkDayStart = (d) => { const l = mk(d); return Date.UTC(l.getUTCFullYear(), l.getUTCMonth(), l.getUTCDate()); };
+
 const AR_DAYS = ["الأحد", "الاثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة", "السبت"];
 const AR_MONTHS = ["يناير", "فبراير", "مارس", "أبريل", "مايو", "يونيو", "يوليو", "أغسطس", "سبتمبر", "أكتوبر", "نوفمبر", "ديسمبر"];
 
 function clockAr(d) {
-  const h = d.getHours(), m = d.getMinutes();
+  const l = mk(d);
+  const h = l.getUTCHours(), m = l.getUTCMinutes();
   const suffix = h < 12 ? "ص" : "م";
   const hh = h % 12 === 0 ? 12 : h % 12;
   return `${ar(hh)}${m ? ":" + ar(String(m).padStart(2, "0")) : ""} ${suffix}`;
 }
 function dayLabelAr(d) {
-  const a = new Date(d).setHours(0, 0, 0, 0);
-  const b = new Date(t0).setHours(0, 0, 0, 0);
-  const diff = Math.round((a - b) / DAY);
+  const l = mk(d);
+  const diff = Math.round((mkDayStart(d) - mkDayStart(NOW)) / DAY);
   if (diff === 0) return "اليوم";
   if (diff === 1) return "غدًا";
   if (diff === -1) return "أمس";
-  if (diff > 1 && diff < 7) return AR_DAYS[d.getDay()];
-  if (diff < -1 && diff > -7) return `${AR_DAYS[d.getDay()]} الماضي`;
-  return `${ar(d.getDate())} ${AR_MONTHS[d.getMonth()]}`;
+  if (diff > 1 && diff < 7) return AR_DAYS[l.getUTCDay()];
+  if (diff < -1 && diff > -7) return `${AR_DAYS[l.getUTCDay()]} الماضي`;
+  return `${ar(l.getUTCDate())} ${AR_MONTHS[l.getUTCMonth()]}`;
 }
 function whenAr(d) { return `${dayLabelAr(d)} — ${clockAr(d)}`; }
 function agoAr(d) {
@@ -147,6 +154,12 @@ function inAr(d) {
 }
 const riyal = (n) => (n === 0 ? "مجانًا" : `${ar(n)} ريال`);
 const minutesAr = (n) => `${ar(n)} دقيقة`;
+/* Arabic counts: 1 and 2 have their own forms, 3–10 take the plural */
+function countAr(n, one, two, many) {
+  if (n === 1) return one + " واحد";
+  if (n === 2) return two;
+  return `${ar(n)} ${n >= 3 && n <= 10 ? many : one}`;
+}
 
 /* ───────────────────────── 3. EDITORIAL IMAGE LAYER ─────────────────────────
    Photography carries the hierarchy in EyeMakkah. Two layers exist:
@@ -2049,11 +2062,11 @@ function nextOccurrence(o) {
   if (tm.kind === "session") return new Date(tm.start);
   if (tm.kind === "window") return new Date(tm.from) > NOW ? new Date(tm.from) : null;
   if (tm.kind === "recurring") {
-    const d = new Date(t0);
-    const delta = (tm.dayIdx - d.getDay() + 7) % 7;
-    const cand = new Date(d); cand.setDate(d.getDate() + delta); cand.setHours(tm.hour, tm.minute || 0, 0, 0);
-    if (cand.getTime() < t0) cand.setDate(cand.getDate() + 7);
-    return cand;
+    const l = mk(NOW);
+    const delta = (tm.dayIdx - l.getUTCDay() + 7) % 7;
+    let inst = Date.UTC(l.getUTCFullYear(), l.getUTCMonth(), l.getUTCDate() + delta, tm.hour, tm.minute || 0) - TZ;
+    if (inst < t0) inst += 7 * DAY;
+    return new Date(inst);
   }
   return null;
 }
@@ -2061,7 +2074,7 @@ function nextOccurrence(o) {
 function isOpenNow(o) {
   const tm = o.timing;
   if (!tm || tm.kind !== "hours") return null;
-  const h = NOW.getHours() + NOW.getMinutes() / 60;
+  const h = mkHour();
   const { open, close } = tm;
   return close > open ? h >= open && h < close : h >= open || h < close;
 }
@@ -2427,7 +2440,7 @@ function deriveContext(state, extra = {}) {
   const active = state.plan.filter((p) => ["planned", "going", "registered", "confirmed", "active", "awaiting"].includes(p.state));
   const completed = {};
   state.plan.filter((p) => p.state === "completed").forEach((p) => { completed[p.obj] = true; });
-  const hour = NOW.getHours();
+  const hour = Math.floor(mkHour());
 
   return {
     mode: state.profile.mode,
@@ -2730,6 +2743,184 @@ function FactRow({ label, value, trustState, onSource }) {
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
+   GROUP 3 — PARTICIPATION & GOING OUT
+   From "this looks interesting" to actually going, joining, completing and
+   continuing. Outings are assembled from context, never static itineraries.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+const OUTING_SHAPES = [
+  { id: "coffee-workshop-dinner", title: "قهوة ← ورشة ← عشاء", hours: 4,
+    steps: [{ cat: ["cafe"], dur: 45 }, { type: ["activity", "experience"], dur: 120 }, { cat: ["food"], dur: 60 }] },
+  { id: "culture-walk-food", title: "معرض ← مشية قصيرة ← أكل قريب", hours: 3.5,
+    steps: [{ cat: ["culture"], dur: 70 }, { cat: ["heritage", "market"], dur: 60 }, { cat: ["food"], dur: 55 }] },
+  { id: "market-sweets", title: "سوق ← حلو بعد العشاء", hours: 2,
+    steps: [{ cat: ["market"], dur: 50 }, { cat: ["food", "cafe"], dur: 40 }] },
+  { id: "family-evening", title: "نشاط للأطفال ← عشاء عائلي", hours: 3,
+    steps: [{ cat: ["family"], dur: 80 }, { cat: ["food"], dur: 60 }] },
+  { id: "quiet-solo", title: "مشي هادئ ← قهوة لوحدك", hours: 2,
+    steps: [{ cat: ["sport", "nature"], dur: 50 }, { cat: ["cafe"], dur: 45 }] },
+  { id: "learn-then-eat", title: "جلسة تعلّم ← عشاء خفيف", hours: 3,
+    steps: [{ cat: ["learn", "craft"], dur: 90 }, { cat: ["food"], dur: 45 }] },
+];
+
+function buildOutings(ctx, state, maxHours = 4) {
+  const out = [];
+  const usedShapes = OUTING_SHAPES.filter((sh) => sh.hours <= maxHours + 0.5);
+  for (const shape of usedShapes) {
+    const chosen = [];
+    const taken = new Set();
+    let ok = true;
+    for (const st of shape.steps) {
+      const pool = INVENTORY.filter((o) =>
+        !taken.has(o.id) && isPromotable(o) && o.type !== "offer" && o.type !== "service" &&
+        (st.cat ? st.cat.includes(o.category) : true) && (st.type ? st.type.includes(o.type) : true) &&
+        (chosen.length ? distanceKm(o, chosen[0].geo) < 5 : true) &&
+        (ctx.party === "kids" ? !["cafe"].includes(o.category) : true));
+      if (!pool.length) { ok = false; break; }
+      const best = rank(pool, ctx, { limit: 3, maxPerCategory: 3, maxPerNeighborhood: 3 })[0];
+      if (!best) { ok = false; break; }
+      taken.add(best.o.id);
+      chosen.push(best.o);
+    }
+    if (!ok || chosen.length < 2) continue;
+    const mins = chosen.reduce((a, o) => a + (o.duration || 50), 0) + (chosen.length - 1) * 15;
+    out.push({ ...shape, objects: chosen, minutes: mins });
+  }
+  return out.slice(0, 3);
+}
+
+function OutingSheet({ outing, open, onClose }) {
+  const { dispatch, go, toast } = useApp();
+  if (!outing) return null;
+  const addAll = () => {
+    outing.objects.forEach((o) => dispatch({ type: "plan", obj: o.id }));
+    toast("أضفنا الخطة كاملة — لم يُحجز أي شيء بعد");
+    onClose(); go({ s: "plan" });
+  };
+  return (
+    <Sheet open={open} onClose={onClose} title={outing.title} tall>
+      <div style={{ fontSize: 13, color: T.muted, lineHeight: 1.8, marginBottom: 14 }}>
+        مقترح مبني على وقتك وموقعك وما تفاعلت معه — وليس قالبًا جاهزًا. يمكنك حذف أي محطة.
+      </div>
+      {outing.objects.map((o, i) => (
+        <div key={o.id} className="row" style={{ gap: 12, alignItems: "flex-start", marginBottom: 14 }}>
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", flex: "0 0 24px", paddingTop: 4 }}>
+            <span style={{ width: 24, height: 24, borderRadius: 99, background: T.deep, color: "#F6EFE0", fontSize: 12, fontWeight: 800, display: "grid", placeItems: "center" }}>{ar(i + 1)}</span>
+            {i < outing.objects.length - 1 && <span style={{ width: 2, flex: 1, minHeight: 34, background: T.sand, marginTop: 4 }} />}
+          </div>
+          <button className="lift" onClick={() => { onClose(); go({ s: "object", id: o.id }); }} style={{ flex: 1, textAlign: "start", minWidth: 0 }}>
+            <div className="clamp1" style={{ fontSize: 14.5, fontWeight: 800 }}>{o.name}</div>
+            <div style={{ fontSize: 12, color: T.muted, marginTop: 3 }}>
+              {[NB[o.neighborhood]?.name, o.duration ? minutesAr(o.duration) : null, o.price != null ? riyal(o.price) : null].filter(Boolean).join(" — ")}
+            </div>
+          </button>
+          <div style={{ width: 56, flex: "0 0 56px" }}>
+            <Photo kind={o.scene} seed={o.id} photo={o.photo} ratio="1 / 1" radius={R.ctl} scrim="none" />
+          </div>
+        </div>
+      ))}
+      <div style={{ padding: "11px 12px", borderRadius: R.box, background: T.sand, fontSize: 12.5, color: T.muted, lineHeight: 1.8, marginTop: 4 }}>
+        الوقت التقديري {minutesAr(outing.minutes)} شاملًا التنقل بين المحطات. الإضافة إلى خطتك لا تعني حجزًا ولا تسجيلًا.
+      </div>
+      <button className="press" onClick={addAll}
+        style={{ width: "100%", marginTop: 16, padding: "13px", borderRadius: R.ctl, background: T.deep, color: "#F6EFE0", fontWeight: 800, fontSize: 14 }}>
+        أضف الخطة كاملة إلى خطتي
+      </button>
+    </Sheet>
+  );
+}
+
+function OutingCard({ outing, onOpen }) {
+  return (
+    <button className="lift" onClick={onOpen} style={{ width: 246, textAlign: "start" }}>
+      <div style={{ display: "flex", gap: 4, borderRadius: R.media, overflow: "hidden" }}>
+        {outing.objects.map((o) => (
+          <div key={o.id} style={{ flex: 1 }}>
+            <Photo kind={o.scene} seed={o.id} photo={o.photo} ratio="3 / 4" radius={0} scrim="soft" />
+          </div>
+        ))}
+      </div>
+      <div style={{ fontSize: 14.5, fontWeight: 800, marginTop: 8 }}>{outing.title}</div>
+      <div style={{ fontSize: 12, color: T.muted, marginTop: 3 }}>
+        {countAr(outing.objects.length, "محطة", "محطتان", "محطات")} — {minutesAr(outing.minutes)}
+      </div>
+    </button>
+  );
+}
+
+/* Participation context — stated by the organiser, never inferred. */
+function ParticipationContext({ o, compact }) {
+  const bits = [];
+  if (o.capacity != null) bits.push({ icon: Users, text: `${ar(o.joinedCount)} من ${ar(o.capacity)} مشاركًا — بيانات نموذج أولي` });
+  const next = nextOccurrence(o);
+  if (next) bits.push({ icon: Clock, text: whenAr(next) });
+  if (o.duration) bits.push({ icon: Clock, text: minutesAr(o.duration) });
+  o.suit.filter((x) => ["small", "solo", "beginners", "noexp", "women", "kids", "family", "students", "arabic", "bilingual"].includes(x))
+    .forEach((x) => bits.push({ icon: Check, text: SUIT[x] }));
+  if (!bits.length) return null;
+  return (
+    <div style={{ padding: compact ? 0 : "13px", borderRadius: R.box, background: compact ? "transparent" : T.sand, marginTop: compact ? 8 : 14 }}>
+      {!compact && <div style={{ fontSize: 13, fontWeight: 800, marginBottom: 9 }}>أول مرة؟ هذا ما تتوقعه</div>}
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+        {bits.slice(0, 6).map((b, i) => (
+          <span key={i} className="row" style={{ gap: 5, fontSize: 12, color: T.ink, fontWeight: 600 }}>
+            <b.icon size={12.5} color={T.green} />{b.text}
+          </span>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/* Completion — lightweight, high-value prompts instead of a star rating. */
+function CompletionSheet({ o, open, onClose }) {
+  const { dispatch, go, toast, ctx, state } = useApp();
+  const [ask, setAsk] = useState(false);
+  if (!o) return null;
+  const next = rank(INVENTORY.filter((x) => x.id !== o.id && isPromotable(x)),
+    { ...ctx, noveltySeeking: true, planNeighborhoods: [o.neighborhood] }, { limit: 3, maxPerCategory: 1 });
+  const openQ = allContributions(state).find((k) => k.type === "question" && !k.answers && k.communities.some((c) => o.communities.includes(c)));
+
+  return (
+    <>
+      <Sheet open={open && !ask} onClose={onClose} title={`أكملت «${o.name}»`} tall>
+        <div style={{ fontSize: 14, lineHeight: 1.85, marginBottom: 16 }}>استمتعت؟ سطران منك الآن أنفع لغيرك من عشرة تقييمات بالنجوم.</div>
+        {[
+          { icon: Camera, label: "شارك صورة", note: "صورة حديثة تساعد من لم يزره بعد", act: () => setAsk(true) },
+          { icon: Sparkles, label: "اكتب نصيحة عملية", note: "أفضل وقت، ما تطلبه، أو ما تمنيت معرفته", act: () => setAsk(true) },
+          openQ && { icon: HelpCircle, label: "ساعد شخصًا يسأل", note: openQ.body.slice(0, 60) + "…", act: () => { onClose(); go({ s: "thread", id: openQ.id }); } },
+        ].filter(Boolean).map((row, i) => (
+          <button key={i} className="press" onClick={row.act}
+            style={{ display: "flex", width: "100%", gap: 11, textAlign: "start", padding: "13px 0", borderBottom: `1px solid ${T.lineSoft}`, alignItems: "flex-start" }}>
+            <row.icon size={17} color={T.green} style={{ marginTop: 2 }} />
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 14, fontWeight: 800 }}>{row.label}</div>
+              <div className="clamp1" style={{ fontSize: 12, color: T.muted, marginTop: 3 }}>{row.note}</div>
+            </div>
+            <ChevronLeft size={15} color={T.muted} style={{ marginTop: 3 }} />
+          </button>
+        ))}
+
+        {next.length > 0 && (
+          <div style={{ marginTop: 20 }}>
+            <div style={{ fontSize: 13.5, fontWeight: 800, marginBottom: 4 }}>خطوة تالية تناسبك</div>
+            <div style={{ fontSize: 12, color: T.muted, marginBottom: 10 }}>لن نعرض عليك نفس التجربة مرة أخرى.</div>
+            <div className="hs scroll" style={{ gap: 12 }}>
+              {next.map((x) => <TileCard key={x.o.id} x={x} w={172} />)}
+            </div>
+          </div>
+        )}
+        <button className="press" onClick={onClose}
+          style={{ width: "100%", marginTop: 18, padding: "12px", borderRadius: R.ctl, background: T.paper, border: `1px solid ${T.line}`, fontWeight: 800, fontSize: 13.5 }}>
+          لاحقًا
+        </button>
+      </Sheet>
+      <AskSheet open={ask} onClose={() => { setAsk(false); onClose(); }} presetObject={o} />
+    </>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
    HOME — a contextual compositor, not a menu
    Precedence: active plan → time-critical → immediate/nearby → community →
    personalized discovery → offers → inspiration → participation.
@@ -2737,7 +2928,7 @@ function FactRow({ label, value, trustState, onSource }) {
    ═══════════════════════════════════════════════════════════════════════════ */
 
 function greeting(profile) {
-  const h = NOW.getHours();
+  const h = Math.floor(mkHour());
   const time = h < 5 ? "ليلة هادئة" : h < 11 ? "صباح الخير" : h < 15 ? "نهارك سعيد" : h < 19 ? "مساء الخير" : "مساء الخير";
   return time;
 }
@@ -2801,6 +2992,16 @@ function buildHome(state, ctx) {
     sub: "بعيدًا عن المسار المعتاد", items: take(novel, 5),
   });
 
+  /* H7.5 — going out: low-friction prompts that assemble a real outing */
+  if (ctx.evening || state.profile.mode === "visitor") {
+    const outings = buildOutings(ctx, state, 4);
+    if (outings.length) modules.push({
+      id: "outings", kind: "outings",
+      title: ctx.evening ? "وش تسوي الليلة؟" : "عندك ساعتان؟",
+      sub: "نركّب لك مسارًا من أماكن قريبة بعضها من بعض", items: outings,
+    });
+  }
+
   /* H8 — participation */
   const participate = rank(INVENTORY.filter((o) => ["activity", "recurring"].includes(o.type) && isPromotable(o)), ctx, { limit: 6, maxPerCategory: 3 });
   if (participate.length) modules.push({ id: "participate", kind: "rows", title: "شارك هذا الأسبوع", sub: "أنشطة يمكنك الانضمام إليها فعلًا", items: take(participate, 3) });
@@ -2844,7 +3045,7 @@ function CommunitySnippet({ k, compact }) {
       <div className="row" style={{ gap: 10, marginTop: 9, flexWrap: "wrap" }}>
         {o && <button className="press" onClick={() => go({ s: "object", id: o.id })} style={{ fontSize: 11.5, fontWeight: 800, color: T.clay }}>↳ {o.name}</button>}
         <span style={{ fontSize: 11.5, color: T.muted, fontWeight: 600 }}>{ar(k.helpful + (state.helpful[k.id] ? 1 : 0))} وجدوها مفيدة</span>
-        {k.answers > 0 && <span style={{ fontSize: 11.5, color: T.muted, fontWeight: 600 }}>{ar(k.answers)} إجابة</span>}
+        {k.answers > 0 && <span style={{ fontSize: 11.5, color: T.muted, fontWeight: 600 }}>{countAr(k.answers, "إجابة", "إجابتان", "إجابات")}</span>}
       </div>
     </div>
   );
@@ -2957,6 +3158,8 @@ function HomeModule({ m, index }) {
             })}
           </div>
         );
+      case "outings":
+        return <OutingsRow items={m.items} />;
       case "hoods":
         return (
           <div className="hs scroll" style={{ padding: "0 16px 4px" }}>
@@ -2982,6 +3185,18 @@ function HomeModule({ m, index }) {
         onAction={() => go({ s: m.id === "community" ? "community" : "discover" })} />}
       {body()}
     </div>
+  );
+}
+
+function OutingsRow({ items }) {
+  const [open, setOpen] = useState(null);
+  return (
+    <>
+      <div className="hs scroll" style={{ padding: "0 16px 4px" }}>
+        {items.map((out) => <OutingCard key={out.id} outing={out} onOpen={() => setOpen(out)} />)}
+      </div>
+      <OutingSheet outing={open} open={!!open} onClose={() => setOpen(null)} />
+    </>
   );
 }
 
@@ -3123,7 +3338,7 @@ function ScreenDiscover({ params }) {
         <div style={{ padding: "12px 16px 0" }}>
           <div className="row" style={{ justifyContent: "space-between", marginBottom: 6 }}>
             <div style={{ fontSize: 13, color: T.muted, fontWeight: 700 }}>
-              {ar(results.length)} نتيجة{nb ? ` في ${NB[nb].name}` : ""}{cat ? ` — ${CAT[cat].name}` : ""}
+              {countAr(results.length, "نتيجة", "نتيجتان", "نتائج")}{nb ? ` في ${NB[nb].name}` : ""}{cat ? ` — ${CAT[cat].name}` : ""}
             </div>
             <button className="press" onClick={() => { setCat(null); setNb(null); setIntent(null); }} style={{ fontSize: 12.5, fontWeight: 800, color: T.green }}>مسح المرشّحات</button>
           </div>
@@ -3303,7 +3518,7 @@ function ScreenSearch() {
 
       {!typing && q.trim() && res.objects.length > 0 && (
         <div style={{ padding: "8px 16px 0" }}>
-          <div style={{ fontSize: 12.5, color: T.muted, fontWeight: 700, marginBottom: 4 }}>{ar(res.objects.length)} نتيجة عبر أنواع مختلفة</div>
+          <div style={{ fontSize: 12.5, color: T.muted, fontWeight: 700, marginBottom: 4 }}>{countAr(res.objects.length, "نتيجة", "نتيجتان", "نتائج")} عبر أنواع مختلفة</div>
           {res.objects.map((x) => (
             <div key={x.o.id} style={{ position: "relative" }}>
               <div style={{ position: "absolute", insetInlineEnd: 0, top: 14, zIndex: 2 }}>
@@ -3406,6 +3621,8 @@ function ScreenObject({ id }) {
         </div>
       </div>
 
+      {planItem?.state === "active" && <ActivePanel o={o} />}
+
       {!o.photo && (
         <div style={{ padding: "7px 16px 0", fontSize: 10.5, color: T.muted, fontWeight: 600 }}>
           صورة تعبيرية مرسومة داخل التطبيق — ليست صورة فوتوغرافية لهذا {o.typeLabel}.
@@ -3454,8 +3671,11 @@ function ScreenObject({ id }) {
           </div>
         )}
 
+        {/* participation context for things you join, stated by the organiser */}
+        {["activity", "event", "experience", "recurring"].includes(o.type) && planItem?.state !== "active" && <ParticipationContext o={o} />}
+
         {/* suitability, stated by the object — never inferred */}
-        {o.suit.length > 0 && (
+        {o.suit.length > 0 && !["activity", "event", "experience", "recurring"].includes(o.type) && (
           <div style={{ display: "flex", gap: 7, flexWrap: "wrap", marginTop: 14 }}>
             {o.suit.map((s) => <Pill key={s} tone={T.green} bg={`${T.green}0F`}>{SUIT[s]}</Pill>)}
           </div>
@@ -3510,7 +3730,7 @@ function ScreenObject({ id }) {
           <div style={{ flex: 1 }}>
             <div style={{ fontSize: 13.5, fontWeight: 800 }}>المصدر والسياق</div>
             <div style={{ fontSize: 12, color: T.muted, marginTop: 3 }}>
-              {ar(uniq(o.claims.map((c) => c.cls)).length)} مصادر — آخر تحديث {agoAr(o.claims.slice().sort((a, b) => new Date(b.at) - new Date(a.at))[0].at)}
+              {countAr(uniq(o.claims.map((c) => c.cls)).length, "مصدر", "مصدران", "مصادر")} — آخر تحديث {agoAr(o.claims.slice().sort((a, b) => new Date(b.at) - new Date(a.at))[0].at)}
             </div>
           </div>
           <TrustChip state={trust.state} small />
@@ -3542,33 +3762,36 @@ function ScreenObject({ id }) {
 function ActionBar({ o, planItem }) {
   const { state, dispatch, toast, go } = useApp();
   const [handoff, setHandoff] = useState(false);
+  const [done, setDone] = useState(false);
   const life = lifecycleOf(o);
   const blocked = ["expired", "ended", "archived"].includes(life);
   const saved = !!state.saved[o.id];
+  const st = planItem?.state;
 
-  const primaryLabel = () => {
-    if (blocked) return "انتهى — اعرض بدائل";
-    if (planItem?.state === "confirmed") return "الاتجاهات";
-    if (planItem?.state === "awaiting") return "أكّد الحجز";
-    if (planItem?.state === "going" || planItem?.state === "registered") return "التفاصيل والاتجاهات";
-    return ACTION_LABEL[o.action] || "افتح";
-  };
-
-  const onPrimary = () => {
-    if (blocked) { go({ s: "discover", cat: o.category }); return; }
-    if (planItem?.state === "awaiting") { setHandoff(true); return; }
-    switch (o.action) {
-      case "join": dispatch({ type: "join", obj: o.id }); toast("سُجّل حضورك — الانضمام ليس حجزًا"); break;
-      case "register":
-      case "book":
-      case "redeem":
-      case "contact":
-      case "official": setHandoff(true); break;
-      default: dispatch({ type: "directions", obj: o.id }); setHandoff(true);
+  const primary = (() => {
+    if (blocked) return { label: "انتهى — اعرض بدائل", act: () => go({ s: "discover", cat: o.category }), tone: T.muted };
+    switch (st) {
+      case "awaiting": return { label: "أكّد الحجز أو ألغِه", act: () => setHandoff(true), tone: T.warn };
+      case "confirmed": return { label: "ابدأ الآن", act: () => { dispatch({ type: "start", obj: o.id }); toast("بدأت — نعرض الآن ما تحتاجه أثناء التنفيذ"); }, tone: T.deep };
+      case "going":
+      case "registered": return { label: "ابدأ الآن", act: () => { dispatch({ type: "start", obj: o.id }); toast("بدأت — الاتجاهات والمعلومات العملية أولًا"); }, tone: T.deep };
+      case "active": return { label: "أكملت هذا", act: () => { dispatch({ type: "complete", obj: o.id }); setDone(true); }, tone: T.ok };
+      case "completed": return { label: "شارك تجربتك", act: () => setDone(true), tone: T.deep };
+      default: break;
     }
-  };
+    switch (o.action) {
+      case "join": return { label: "انضم — سأحضر", act: () => { dispatch({ type: "join", obj: o.id }); toast("سُجّل حضورك — الانضمام ليس حجزًا ولا تأكيدًا"); }, tone: T.deep };
+      case "register": return { label: "سجّل", act: () => setHandoff(true), tone: T.deep };
+      case "book": return { label: "احجز", act: () => setHandoff(true), tone: T.deep };
+      case "redeem": return { label: "استخدم العرض", act: () => setHandoff(true), tone: T.deep };
+      case "contact": return { label: "تواصل", act: () => setHandoff(true), tone: T.deep };
+      case "official": return { label: "افتح المصدر الرسمي", act: () => setHandoff(true), tone: T.green };
+      default: return { label: "الاتجاهات", act: () => setHandoff(true), tone: T.deep };
+    }
+  })();
 
-  const inPlan = planItem && !["saved", "interested", "cancelled"].includes(planItem.state);
+  const inPlan = planItem && !["saved", "interested", "cancelled"].includes(st);
+  const showInterested = !planItem && !blocked;
 
   return (
     <>
@@ -3576,30 +3799,87 @@ function ActionBar({ o, planItem }) {
         position: "sticky", bottom: 0, zIndex: 40, padding: "12px 16px 14px", marginTop: "auto",
         background: "linear-gradient(180deg, rgba(244,239,229,0) 0%, rgba(244,239,229,.96) 30%, #F4EFE5 100%)",
       }}>
+        {planItem && (
+          <div className="row" style={{ gap: 7, marginBottom: 9, flexWrap: "wrap" }}>
+            <PlanStateChip o={o} />
+            <span style={{ fontSize: 11.5, color: T.muted }}>
+              {st === "saved" ? "الحفظ لا يعني الحجز" : st === "planned" ? "في خطتك — لم يُحجز" : st === "going" ? "سجّلت حضورك — بدون حجز"
+                : st === "registered" ? "مسجَّل لدى المنظّم" : st === "awaiting" ? "انتقلت لإكمال الحجز — غير مؤكد بعد"
+                : st === "confirmed" ? "مؤكد" : st === "active" ? "جارٍ الآن" : st === "completed" ? "حضرت وأكملت" : ""}
+            </span>
+          </div>
+        )}
         <div className="row" style={{ gap: 9 }}>
-          <button className="press" onClick={() => dispatch({ type: "save", obj: o.id })}
+          <button className="press" onClick={() => dispatch({ type: "save", obj: o.id })} aria-label="حفظ"
             style={{ width: 46, height: 46, borderRadius: R.ctl, background: T.paper, border: `1px solid ${saved ? T.brass : T.line}`, color: saved ? T.brass : T.ink, display: "grid", placeItems: "center" }}>
             {saved ? <BookmarkCheck size={19} /> : <Bookmark size={19} />}
           </button>
-          {!inPlan && !blocked && (
-            <button className="press" onClick={() => { dispatch({ type: "plan", obj: o.id }); toast("أُضيف إلى خطتي — لم يُحجز بعد"); }}
-              style={{ height: 46, padding: "0 15px", borderRadius: R.ctl, background: T.paper, border: `1px solid ${T.line}`, fontWeight: 800, fontSize: 13.5 }}>
-              أضف إلى خطتي
+          {showInterested && (
+            <button className="press" onClick={() => { dispatch({ type: "interested", obj: o.id }); toast("سجّلناه كاهتمام — نذكّرك إن اقترب موعده"); }} aria-label="مهتم"
+              style={{ width: 46, height: 46, borderRadius: R.ctl, background: T.paper, border: `1px solid ${T.line}`, display: "grid", placeItems: "center" }}>
+              <Heart size={18} />
             </button>
           )}
-          <button className="press" onClick={onPrimary}
-            style={{ flex: 1, height: 46, borderRadius: R.ctl, background: blocked ? T.muted : T.deep, color: "#F6EFE0", fontWeight: 800, fontSize: 14.5 }}>
-            {primaryLabel()}
+          {!inPlan && !blocked && (
+            <button className="press" onClick={() => { dispatch({ type: "plan", obj: o.id }); toast("أُضيف إلى خطتي — لم يُحجز ولم تُسجّل بعد"); }}
+              style={{ height: 46, padding: "0 14px", borderRadius: R.ctl, background: T.paper, border: `1px solid ${T.line}`, fontWeight: 800, fontSize: 13 }}>
+              أضف لخطتي
+            </button>
+          )}
+          <button className="press" onClick={primary.act}
+            style={{ flex: 1, height: 46, borderRadius: R.ctl, background: primary.tone, color: "#F6EFE0", fontWeight: 800, fontSize: 14.5 }}>
+            {primary.label}
           </button>
         </div>
+        {st === "active" && (
+          <button className="press" onClick={() => setHandoff(true)}
+            style={{ width: "100%", marginTop: 8, padding: "10px", borderRadius: R.ctl, background: T.paper, border: `1px solid ${T.line}`, fontWeight: 800, fontSize: 13 }}>
+            <Navigation size={14} style={{ verticalAlign: "-2px", marginInlineEnd: 6 }} />الاتجاهات
+          </button>
+        )}
         {o.outbound && !blocked && (
-          <div style={{ fontSize: 11, color: T.muted, textAlign: "center", marginTop: 7 }}>
-            {o.action === "book" || o.action === "register" ? `يكتمل عبر ${o.outbound} — لا يُعد مؤكدًا حتى يصلنا تأكيد` : `الخدمة عبر ${o.outbound}`}
+          <div style={{ fontSize: 11, color: T.muted, textAlign: "center", marginTop: 8, lineHeight: 1.7 }}>
+            {["book", "register"].includes(o.action)
+              ? `يكتمل لدى ${o.outbound} — لا يصبح «مؤكدًا» إلا بتأكيد حقيقي`
+              : `الخدمة عبر ${o.outbound}`}
           </div>
         )}
       </div>
       <HandoffSheet o={o} open={handoff} onClose={() => setHandoff(false)} />
+      <CompletionSheet o={o} open={done} onClose={() => setDone(false)} />
     </>
+  );
+}
+
+/* Active state — only what you need while you are actually there. */
+function ActivePanel({ o }) {
+  const { state, go, dispatch, toast } = useApp();
+  const tips = contributionsFor(o.id, state).filter((k) => ["tip", "experience_report", "update"].includes(k.type)).slice(0, 2);
+  const provider = o.provider ? PROV[o.provider] : null;
+  const next = nextOccurrence(o);
+  return (
+    <div style={{ margin: "14px 16px 0", padding: "14px", borderRadius: R.box, background: `${T.clay}10`, border: `1px solid ${T.clay}33` }}>
+      <div className="row" style={{ gap: 7, marginBottom: 10 }}>
+        <CircleDot size={15} color={T.clay} />
+        <span style={{ fontSize: 14, fontWeight: 800, color: T.clay }}>جارٍ الآن</span>
+      </div>
+      {next && <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 6 }}>الموعد: {whenAr(next)}</div>}
+      {(o.facts || []).slice(0, 2).map((f) => (
+        <div key={f.label} className="row" style={{ gap: 8, alignItems: "flex-start", marginBottom: 6 }}>
+          <span style={{ fontSize: 12, color: T.muted, fontWeight: 700, flex: "0 0 84px" }}>{f.label}</span>
+          <span style={{ fontSize: 13, fontWeight: 600, flex: 1, lineHeight: 1.6 }}>{f.value}</span>
+        </div>
+      ))}
+      {provider && <div style={{ fontSize: 12.5, color: T.muted, marginTop: 6 }}>المنظّم: {provider.name}</div>}
+      {tips.length > 0 && (
+        <div style={{ marginTop: 11, paddingTop: 11, borderTop: `1px solid ${T.clay}22` }}>
+          <div style={{ fontSize: 12, fontWeight: 800, marginBottom: 6 }}>نصائح من أناس جرّبوه</div>
+          {tips.map((k) => (
+            <div key={k.id} className="clamp2" style={{ fontSize: 12.5, color: T.muted, lineHeight: 1.75, marginBottom: 5 }}>— {k.body}</div>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -3933,7 +4213,7 @@ function ContributionCard({ k, onOpen }) {
         <button className="press row" onClick={() => dispatch({ type: "helpful", k: k.id })} style={{ gap: 4, fontSize: 11.5, fontWeight: 700, color: state.helpful[k.id] ? T.ok : T.muted }}>
           <ThumbsUp size={12} />{ar(helpful)}
         </button>
-        {k.answers > 0 && <span style={{ fontSize: 11.5, color: T.muted, fontWeight: 600 }}>{ar(k.answers)} إجابة</span>}
+        {k.answers > 0 && <span style={{ fontSize: 11.5, color: T.muted, fontWeight: 600 }}>{countAr(k.answers, "إجابة", "إجابتان", "إجابات")}</span>}
         {k.type === "question" && k.answers === 0 && <Pill tone={T.brass} size={10.5}>بلا إجابة</Pill>}
       </div>
     </div>
@@ -4033,7 +4313,7 @@ function ScreenCommunity() {
                     <div className="clamp1" style={{ fontSize: 13.5, fontWeight: 800, color: "#FFF8EA" }}>{f.name}</div>
                   </div>
                 </Photo>
-                <div style={{ fontSize: 10.5, color: T.muted, marginTop: 5, fontWeight: 600 }}>{ar(subCommunities(f.id).length)} مجتمع</div>
+                <div style={{ fontSize: 10.5, color: T.muted, marginTop: 5, fontWeight: 600 }}>{countAr(subCommunities(f.id).length, "مجتمع", "مجتمعان", "مجتمعات")}</div>
               </button>
             ))}
           </div>
@@ -4382,7 +4662,7 @@ function ScreenThread({ id }) {
           <button className="press" onClick={() => go({ back: true })} aria-label="رجوع"><ChevronRight size={22} /></button>
           <div style={{ flex: 1, minWidth: 0 }}>
             <div className="clamp1" style={{ fontSize: 15, fontWeight: 800 }}>{com?.name || "نقاش"}</div>
-            <div style={{ fontSize: 11.5, color: T.muted }}>{ar(answers.length)} إجابة</div>
+            <div style={{ fontSize: 11.5, color: T.muted }}>{countAr(answers.length, "إجابة", "إجابتان", "إجابات")}</div>
           </div>
           <button className="press" onClick={() => setReportOpen(true)} aria-label="إبلاغ"><Flag size={16} color={T.muted} /></button>
         </div>
@@ -4469,29 +4749,42 @@ function ScreenThread({ id }) {
 
 function ScreenPlan() {
   const { state, ctx, go, dispatch, toast } = useApp();
+  const [completing, setCompleting] = useState(null);
   const items = state.plan.filter((p) => p.state !== "cancelled");
+
   const bucketOf = (p) => {
     const o = getObj(p.obj);
-    const s = PLAN_STATE[p.state];
     if (p.state === "active") return "now";
     if (p.state === "completed") return "completed";
+    if (p.state === "saved") return "saved";
+    if (p.state === "interested") return "interested";
     if (p.state === "confirmed") return "confirmed";
-    if (["saved"].includes(p.state)) return "saved";
-    if (["interested"].includes(p.state)) return "interested";
     const n = o ? nextOccurrence(o) : null;
-    if (n && new Date(n).setHours(0, 0, 0, 0) === new Date(t0).setHours(0, 0, 0, 0)) return "today";
-    return s.bucket === "confirmed" ? "confirmed" : "upcoming";
+    if (n && mkDayStart(n) === mkDayStart(NOW)) return "today";
+    return "upcoming";
   };
   const grouped = {};
   items.forEach((p) => { const b = bucketOf(p); (grouped[b] = grouped[b] || []).push(p); });
+  Object.values(grouped).forEach((list) => list.sort((a, b) => {
+    const oa = getObj(a.obj), ob = getObj(b.obj);
+    const na = oa && nextOccurrence(oa), nb = ob && nextOccurrence(ob);
+    return (na ? +na : Infinity) - (nb ? +nb : Infinity);
+  }));
 
   const completed = items.filter((p) => p.state === "completed");
+  const needsAttention = items.filter((p) => {
+    const o = getObj(p.obj); if (!o) return false;
+    if (p.state === "awaiting") return true;
+    const tr = objectTrust(o, state.resolved);
+    return ["conflicting", "possibly_stale", "expired"].includes(tr.state) && !["completed", "saved"].includes(p.state);
+  });
+
   const whatNext = useMemo(() => {
     if (!completed.length) return [];
     const last = getObj(completed[completed.length - 1].obj);
-    return rank(INVENTORY.filter((o) => o.id !== last?.id && isPromotable(o)),
+    return rank(INVENTORY.filter((o) => o.id !== last?.id && isPromotable(o) && !state.plan.some((p) => p.obj === o.id)),
       { ...ctx, noveltySeeking: true, planNeighborhoods: last ? [last.neighborhood] : [] }, { limit: 4, maxPerCategory: 1 });
-  }, [completed.length, ctx]);
+  }, [completed.length, ctx, state.plan]);
 
   if (!items.length) {
     return (
@@ -4501,7 +4794,7 @@ function ScreenPlan() {
           <div style={{ fontSize: 12.5, color: T.muted, marginTop: 3 }}>ما ستفعله، وما بعده</div>
         </div>
         <EmptyState icon={CalendarCheck} title="خطتك فارغة الآن"
-          body="احفظ ما يعجبك، أو أضف شيئًا إلى خطتك. الحفظ ليس حجزًا، والخطة ليست تأكيدًا — نُبقي الفرق واضحًا دائمًا."
+          body="احفظ ما يعجبك، أو أضف شيئًا إلى خطتك. الحفظ ليس حجزًا، والإضافة إلى الخطة ليست تسجيلًا ولا تأكيدًا — نُبقي الفرق واضحًا دائمًا."
           action="تصفّح اكتشف" onAction={() => go({ s: "discover" })} />
       </div>
     );
@@ -4511,34 +4804,65 @@ function ScreenPlan() {
     <div className="scroll" style={{ paddingBottom: 96 }}>
       <div style={{ padding: "16px 16px 10px" }}>
         <div style={{ fontSize: 21, fontWeight: 800 }}>خطتي</div>
-        <div style={{ fontSize: 12.5, color: T.muted, marginTop: 3 }}>{ar(items.length)} عنصر — الحالات منفصلة بعضها عن بعض</div>
+        <div style={{ fontSize: 12.5, color: T.muted, marginTop: 3 }}>
+          {countAr(items.length, "عنصر", "عنصران", "عناصر")} — كل حالة تعني شيئًا مختلفًا
+        </div>
       </div>
+
+      {needsAttention.length > 0 && (
+        <div style={{ margin: "0 16px 18px", padding: "13px", borderRadius: R.box, background: `${T.warn}10`, border: `1px solid ${T.warn}2E` }}>
+          <div className="row" style={{ gap: 8, marginBottom: 7 }}>
+            <AlertTriangle size={15} color={T.warn} />
+            <span style={{ fontSize: 13.5, fontWeight: 800, color: T.warn }}>{countAr(needsAttention.length, "عنصر", "عنصران", "عناصر")} يحتاج مراجعة</span>
+          </div>
+          {needsAttention.slice(0, 3).map((p) => {
+            const o = getObj(p.obj);
+            const tr = objectTrust(o, state.resolved);
+            return (
+              <button key={p.id} className="press" onClick={() => go({ s: "object", id: o.id })}
+                style={{ display: "block", width: "100%", textAlign: "start", padding: "7px 0" }}>
+                <div className="clamp1" style={{ fontSize: 13, fontWeight: 700 }}>{o.name}</div>
+                <div style={{ fontSize: 11.5, color: T.muted, marginTop: 2 }}>
+                  {p.state === "awaiting" ? "انتقلت لإكمال الحجز ولم يصلنا تأكيد" : TRUST_STATE[tr.state]?.label}
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      )}
 
       {PLAN_BUCKETS.map((b) => {
         const list = grouped[b.id];
         if (!list?.length) return null;
         return (
-          <div key={b.id} style={{ marginBottom: 22 }}>
-            <SectionTitle title={b.label} />
+          <div key={b.id} style={{ marginBottom: 24 }}>
+            <SectionTitle title={b.label} sub={
+              b.id === "now" ? "ما أنت فيه الآن" :
+              b.id === "saved" ? "محفوظ فقط — بلا التزام" :
+              b.id === "interested" ? "سجّلنا اهتمامك، ونذكّرك إن اقترب موعده" :
+              b.id === "confirmed" ? "وصلنا تأكيد أو أكّدته بنفسك" : undefined} />
             <div style={{ padding: "0 16px" }}>
-              {list.map((p) => <PlanRow key={p.id} p={p} />)}
+              {list.map((p) => <PlanRow key={p.id} p={p} onComplete={() => setCompleting(getObj(p.obj))} />)}
             </div>
           </div>
         );
       })}
 
       {whatNext.length > 0 && (
-        <div style={{ marginBottom: 22 }}>
-          <SectionTitle title="ماذا بعد؟" sub="بناءً على ما أكملته — لا إعادة بيع لنفس التجربة" />
+        <div style={{ marginBottom: 24 }}>
+          <SectionTitle title="ماذا بعد؟" sub="بناءً على ما أكملته — بدون إعادة عرض نفس التجربة" />
           <div className="hs scroll" style={{ padding: "0 16px 4px" }}>{whatNext.map((x) => <TileCard key={x.o.id} x={x} w={182} />)}</div>
         </div>
       )}
+
+      <CompletionSheet o={completing} open={!!completing} onClose={() => setCompleting(null)} />
     </div>
   );
 }
 
-function PlanRow({ p }) {
+function PlanRow({ p, onComplete }) {
   const { go, dispatch, toast, state } = useApp();
+  const [open, setOpen] = useState(false);
   const o = getObj(p.obj);
   if (!o) return null;
   const s = PLAN_STATE[p.state];
@@ -4546,21 +4870,56 @@ function PlanRow({ p }) {
   const trust = objectTrust(o, state.resolved);
   const warn = ["conflicting", "possibly_stale", "expired"].includes(trust.state);
 
+  const actions = [];
+  if (p.state === "saved" || p.state === "interested") actions.push({ label: "أضف إلى خطتي", act: () => { dispatch({ type: "plan", obj: o.id }); toast("أصبح في خطتك — لم يُحجز بعد"); } });
+  if (["planned", "going", "registered", "confirmed"].includes(p.state)) actions.push({ label: "ابدأ الآن", act: () => { dispatch({ type: "start", obj: o.id }); toast("بدأت — المعلومات العملية أولًا"); } });
+  if (p.state === "awaiting") {
+    actions.push({ label: "أكّد الحجز", act: () => { dispatch({ type: "book_confirm", obj: o.id, source: "user" }); toast("تم التأكيد بناءً على تأكيدك أنت"); } });
+    actions.push({ label: "لم يكتمل", act: () => { dispatch({ type: "book_fail", obj: o.id }); toast("أبقيناه غير مؤكد في خطتك"); } });
+  }
+  if (p.state === "active") actions.push({ label: "أكملت هذا", act: () => { dispatch({ type: "complete", obj: o.id }); onComplete && onComplete(); } });
+  if (p.state === "completed") actions.push({ label: "شارك تجربتك", act: () => onComplete && onComplete() });
+  if (!["completed", "cancelled"].includes(p.state)) actions.push({ label: "أزل من خطتي", act: () => { dispatch({ type: "remove_plan", obj: o.id }); toast("أزلناه من خطتك"); }, danger: true });
+
   return (
-    <div style={{ display: "flex", gap: 12, padding: "12px 0", borderBottom: `1px solid ${T.lineSoft}` }}>
-      <div style={{ width: 4, borderRadius: 4, background: s.tone, opacity: .8 }} />
-      <button className="lift" onClick={() => go({ s: "object", id: o.id })} style={{ flex: 1, textAlign: "start", minWidth: 0 }}>
-        <div className="row" style={{ gap: 6, marginBottom: 5, flexWrap: "wrap" }}>
-          <Pill tone={s.tone} bg={`${s.tone}16`} icon={s.icon}>{s.label}</Pill>
-          {warn && <Pill tone={T.warn} bg={`${T.warn}16`} icon={AlertTriangle}>يحتاج مراجعة</Pill>}
+    <div style={{ display: "flex", gap: 12, padding: "13px 0", borderBottom: `1px solid ${T.lineSoft}` }}>
+      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", flex: "0 0 10px" }}>
+        <span style={{ width: 10, height: 10, borderRadius: 99, background: s.tone, marginTop: 5 }} />
+        <span style={{ width: 2, flex: 1, background: T.sand, marginTop: 5 }} />
+      </div>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <button className="lift" onClick={() => go({ s: "object", id: o.id })} style={{ textAlign: "start", width: "100%" }}>
+          <div className="row" style={{ gap: 6, marginBottom: 5, flexWrap: "wrap" }}>
+            <Pill tone={s.tone} bg={`${s.tone}16`} icon={s.icon}>{s.label}</Pill>
+            {warn && <Pill tone={T.warn} bg={`${T.warn}16`} icon={AlertTriangle}>يحتاج مراجعة</Pill>}
+          </div>
+          <div className="clamp2" style={{ fontSize: 15, fontWeight: 800, lineHeight: 1.45 }}>{o.name}</div>
+          <div style={{ fontSize: 12, color: T.muted, marginTop: 4 }}>
+            {[
+              p.state === "completed" ? `اكتمل ${agoAr(p.completedAt || p.at)}`
+                : p.state === "active" ? "بدأ للتو"
+                : next ? whenAr(next) : timingLabel(o),
+              NB[o.neighborhood]?.name,
+              p.state === "completed" ? null : o.duration ? minutesAr(o.duration) : null,
+            ].filter(Boolean).join(" — ")}
+          </div>
+        </button>
+        <div className="row" style={{ gap: 8, marginTop: 9, flexWrap: "wrap" }}>
+          {actions.slice(0, open ? actions.length : 2).map((a) => (
+            <button key={a.label} className="press" onClick={a.act}
+              style={{ padding: "7px 12px", borderRadius: R.pill, border: `1px solid ${a.danger ? `${T.warn}44` : T.line}`, background: T.paper, fontSize: 12, fontWeight: 800, color: a.danger ? T.warn : T.ink }}>
+              {a.label}
+            </button>
+          ))}
+          {actions.length > 2 && (
+            <button className="press" onClick={() => setOpen(!open)} style={{ fontSize: 12, fontWeight: 800, color: T.muted, padding: "7px 4px" }}>
+              {open ? "أقل" : "المزيد"}
+            </button>
+          )}
         </div>
-        <div className="clamp2" style={{ fontSize: 15, fontWeight: 800, lineHeight: 1.45 }}>{o.name}</div>
-        <div style={{ fontSize: 12, color: T.muted, marginTop: 4 }}>
-          {[next ? whenAr(next) : timingLabel(o), NB[o.neighborhood]?.name].filter(Boolean).join(" — ")}
-        </div>
-      </button>
+      </div>
       <div style={{ width: 76, flex: "0 0 76px" }}>
-        <Photo kind={o.scene} seed={o.id} photo={o.photo} ratio="1 / 1" radius={R.box} scrim="none" mark={false} />
+        <Photo kind={o.scene} seed={o.id} photo={o.photo} ratio="1 / 1" radius={R.box} scrim="none" />
       </div>
     </div>
   );
@@ -4778,7 +5137,7 @@ function BottomNav({ tab, onTab, planCount }) {
         const on = tab === t.id;
         const Icon = t.icon;
         return (
-          <button key={t.id} className="press" onClick={() => onTab(t.id)}
+          <button key={t.id} className="press" data-nav={t.id} onClick={() => onTab(t.id)}
             style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 3, padding: "4px 0", position: "relative" }}>
             <div style={{ position: "relative" }}>
               <Icon size={21} color={on ? T.green : T.muted} strokeWidth={on ? 2.3 : 1.8} />
@@ -4861,3 +5220,7 @@ export default function EyeMakkahApp() {
     </App.Provider>
   );
 }
+
+
+/* debug surface used by scripts/dbg.mjs — tree-shaken out of the app bundle */
+export const __debug = { INVENTORY, COMMUNITIES, CONTRIBUTIONS, buildOutings, buildHome, deriveContext, initialState, rank, scoreObject, lifecycleOf, objectTrust, searchAll, CLUBS, getObj, NEIGHBORHOODS, CATEGORIES };
