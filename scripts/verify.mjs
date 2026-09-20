@@ -49,6 +49,15 @@ const tapText = async (text, opts = {}) => {
   await page.waitForTimeout(opts.wait ?? 420);
 };
 
+const openByName = async (name) => {
+  await goTab("الرئيسية");
+  await tapText("ابحث عن مكان أو تجربة أو مجتمع");
+  await page.keyboard.type(name);
+  await page.waitForTimeout(900);
+  await page.getByText(name, { exact: false }).first().click();
+  await page.waitForTimeout(700);
+};
+
 await page.goto("http://127.0.0.1:4321/", { waitUntil: "networkidle" });
 await page.waitForTimeout(700);
 
@@ -71,16 +80,18 @@ await step("home shows more than one module", async () => {
 });
 
 await step("open a decision page from home", async () => {
-  await page.locator("button").filter({ hasText: /./ }).nth(6).click();
-  await page.waitForTimeout(500);
+  await openByName("حي حراء الثقافي");
   const body = await appText();
-  if (!/معلومات عملية|ماذا يقول الناس|المصدر والسياق/.test(body)) throw new Error("decision page layers missing");
+  for (const layer of ["معلومات عملية", "ماذا يقول الناس", "المصدر والسياق", "وبعدها؟"]) {
+    if (!body.includes(layer)) throw new Error("missing decision layer: " + layer);
+  }
 });
 await shot("02-decision");
 
 await step("back returns", async () => {
-  await page.getByLabel("رجوع").first().click();
-  await page.waitForTimeout(400);
+  await goTab("الرئيسية");
+  const b = await appText();
+  if (!/كم معك وقت الآن؟/.test(b)) throw new Error("home not restored");
 });
 
 await step("discover tab loads", async () => { await tapText("اكتشف"); const b = await appText(); if (!/الليلة في مكة|نتيجة/.test(b)) throw new Error("discover empty"); });
@@ -145,15 +156,6 @@ await step("community: open a thread and answer", async () => {
   if (!/مقهى الدراسة بالششة يفتح/.test(b)) throw new Error("answer not posted");
 });
 await shot("09-thread");
-
-const openByName = async (name) => {
-  await goTab("الرئيسية");
-  await tapText("ابحث عن مكان أو تجربة أو مجتمع");
-  await page.keyboard.type(name);
-  await page.waitForTimeout(900);
-  await page.getByText(name, { exact: false }).first().click();
-  await page.waitForTimeout(700);
-};
 
 await step("participation: join → start → complete a free activity", async () => {
   await openByName("ورشة خط للمبتدئين");
@@ -238,6 +240,76 @@ await step("expired content is archived, not promoted", async () => {
   if (!/انتهى|منتهٍ|غير نشط|متوقف مؤقتًا/.test(b2)) throw new Error("archive does not show ended content");
 });
 await shot("14-archive");
+
+await step("personalisation: dismissing changes the feed and is reversible", async () => {
+  await goTab("الرئيسية");
+  const before = await appText();
+  await page.getByLabel("إخفاء").first().click();
+  await page.waitForTimeout(350);
+  await page.getByText("لا تعجبني هذه الفئة", { exact: true }).click();
+  await page.waitForTimeout(600);
+  const after = await appText();
+  if (before === after) throw new Error("feed unchanged after dismissal");
+  await goTab("الرئيسية");
+  await page.getByLabel("حسابي").click();
+  await page.waitForTimeout(500);
+  const prof = await appText();
+  if (!/عناصر أخفيتها/.test(prof)) throw new Error("dismissal not reversible from profile");
+});
+await shot("15-personalisation");
+
+await step("notifications are useful, not generic", async () => {
+  await page.getByText("الإشعارات المفيدة", { exact: true }).click();
+  await page.waitForTimeout(400);
+  await page.getByLabel("رجوع").first().click();
+  await page.waitForTimeout(400);
+  await page.getByLabel("الإشعارات").click();
+  await page.waitForTimeout(600);
+  const b = await appText();
+  if (/نفتقدك|اشتقنا لك/.test(b)) throw new Error("generic engagement notification present");
+  if (!/الإشعارات/.test(b)) throw new Error("notifications screen missing");
+});
+await shot("16-notifications");
+
+await step("provider role can publish and it appears in discovery", async () => {
+  await goTab("الرئيسية");
+  await page.getByLabel("حسابي").click();
+  await page.waitForTimeout(500);
+  await page.getByText("أدوات مقدّم التجربة", { exact: true }).first().click();
+  await page.waitForTimeout(600);
+  await page.getByText("انشر نشاطًا أو عرضًا", { exact: false }).click();
+  await page.waitForTimeout(400);
+  await page.locator("input").first().fill("ورشة تذهيب للمبتدئين");
+  await page.getByText("انشر", { exact: true }).last().click();
+  await page.waitForTimeout(800);
+  const b = await appText();
+  if (!/ورشة تذهيب للمبتدئين/.test(b)) throw new Error("published object did not open");
+  await goTab("اكتشف");
+  await page.waitForTimeout(300);
+  await page.getByText("ابحث في مكة").click();
+  await page.waitForTimeout(400);
+  await page.keyboard.type("تذهيب");
+  await page.waitForTimeout(1200);
+  const b2 = await appText();
+  if (!/ورشة تذهيب للمبتدئين/.test(b2)) throw new Error("published object not discoverable");
+});
+await shot("17-provider");
+
+await step("provider signals show the interaction loop", async () => {
+  await goTab("الرئيسية");
+  await page.getByLabel("حسابي").click();
+  await page.waitForTimeout(500);
+  await page.getByText("أدوات مقدّم التجربة", { exact: true }).first().click();
+  await page.waitForTimeout(500);
+  await page.getByText("الإشارات", { exact: true }).click();
+  await page.waitForTimeout(500);
+  const b = await appText();
+  for (const t of ["من الاهتمام إلى الفعل", "أين يقع الاهتمام", "ما يبحث عنه الناس", "جودة المعلومة"]) {
+    if (!b.includes(t)) throw new Error("missing signal block: " + t);
+  }
+  if (!/بحوكمة خصوصية/.test(b)) throw new Error("privacy framing missing");
+});
+await shot("18-signals");
 
 console.log("\n──────── verification ────────");
 for (const [s, n] of results) console.log(`${s === "PASS" ? "✓" : "✗"} ${n}`);
