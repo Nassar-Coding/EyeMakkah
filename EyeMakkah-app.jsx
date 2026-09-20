@@ -1648,6 +1648,8 @@ const COMMUNITIES = [
 
   C("campaigns", "hajj", "الحملات والمجموعات", "تنسيق المجموعات وأسئلتها العملية.", 2600, { scene: "haram" }),
   C("first-umrah", "hajj", "أول عمرة", "الاستعداد والخطوات والأسئلة الشائعة.", 4300, { langs: ["ar", "en"], scene: "haram" }),
+  C("hajj-logistics", "hajj", "السكن والتنقل في الموسم", "أسئلة عملية عن المسافات والمواعيد ونقاط اللقاء.", 3100, { scene: "stay" }),
+  C("after-umrah", "hajj", "بعد العمرة", "ماذا تفعل في بقية أيامك في مكة.", 2200, { scene: "alley" }),
 
   C("local-food", "food", "الأكل المكي", "الأطباق المكية وأين تجدها وما يُطلب فعلًا.", 6100, { scene: "food" }),
   C("cafes", "food", "المقاهي", "قهوة، جلسات، ومساحات عمل ودراسة.", 3300, { scene: "cafe" }),
@@ -1658,10 +1660,12 @@ const COMMUNITIES = [
   C("makkah-old", "culture", "مكة القديمة", "صور وحكايات وأسماء الحارات.", 3600, { scene: "alley" }),
   C("craft", "culture", "الحرف والمهارات", "السدو، الخط، الفخار، الجلد، والعطور.", 1800, { scene: "workshop" }),
   C("museums", "culture", "المتاحف والمعارض", "ما يستحق الزيارة هذا الشهر.", 1500, { scene: "museum" }),
+  C("photo-c", "culture", "تصوير مكة", "زوايا وأوقات وضوء المدينة.", 1300, { scene: "skyline" }),
 
   C("haram-service", "volunteer", "خدمة الزوار", "فرص منظّمة عبر جهات مرخّصة.", 3200, { scene: "volunteer" }),
   C("neighborhood-init", "volunteer", "مبادرات الأحياء", "تنظيف، تشجير، وخدمة الجيران.", 1600, { scene: "garden" }),
   C("health-vol", "volunteer", "التطوع الصحي", "حملات وتدريب وإسعافات.", 1100, { scene: "volunteer" }),
+  C("env-vol", "volunteer", "البيئة والتشجير", "مبادرات نظافة وتشجير في الأحياء.", 940, { scene: "garden" }),
 
   C("students", "learn", "طلاب أم القرى", "أندية، فعاليات، ومجموعات مذاكرة.", 4400, { scene: "library" }),
   C("workshops", "learn", "الورش والدورات", "ورش قصيرة ودورات عملية.", 2300, { scene: "workshop" }),
@@ -1872,9 +1876,17 @@ CONTRIBUTIONS.forEach((k) => {
   if (k.parent) { const p = CONTRIBUTIONS.find((x) => x.id === k.parent); if (p) p.answers = (p.answers || 0) + 1; }
 });
 const KB = byId(CONTRIBUTIONS);
-const contributionsFor = (objId) => CONTRIBUTIONS.filter((k) => k.obj === objId && !k.parent && (!k.flagged || k.flagged.state !== "held"));
-const answersFor = (kid) => CONTRIBUTIONS.filter((k) => k.parent === kid);
-const contributionsIn = (comId) => CONTRIBUTIONS.filter((k) => k.communities.includes(comId) && (!k.flagged || k.flagged.state !== "held"));
+const visible = (k, state) => (!k.flagged || k.flagged.state !== "held") && !(state?.blocked || []).includes(k.author?.name);
+/* the community always reads the user's own contributions alongside the seeded ones */
+const allContributions = (state) => [...(state?.contributions || []), ...CONTRIBUTIONS].filter((k) => visible(k, state));
+const contributionsFor = (objId, state) => allContributions(state).filter((k) => k.obj === objId && !k.parent);
+const answersFor = (kid, state) => allContributions(state).filter((k) => k.parent === kid);
+const contributionsIn = (comId, state) => allContributions(state).filter((k) => k.communities.includes(comId));
+const findContribution = (id, state) => KB[id] || (state?.contributions || []).find((k) => k.id === id) || null;
+const CONTRIB_LABEL = {
+  question: "سؤال", answer: "إجابة", experience_report: "تجربة", recommendation: "توصية",
+  update: "تحديث معلومة", correction: "تصحيح", tip: "نصيحة", photo: "صورة", post_story: "حكاية",
+};
 
 /* ═══════════════════════════════════════════════════════════════════════════
    GROUP 4 FOUNDATION — FRESHNESS, SOURCE CLAIMS, LIFECYCLE, CONFLICT
@@ -2772,8 +2784,8 @@ function buildHome(state, ctx) {
   });
 
   /* H4 — community */
-  const comItems = CONTRIBUTIONS
-    .filter((k) => !k.flagged && !k.parent && k.communities.some((c) => state.joinedCommunities.includes(c) || state.followedCommunities.includes(c)))
+  const comItems = allContributions(state)
+    .filter((k) => !k.parent && k.communities.some((c) => state.joinedCommunities.includes(c) || state.followedCommunities.includes(c)))
     .sort((a, b) => new Date(b.at) - new Date(a.at)).slice(0, 4);
   if (comItems.length) modules.push({ id: "community", kind: "community", title: "من مجتمعك", sub: "معرفة محلية حديثة من الناس، لا من التطبيق", items: comItems });
 
@@ -3359,7 +3371,7 @@ function ScreenObject({ id }) {
   const life = lifecycleOf(o);
   const next = nextOccurrence(o);
   const provider = o.provider ? PROV[o.provider] : null;
-  const contribs = contributionsFor(o.id);
+  const contribs = contributionsFor(o.id, state);
   const planItem = state.plan.find((p) => p.obj === o.id);
   const linked = o.linked ? getObj(o.linked) : null;
   const cs = uniq(o.communities.map((c) => COM[c]).filter(Boolean).map((c) => c.id));
@@ -3371,7 +3383,7 @@ function ScreenObject({ id }) {
   }, [o.id, ctx]);
 
   return (
-    <div className="scroll" style={{ paddingBottom: 0 }}>
+    <div className="scroll" style={{ display: "flex", flexDirection: "column", minHeight: "100%" }}>
       {/* A — identity / desirability */}
       <div style={{ position: "relative" }}>
         <Photo kind={o.scene} seed={o.id} photo={o.photo} ratio="4 / 3" radius={0} scrim="strong" />
@@ -3561,7 +3573,7 @@ function ActionBar({ o, planItem }) {
   return (
     <>
       <div style={{
-        position: "sticky", bottom: 0, zIndex: 40, padding: "12px 16px 14px", marginTop: 20,
+        position: "sticky", bottom: 0, zIndex: 40, padding: "12px 16px 14px", marginTop: "auto",
         background: "linear-gradient(180deg, rgba(244,239,229,0) 0%, rgba(244,239,229,.96) 30%, #F4EFE5 100%)",
       }}>
         <div className="row" style={{ gap: 9 }}>
@@ -3752,38 +3764,64 @@ function HandoffSheet({ o, open, onClose }) {
 
 /* ───────── Ask — a question is a contribution, routed to the right community ───────── */
 
-function AskSheet({ o, open, onClose, presetCommunity }) {
+function AskSheet({ o: objProp, open, onClose, presetCommunity, presetObject }) {
   const { dispatch, toast, go, state } = useApp();
+  const o = objProp || presetObject || null;
   const [text, setText] = useState("");
   const [type, setType] = useState("question");
+  const [withPhoto, setWithPhoto] = useState(false);
+  const [fields, setFields] = useState({});
   const suggested = useMemo(() => {
     const ids = o ? o.communities : (presetCommunity ? [presetCommunity] : ["living"]);
-    return uniq(ids).map((c) => COM[c]).filter(Boolean).slice(0, 3);
-  }, [o, presetCommunity]);
+    return uniq([...ids, ...state.joinedCommunities]).map((c) => COM[c]).filter(Boolean).slice(0, 4);
+  }, [o, presetCommunity, state.joinedCommunities]);
   const [target, setTarget] = useState(null);
-  useEffect(() => { if (open) { setText(""); setType("question"); setTarget(suggested[0]?.id || "living"); } }, [open, suggested]);
+  useEffect(() => {
+    if (!open) return;
+    setText(""); setWithPhoto(false); setFields({});
+    setType(presetObject ? "experience_report" : "question");
+    setTarget(suggested[0]?.id || "living");
+  }, [open, suggested, presetObject]);
 
   const TYPES = [
     { id: "question", label: "سؤال", icon: HelpCircle },
     { id: "experience_report", label: "تجربة", icon: Quote },
     { id: "recommendation", label: "توصية", icon: ThumbsUp },
+    { id: "tip", label: "نصيحة", icon: Sparkles },
     { id: "update", label: "تحديث معلومة", icon: RefreshCw },
-    { id: "photo", label: "صورة", icon: Camera },
+    { id: "correction", label: "تصحيح", icon: Pencil },
   ];
+  const REPORT_FIELDS = ["كيف كان الوصول؟", "أفضل وقت؟", "ماذا تمنيت أن تعرفه قبلها؟"];
 
   const submit = () => {
     if (!text.trim()) return;
+    const filled = Object.fromEntries(Object.entries(fields).filter(([, v]) => v && v.trim()));
     dispatch({
       type: "contribute",
-      contribution: { type, communities: [target], author: { name: "أنت", role: state.profile.mode === "visitor" ? "زائر" : `من سكان ${NB[state.profile.nb]?.name}`, kind: "resident" }, body: text.trim(), obj: o?.id || null, helpful: 0, lang: "ar", answers: 0 },
+      contribution: {
+        type, communities: [target],
+        author: { name: "أنت", role: state.profile.mode === "visitor" ? "زائر" : `من سكان ${NB[state.profile.nb]?.name}`, kind: "resident" },
+        body: text.trim(), obj: o?.id || null, helpful: 0, lang: "ar", answers: 0,
+        photos: withPhoto ? 1 : 0, fields: Object.keys(filled).length ? filled : null,
+        visitedAt: type === "experience_report" ? new Date(t0) : null,
+      },
       expectAnswer: type === "question" ? "ردّ أحد أعضاء المجتمع على سؤالك." : null,
     });
-    toast(type === "question" ? "نُشر سؤالك في المجتمع" : "شكرًا — أضفنا مساهمتك");
+    toast(type === "question" ? "نُشر سؤالك في المجتمع" : type === "correction" ? "وصل تصحيحك — يُراجع قبل أن يغيّر معلومة رسمية" : "شكرًا — أضفنا مساهمتك");
     onClose();
   };
 
   return (
     <Sheet open={open} onClose={onClose} title={o ? `شارك عن ${o.name}` : "شارك المجتمع"} tall>
+      {o && (
+        <div className="row" style={{ gap: 10, marginBottom: 14, padding: "9px 10px", borderRadius: R.box, background: T.limestone }}>
+          <div style={{ width: 40, flex: "0 0 40px" }}><Photo kind={o.scene} seed={o.id} photo={o.photo} ratio="1 / 1" radius={R.ctl} scrim="none" /></div>
+          <div style={{ minWidth: 0 }}>
+            <div className="clamp1" style={{ fontSize: 13, fontWeight: 800 }}>{o.name}</div>
+            <div style={{ fontSize: 11, color: T.muted }}>ستُربط مساهمتك بهذا {o.typeLabel}</div>
+          </div>
+        </div>
+      )}
       <div className="hs scroll" style={{ gap: 7, marginBottom: 14 }}>
         {TYPES.map((t) => <Chip key={t.id} icon={t.icon} active={type === t.id} onClick={() => setType(t.id)}>{t.label}</Chip>)}
       </div>
@@ -3797,6 +3835,30 @@ function AskSheet({ o, open, onClose, presetCommunity }) {
           {suggested.map((c) => <Chip key={c.id} active={target === c.id} onClick={() => setTarget(c.id)}>{c.name}</Chip>)}
         </div>
       </div>
+
+      {type === "experience_report" && (
+        <div style={{ marginTop: 14 }}>
+          <div style={{ fontSize: 12.5, fontWeight: 800, marginBottom: 8 }}>اختياري — أسئلة يبحث عنها الناس فعلًا</div>
+          {REPORT_FIELDS.map((q) => (
+            <div key={q} style={{ marginBottom: 9 }}>
+              <div style={{ fontSize: 11.5, color: T.muted, marginBottom: 4, fontWeight: 700 }}>{q}</div>
+              <input value={fields[q] || ""} onChange={(e) => setFields({ ...fields, [q]: e.target.value })} dir="rtl"
+                style={{ width: "100%", border: `1px solid ${T.line}`, borderRadius: R.ctl, padding: "9px 11px", fontSize: 13, background: T.paper, outline: "none" }} />
+            </div>
+          ))}
+        </div>
+      )}
+
+      <button className="press row" onClick={() => setWithPhoto(!withPhoto)}
+        style={{ gap: 8, marginTop: 14, padding: "10px 12px", borderRadius: R.ctl, border: `1px dashed ${withPhoto ? T.green : T.line}`, width: "100%", color: withPhoto ? T.green : T.muted }}>
+        <Camera size={15} /><span style={{ fontSize: 13, fontWeight: 700 }}>{withPhoto ? "ستُرفق صورة من تجربتك" : "أرفق صورة"}</span>
+      </button>
+
+      {type === "correction" && (
+        <div style={{ marginTop: 12, padding: "11px 12px", borderRadius: R.box, background: `${T.brass}14`, fontSize: 12, color: T.muted, lineHeight: 1.8 }}>
+          التصحيح يُسجَّل كمصدر مجتمعي بتاريخه. لا يستبدل معلومة رسمية تلقائيًا، لكنه قد يطلب مراجعتها.
+        </div>
+      )}
 
       <div style={{ marginTop: 14, padding: "11px 12px", borderRadius: R.box, background: T.sand, fontSize: 12, color: T.muted, lineHeight: 1.8 }}>
         لا تنشر أرقامًا شخصية أو موقعًا دقيقًا لأحد. اسمك المعروض فقط، وموقعك لا يُنشر.
@@ -3814,29 +3876,105 @@ function AskSheet({ o, open, onClose, presetCommunity }) {
    COMMUNITY — families → communities → conversations → activities
    ═══════════════════════════════════════════════════════════════════════════ */
 
+function ContributionCard({ k, onOpen }) {
+  const { go, state, dispatch } = useApp();
+  const o = k.obj ? getObj(k.obj) : null;
+  const com = COM[k.communities[0]];
+  const translated = state.translated[k.id];
+  const showOriginal = k.original && translated;
+  const helpful = k.helpful + (state.helpful[k.id] ? 1 : 0);
+  return (
+    <div style={{ padding: "13px 13px", borderRadius: R.box, background: T.paper, border: `1px solid ${T.line}`, marginBottom: 10 }}>
+      <div className="row" style={{ gap: 8, marginBottom: 8 }}>
+        <div style={{ width: 30, height: 30, borderRadius: R.pill, background: T.sand, display: "grid", placeItems: "center", fontSize: 12.5, fontWeight: 800, color: T.green }}>
+          {k.author.name.slice(0, 1)}
+        </div>
+        <div style={{ minWidth: 0, flex: 1 }}>
+          <div className="row" style={{ gap: 6, flexWrap: "wrap" }}>
+            <span style={{ fontSize: 12.5, fontWeight: 800 }}>{k.author.name}</span>
+            <Pill tone={T.clay} size={10}>{CONTRIB_LABEL[k.type] || "مساهمة"}</Pill>
+            {k.author.kind === "provider" && <Pill tone="#54697E" size={10}>مقدّم الخدمة</Pill>}
+          </div>
+          <div style={{ fontSize: 11, color: T.muted, marginTop: 1 }}>{k.author.role} — {agoAr(k.at)}</div>
+        </div>
+        {com && <button className="press" onClick={() => go({ s: "community", id: com.id })} style={{ fontSize: 11, fontWeight: 800, color: T.green, whiteSpace: "nowrap" }}>{com.name}</button>}
+      </div>
+      <button className="press" onClick={() => (onOpen ? onOpen() : go({ s: "thread", id: k.parent || k.id }))} style={{ textAlign: "start", width: "100%" }}>
+        <div className="clamp4" style={{ fontSize: 14, lineHeight: 1.85, fontWeight: k.type === "question" ? 700 : 500 }}>
+          {showOriginal ? k.original.text : k.body}
+        </div>
+      </button>
+      {k.fields && (
+        <div style={{ marginTop: 9, padding: "9px 11px", borderRadius: R.ctl, background: T.limestone }}>
+          {Object.entries(k.fields).slice(0, 3).map(([q, a]) => (
+            <div key={q} className="row" style={{ gap: 8, alignItems: "flex-start", marginBottom: 4 }}>
+              <span style={{ fontSize: 11.5, color: T.muted, fontWeight: 700, flex: "0 0 96px" }}>{q}</span>
+              <span style={{ fontSize: 12.5, fontWeight: 600, flex: 1 }}>{a}</span>
+            </div>
+          ))}
+        </div>
+      )}
+      {k.photos > 0 && (
+        <div className="row" style={{ gap: 7, marginTop: 9 }}>
+          {Array.from({ length: Math.min(3, k.photos) }).map((_, i) => (
+            <div key={i} style={{ flex: 1 }}>
+              <Photo kind={o?.scene || "alley"} seed={k.id + "p" + i} ratio="4 / 3" radius={R.ctl} scrim="none" />
+            </div>
+          ))}
+        </div>
+      )}
+      {k.original && (
+        <button className="press row" onClick={() => dispatch({ type: "translate", k: k.id })} style={{ gap: 5, marginTop: 8, fontSize: 11.5, color: T.muted, fontWeight: 700 }}>
+          <Languages size={12} />{translated ? "عرض الترجمة" : `النص الأصلي — ${({ en: "English", ur: "اردو", id: "Bahasa" })[k.original.lang]}`}
+        </button>
+      )}
+      <div className="row" style={{ gap: 12, marginTop: 10, flexWrap: "wrap" }}>
+        {o && <button className="press" onClick={() => go({ s: "object", id: o.id })} style={{ fontSize: 11.5, fontWeight: 800, color: T.clay }}>↳ {o.name}</button>}
+        <button className="press row" onClick={() => dispatch({ type: "helpful", k: k.id })} style={{ gap: 4, fontSize: 11.5, fontWeight: 700, color: state.helpful[k.id] ? T.ok : T.muted }}>
+          <ThumbsUp size={12} />{ar(helpful)}
+        </button>
+        {k.answers > 0 && <span style={{ fontSize: 11.5, color: T.muted, fontWeight: 600 }}>{ar(k.answers)} إجابة</span>}
+        {k.type === "question" && k.answers === 0 && <Pill tone={T.brass} size={10.5}>بلا إجابة</Pill>}
+      </div>
+    </div>
+  );
+}
+
 function ScreenCommunity() {
-  const { state, ctx, go, dispatch } = useApp();
+  const { state, ctx, go, dispatch, toast } = useApp();
   const [tab, setTab] = useState("for-me");
   const [composer, setComposer] = useState(false);
-
   const mine = state.joinedCommunities;
-  const feed = useMemo(() => {
-    const items = CONTRIBUTIONS.filter((k) => !k.parent && !k.flagged &&
-      (tab === "for-me" ? k.communities.some((c) => mine.includes(c) || state.followedCommunities.includes(c)) : true));
-    const scored = items.map((k) => {
-      let s = 0;
-      s += Math.max(0, 14 - (t0 - new Date(k.at).getTime()) / DAY) * 2.2;
-      if (k.type === "question" && k.answers === 0) s += 14;
-      if (k.communities.some((c) => mine.includes(c))) s += 10;
-      if (k.obj && ctx.planNeighborhoods?.includes(getObj(k.obj)?.neighborhood)) s += 8;
-      s += Math.min(12, k.helpful / 4);
-      return { k, s };
-    }).sort((a, b) => b.s - a.s);
-    return scored.map((x) => x.k);
-  }, [tab, mine, state.followedCommunities, ctx]);
+  const following = state.followedCommunities;
+  const relevant = (k) => k.communities.some((c) => mine.includes(c) || following.includes(c));
 
-  const openQuestions = feed.filter((k) => k.type === "question" && k.answers === 0).slice(0, 3);
-  const activityPrompts = useMemo(() => rank(INVENTORY.filter((o) => ["activity", "recurring"].includes(o.type) && isPromotable(o)), ctx, { limit: 5, maxPerCategory: 2 }), [ctx]);
+  const all = useMemo(() => allContributions(state).filter((k) => !k.parent), [state]);
+  const pool = tab === "for-me" ? all.filter(relevant) : all;
+
+  /* community home is an editorial mix, not eight equal cards */
+  const openQuestions = pool.filter((k) => k.type === "question" && !k.answers).slice(0, 3);
+  const usefulAnswers = useMemo(() => allContributions(state)
+    .filter((k) => k.parent && (tab === "all" || relevant(k)))
+    .sort((a, b) => (b.helpful || 0) - (a.helpful || 0)).slice(0, 3), [state, tab]);
+  const photos = pool.filter((k) => k.photos > 0).slice(0, 4);
+  const updates = pool.filter((k) => ["update", "correction"].includes(k.type)).slice(0, 3);
+  const reports = pool.filter((k) => ["experience_report", "recommendation"].includes(k.type)).slice(0, 3);
+  const myClubs = CLUBS.filter((cl) => mine.includes(cl.community) && cl.state === "active").slice(0, 4);
+  const activityPrompts = useMemo(() => rank(INVENTORY.filter((o) => ["activity", "recurring"].includes(o.type) && isPromotable(o)), ctx, { limit: 6, maxPerCategory: 2 }), [ctx]);
+
+  /* continue the conversation after you actually attended something */
+  const justCompleted = state.plan.filter((p) => p.state === "completed").slice(-1)[0];
+  const completedObj = justCompleted ? getObj(justCompleted.obj) : null;
+  const alreadyShared = completedObj && state.contributions.some((k) => k.obj === completedObj.id);
+
+  const suggestedCommunities = useMemo(() => COMMUNITIES.filter((c) => c.kind !== "family" && c.state === "active" && !mine.includes(c.id))
+    .map((c) => {
+      let s = c.members / 1000;
+      if (c.nb === state.profile.nb) s += 9;
+      if (ctx.interests.some((i) => c.id === i || c.family === i)) s += 5;
+      if (c.family === "visitors" && state.profile.mode === "visitor") s += 7;
+      return { c, s };
+    }).sort((a, b) => b.s - a.s).slice(0, 4).map((x) => x.c), [mine, state.profile.nb, state.profile.mode, ctx.interests]);
 
   return (
     <div className="scroll" style={{ paddingBottom: 96 }}>
@@ -3851,8 +3989,8 @@ function ScreenCommunity() {
             <Plus size={14} style={{ verticalAlign: "-2px", marginInlineEnd: 5 }} />شارك
           </button>
         </div>
-        <div className="row" style={{ gap: 8, marginTop: 12 }}>
-          {[["for-me", "لك"], ["all", "كل المجتمعات"]].map(([id, label]) => (
+        <div className="row" style={{ gap: 14, marginTop: 12 }}>
+          {[["for-me", "لك"], ["all", "كل المجتمعات"], ["browse", "تصفّح"]].map(([id, label]) => (
             <button key={id} className="press" onClick={() => setTab(id)}
               style={{ fontSize: 13.5, fontWeight: 800, paddingBottom: 6, borderBottom: `2px solid ${tab === id ? T.green : "transparent"}`, color: tab === id ? T.ink : T.muted }}>
               {label}
@@ -3861,59 +3999,231 @@ function ScreenCommunity() {
         </div>
       </div>
 
-      {/* families */}
-      <div className="hs scroll" style={{ padding: "12px 16px 6px", gap: 10 }}>
-        {FAMILIES.map((f) => (
-          <button key={f.id} className="lift" onClick={() => go({ s: "family", id: f.id })} style={{ width: 132, textAlign: "start" }}>
-            <Photo kind={f.scene} seed={"fam" + f.id} ratio="4 / 3" radius={R.media} scrim="strong" mark={false}>
-              <div style={{ position: "absolute", insetInlineStart: 9, bottom: 8, insetInlineEnd: 9 }}>
-                <div className="clamp1" style={{ fontSize: 13.5, fontWeight: 800, color: "#FFF8EA" }}>{f.name}</div>
+      {tab === "browse" ? (
+        <div style={{ paddingTop: 12 }}>
+          {FAMILIES.map((f) => (
+            <div key={f.id} style={{ marginBottom: 22 }}>
+              <SectionTitle title={f.name} sub={f.blurb} action="الكل" onAction={() => go({ s: "family", id: f.id })} />
+              <div style={{ padding: "0 16px" }}>
+                {subCommunities(f.id).slice(0, 3).map((c) => <CommunityRow key={c.id} c={c} />)}
               </div>
-            </Photo>
-            <div style={{ fontSize: 10.5, color: T.muted, marginTop: 5, fontWeight: 600 }}>{ar(subCommunities(f.id).length)} مجتمع</div>
-          </button>
-        ))}
-      </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <>
+          {completedObj && !alreadyShared && (
+            <div className="up" style={{ margin: "12px 16px 20px", padding: "14px", borderRadius: R.box, background: T.sand }}>
+              <div style={{ fontSize: 14, fontWeight: 800 }}>أكملت «{completedObj.name}»</div>
+              <div style={{ fontSize: 12.5, color: T.muted, marginTop: 5, lineHeight: 1.8 }}>
+                تجربتك الآن أحدث معلومة عن هذا {completedObj.typeLabel}. سطران يكفيان ليستفيد غيرك.
+              </div>
+              <button className="press" onClick={() => setComposer(true)}
+                style={{ marginTop: 11, padding: "9px 15px", borderRadius: R.ctl, background: T.deep, color: "#F6EFE0", fontWeight: 800, fontSize: 13 }}>
+                اكتب تجربتك
+              </button>
+            </div>
+          )}
 
-      {openQuestions.length > 0 && (
-        <div style={{ marginTop: 18 }}>
-          <SectionTitle title="أسئلة تنتظر إجابة" sub="معرفتك قد تختصر على أحدهم وقتًا" />
-          <div style={{ padding: "0 16px" }}>
-            {openQuestions.map((k) => (
-              <button key={k.id} className="lift" onClick={() => go({ s: "thread", id: k.id })}
-                style={{ display: "block", width: "100%", textAlign: "start", padding: "12px 13px", marginBottom: 9, borderRadius: R.box, background: T.paper, border: `1px solid ${T.line}` }}>
-                <div className="clamp2" style={{ fontSize: 14, fontWeight: 700, lineHeight: 1.7 }}>{k.body}</div>
-                <div className="row" style={{ gap: 8, marginTop: 7 }}>
-                  <Pill tone={T.clay}>{COM[k.communities[0]]?.name}</Pill>
-                  <span style={{ fontSize: 11.5, color: T.muted }}>{agoAr(k.at)}</span>
-                </div>
+          <div className="hs scroll" style={{ padding: "12px 16px 6px", gap: 10 }}>
+            {FAMILIES.map((f) => (
+              <button key={f.id} className="lift" onClick={() => go({ s: "family", id: f.id })} style={{ width: 132, textAlign: "start" }}>
+                <Photo kind={f.scene} seed={"fam" + f.id} ratio="4 / 3" radius={R.media} scrim="strong">
+                  <div style={{ position: "absolute", insetInlineStart: 9, bottom: 8, insetInlineEnd: 9 }}>
+                    <div className="clamp1" style={{ fontSize: 13.5, fontWeight: 800, color: "#FFF8EA" }}>{f.name}</div>
+                  </div>
+                </Photo>
+                <div style={{ fontSize: 10.5, color: T.muted, marginTop: 5, fontWeight: 600 }}>{ar(subCommunities(f.id).length)} مجتمع</div>
               </button>
             ))}
           </div>
-        </div>
+
+          {openQuestions.length > 0 && (
+            <div style={{ marginTop: 20 }}>
+              <SectionTitle title="أسئلة تنتظر إجابة" sub="معرفتك قد تختصر على أحدهم وقتًا طويلًا" />
+              <div style={{ padding: "0 16px" }}>{openQuestions.map((k) => <ContributionCard key={k.id} k={k} />)}</div>
+            </div>
+          )}
+
+          {usefulAnswers.length > 0 && (
+            <div style={{ marginTop: 14 }}>
+              <SectionTitle title="إجابات وجدها الناس مفيدة" sub="معرفة محلية، لا نصوص عامة" />
+              <div style={{ padding: "0 16px" }}>{usefulAnswers.map((k) => <ContributionCard key={k.id} k={k} />)}</div>
+            </div>
+          )}
+
+          {myClubs.length > 0 && (
+            <div style={{ marginTop: 14 }}>
+              <SectionTitle title="أنديتك ومجموعاتك" sub="مشاركة تتكرر — لا زيارة واحدة" />
+              <div className="hs scroll" style={{ padding: "0 16px 4px" }}>
+                {myClubs.map((cl) => <ClubTile key={cl.id} cl={cl} />)}
+              </div>
+            </div>
+          )}
+
+          <div style={{ marginTop: 22 }}>
+            <SectionTitle title="من النقاش إلى المشاركة" sub="أنشطة تبدأ من هذه المجتمعات ويمكنك الانضمام إليها" />
+            <div className="hs scroll" style={{ padding: "0 16px 4px" }}>{activityPrompts.map((x) => <TileCard key={x.o.id} x={x} w={190} />)}</div>
+          </div>
+
+          {photos.length > 0 && (
+            <div style={{ marginTop: 22 }}>
+              <SectionTitle title="صور من المجتمع" sub="مما شاركه الناس مؤخرًا" />
+              <div className="hs scroll" style={{ padding: "0 16px 4px" }}>
+                {photos.map((k) => {
+                  const o = k.obj ? getObj(k.obj) : null;
+                  return (
+                    <button key={k.id} className="lift" onClick={() => go({ s: "thread", id: k.id })} style={{ width: 172, textAlign: "start" }}>
+                      <Photo kind={o?.scene || "alley"} seed={k.id + "cover"} ratio="1 / 1" radius={R.media} scrim="soft">
+                        <div style={{ position: "absolute", insetInlineStart: 9, bottom: 8, insetInlineEnd: 9 }}>
+                          <div className="clamp1" style={{ fontSize: 12, fontWeight: 800, color: "#FFF8EA" }}>{k.author.name}</div>
+                        </div>
+                      </Photo>
+                      <div className="clamp2" style={{ fontSize: 12, color: T.muted, marginTop: 6, lineHeight: 1.6 }}>{k.body}</div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {updates.length > 0 && (
+            <div style={{ marginTop: 20 }}>
+              <SectionTitle title="تحديثات وتصحيحات" sub="تغيّرات لاحظها الناس على أرض الواقع" />
+              <div style={{ padding: "0 16px" }}>{updates.map((k) => <ContributionCard key={k.id} k={k} />)}</div>
+            </div>
+          )}
+
+          {reports.length > 0 && (
+            <div style={{ marginTop: 14 }}>
+              <SectionTitle title="تجارب وتوصيات" />
+              <div style={{ padding: "0 16px" }}>{reports.map((k) => <ContributionCard key={k.id} k={k} />)}</div>
+            </div>
+          )}
+
+          {!state.contributions.length && (
+            <div style={{ margin: "8px 16px 20px", padding: "14px", borderRadius: R.box, background: T.paper, border: `1px dashed ${T.line}` }}>
+              <div style={{ fontSize: 14, fontWeight: 800 }}>لم تشارك بعد</div>
+              <div style={{ fontSize: 12.5, color: T.muted, marginTop: 5, lineHeight: 1.8 }}>
+                أسهل بداية: جواب قصير على سؤال مفتوح، أو نصيحة عملية عن مكان تعرفه. لا يلزم أن تكون خبيرًا.
+              </div>
+              <button className="press" onClick={() => setComposer(true)}
+                style={{ marginTop: 11, padding: "9px 15px", borderRadius: R.ctl, background: T.paper, border: `1px solid ${T.line}`, fontWeight: 800, fontSize: 13 }}>
+                ابدأ بمساهمة صغيرة
+              </button>
+            </div>
+          )}
+
+          <div style={{ marginTop: 10 }}>
+            <SectionTitle title="مجتمعاتك" sub="ما تنضم إليه يظهر أولًا في رئيسيتك" action="تصفّح" onAction={() => setTab("browse")} />
+            <div style={{ padding: "0 16px" }}>
+              {mine.map((c) => COM[c] ? <CommunityRow key={c} c={COM[c]} /> : null)}
+              {!mine.length && <div style={{ fontSize: 13, color: T.muted, padding: "10px 0", lineHeight: 1.8 }}>لم تنضم لأي مجتمع بعد.</div>}
+            </div>
+          </div>
+
+          {suggestedCommunities.length > 0 && (
+            <div style={{ marginTop: 20 }}>
+              <SectionTitle title="قد تناسبك" sub={`حسب حيّك واهتماماتك${state.profile.mode === "visitor" ? " ووضعك كزائر" : ""}`} />
+              <div style={{ padding: "0 16px" }}>{suggestedCommunities.map((c) => <CommunityRow key={c.id} c={c} />)}</div>
+            </div>
+          )}
+        </>
       )}
 
-      <div style={{ marginTop: 18 }}>
-        <SectionTitle title="مجتمعاتك" sub="ما تتابعه يظهر أولًا" action="تصفّح الكل" onAction={() => setTab("all")} />
-        <div style={{ padding: "0 16px" }}>
-          {(mine.length ? mine : ["awali", "local-food"]).map((c) => COM[c] ? <CommunityRow key={c} c={COM[c]} /> : null)}
+      <AskSheet open={composer} onClose={() => setComposer(false)} presetCommunity={mine[0]} presetObject={completedObj && !alreadyShared ? completedObj : null} />
+    </div>
+  );
+}
+
+function ClubTile({ cl }) {
+  const { go } = useApp();
+  const act = getObj(cl.activity);
+  const next = act ? nextOccurrence(act) : null;
+  return (
+    <button className="lift" onClick={() => go({ s: "club", id: cl.id })} style={{ width: 196, textAlign: "start" }}>
+      <Photo kind={act?.scene || "garden"} seed={"club" + cl.id} ratio="4 / 3" radius={R.media} scrim="strong">
+        <div style={{ position: "absolute", insetInlineStart: 10, bottom: 9, insetInlineEnd: 10 }}>
+          <div className="clamp1" style={{ fontSize: 14, fontWeight: 800, color: "#FFF8EA" }}>{cl.name}</div>
+          <div style={{ fontSize: 11, color: "rgba(255,247,230,.85)", marginTop: 3 }}>{cl.cadence} — {ar(cl.members)} عضو</div>
+        </div>
+      </Photo>
+      {next && <div style={{ fontSize: 11.5, color: T.ok, fontWeight: 700, marginTop: 6 }}>اللقاء القادم {inAr(next)}</div>}
+    </button>
+  );
+}
+
+function ScreenClub({ id }) {
+  const { state, go, dispatch, toast, ctx } = useApp();
+  const cl = CLUBS.find((c) => c.id === id);
+  if (!cl) return <EmptyState title="هذا النادي غير متاح" body="" />;
+  const act = getObj(cl.activity);
+  const com = COM[cl.community];
+  const joined = act ? state.plan.some((p) => p.obj === act.id && ["going", "registered", "confirmed", "active"].includes(p.state)) : false;
+  const next = act ? nextOccurrence(act) : null;
+  const threads = com ? contributionsIn(com.id, state).filter((k) => !k.parent).slice(0, 4) : [];
+
+  return (
+    <div className="scroll" style={{ paddingBottom: 96 }}>
+      <div style={{ position: "relative" }}>
+        <Photo kind={act?.scene || "garden"} seed={"clubhero" + cl.id} ratio="16 / 9" radius={0} scrim="strong" />
+        <button className="press" onClick={() => go({ back: true })} aria-label="رجوع"
+          style={{ position: "absolute", insetInlineStart: 14, top: 14, width: 36, height: 36, borderRadius: R.pill, background: "rgba(20,16,12,.44)", color: "#FFF8EA", display: "grid", placeItems: "center" }}><ChevronRight size={20} /></button>
+        <div style={{ position: "absolute", insetInlineStart: 16, bottom: 14, insetInlineEnd: 16 }}>
+          <Pill tone="#FFF8EA" bg="rgba(20,16,12,.45)" strong>نادٍ — مشاركة متكررة</Pill>
+          <div style={{ fontSize: 23, fontWeight: 800, color: "#FFF8EA", marginTop: 8 }}>{cl.name}</div>
+          <div style={{ fontSize: 12.5, color: "rgba(255,247,230,.85)", marginTop: 4 }}>{cl.cadence} — {ar(cl.members)} عضو</div>
         </div>
       </div>
 
-      <div style={{ marginTop: 22 }}>
-        <SectionTitle title="من النقاش إلى المشاركة" sub="أنشطة ومجموعات تبدأ من هذه المجتمعات" />
-        <div className="hs scroll" style={{ padding: "0 16px 4px" }}>{activityPrompts.map((x) => <TileCard key={x.o.id} x={x} w={190} />)}</div>
-      </div>
+      <div style={{ padding: "16px 16px 0" }}>
+        {cl.state !== "active" && (
+          <div style={{ padding: "12px 13px", borderRadius: R.box, background: `${T.warn}12`, marginBottom: 14 }}>
+            <div className="row" style={{ gap: 8 }}><AlertTriangle size={15} color={T.warn} />
+              <span style={{ fontSize: 13, fontWeight: 800, color: T.warn }}>{cl.state === "paused" ? "متوقف مؤقتًا" : "غير نشط حاليًا"}</span></div>
+            <div style={{ fontSize: 12.5, color: T.muted, marginTop: 6, lineHeight: 1.75 }}>
+              لا نرشّح هذه المجموعة ضمن الأنشطة النشطة. تبقى هنا كسجل حتى يعود نشاطها.
+            </div>
+          </div>
+        )}
 
-      <div style={{ marginTop: 22 }}>
-        <SectionTitle title="أحدث ما كُتب" sub={tab === "for-me" ? "من مجتمعاتك" : "من كل مجتمعات مكة"} />
-        <div style={{ padding: "0 16px" }}>
-          {feed.slice(0, 12).map((k) => <CommunitySnippet key={k.id} k={k} compact />)}
-          {!feed.length && <EmptyState icon={Users} title="لم تنضم لأي مجتمع بعد" body="انضم إلى مجتمع حيّك أو اهتمامك لتصلك معرفة محلية مفيدة." action="تصفّح المجتمعات" onAction={() => setTab("all")} />}
+        <div style={{ fontSize: 13.5, fontWeight: 800, marginBottom: 8 }}>ثلاثة أشياء مختلفة، مترابطة</div>
+        <div style={{ borderRadius: R.box, border: `1px solid ${T.line}`, overflow: "hidden", marginBottom: 16 }}>
+          {[
+            com && { icon: Users, label: "المجتمع", value: com.name, go: () => go({ s: "community", id: com.id }), note: "مساحة معرفة دائمة" },
+            { icon: RefreshCw, label: "النادي", value: cl.name, note: `مجموعة مشاركة متكررة — ${cl.cadence}` },
+            act && { icon: CalendarCheck, label: "النشاط", value: act.name, go: () => go({ s: "object", id: act.id }), note: next ? `اللقاء القادم ${whenAr(next)}` : "لا موعد محدد الآن" },
+          ].filter(Boolean).map((row, i) => (
+            <button key={i} className="press" onClick={row.go} disabled={!row.go}
+              style={{ display: "flex", width: "100%", gap: 11, textAlign: "start", padding: "13px", borderBottom: i < 2 ? `1px solid ${T.lineSoft}` : "none", background: T.paper, alignItems: "flex-start" }}>
+              <row.icon size={16} color={T.green} style={{ marginTop: 2 }} />
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 11.5, color: T.muted, fontWeight: 700 }}>{row.label}</div>
+                <div className="clamp1" style={{ fontSize: 14, fontWeight: 800, marginTop: 2 }}>{row.value}</div>
+                <div style={{ fontSize: 11.5, color: T.muted, marginTop: 3 }}>{row.note}</div>
+              </div>
+              {row.go && <ChevronLeft size={16} color={T.muted} style={{ alignSelf: "center" }} />}
+            </button>
+          ))}
+        </div>
+
+        {act && cl.state === "active" && (
+          <button className="press" onClick={() => { dispatch({ type: "join", obj: act.id }); toast("سُجّل حضورك في اللقاء القادم — الانضمام ليس حجزًا"); }}
+            style={{ width: "100%", padding: "13px", borderRadius: R.ctl, background: joined ? T.paper : T.deep, color: joined ? T.ink : "#F6EFE0", border: `1px solid ${joined ? T.line : T.deep}`, fontWeight: 800, fontSize: 14 }}>
+            {joined ? "أنت ضمن اللقاء القادم" : "انضم للقاء القادم"}
+          </button>
+        )}
+        <div style={{ fontSize: 11.5, color: T.muted, marginTop: 10, lineHeight: 1.8 }}>
+          قائمة المشاركين غير معلنة. ترى العدد فقط، ولا يُنشر موقع أحد.
         </div>
       </div>
 
-      <AskSheet open={composer} onClose={() => setComposer(false)} presetCommunity={mine[0]} />
+      {threads.length > 0 && (
+        <div style={{ marginTop: 22 }}>
+          <SectionTitle title="نقاش المجموعة" sub={`من ${com?.name}`} />
+          <div style={{ padding: "0 16px" }}>{threads.map((k) => <ContributionCard key={k.id} k={k} />)}</div>
+        </div>
+      )}
     </div>
   );
 }
@@ -3948,7 +4258,8 @@ function ScreenCommunityDetail({ id }) {
   const [tab, setTab] = useState("useful");
   if (!c) return <EmptyState title="هذا المجتمع غير متاح" body="قد يكون أُرشف." />;
   const joined = state.joinedCommunities.includes(c.id);
-  const items = contributionsIn(c.id).filter((k) => !k.parent);
+  const followed = state.followedCommunities.includes(c.id);
+  const items = contributionsIn(c.id, state).filter((k) => !k.parent);
   const list = tab === "questions" ? items.filter((k) => k.type === "question")
     : tab === "reports" ? items.filter((k) => ["experience_report", "recommendation", "update", "photo"].includes(k.type))
     : items.slice().sort((a, b) => (b.helpful + b.answers * 5) - (a.helpful + a.answers * 5));
@@ -3973,9 +4284,13 @@ function ScreenCommunityDetail({ id }) {
             style={{ flex: 1, padding: "11px", borderRadius: R.ctl, background: joined ? T.paper : T.deep, color: joined ? T.ink : "#F6EFE0", border: `1px solid ${joined ? T.line : T.deep}`, fontWeight: 800, fontSize: 13.5 }}>
             {joined ? "أنت عضو" : "انضم"}
           </button>
-          <button className="press" onClick={() => setComposer(true)}
-            style={{ flex: 1, padding: "11px", borderRadius: R.ctl, background: T.paper, border: `1px solid ${T.line}`, fontWeight: 800, fontSize: 13.5 }}>
-            اكتب مساهمة
+          <button className="press" onClick={() => { dispatch({ type: "follow_community", com: c.id }); toast(followed ? "لن نُظهر محتواه في رئيسيتك" : "تتابعه الآن — يظهر محتواه دون أن تكون عضوًا"); }}
+            style={{ padding: "11px 15px", borderRadius: R.ctl, background: T.paper, border: `1px solid ${followed ? T.green : T.line}`, color: followed ? T.green : T.ink, fontWeight: 800, fontSize: 13.5 }}>
+            {followed ? "تتابعه" : "تابِع"}
+          </button>
+          <button className="press" onClick={() => setComposer(true)} aria-label="اكتب مساهمة"
+            style={{ width: 44, padding: "11px 0", borderRadius: R.ctl, background: T.paper, border: `1px solid ${T.line}`, display: "grid", placeItems: "center" }}>
+            <Pencil size={16} />
           </button>
         </div>
         <div style={{ marginTop: 12, fontSize: 11.5, color: T.muted, lineHeight: 1.8 }}>
@@ -3990,7 +4305,7 @@ function ScreenCommunityDetail({ id }) {
             {clubs.map((cl) => {
               const act = getObj(cl.activity);
               return (
-                <button key={cl.id} className="lift" onClick={() => act && go({ s: "object", id: act.id })}
+                <button key={cl.id} className="lift" onClick={() => go({ s: "club", id: cl.id })}
                   style={{ display: "flex", width: "100%", gap: 12, textAlign: "start", padding: "12px 0", borderBottom: `1px solid ${T.lineSoft}` }}>
                   <div style={{ width: 52, flex: "0 0 52px" }}><Photo kind={act?.scene || "garden"} seed={cl.id} ratio="1 / 1" radius={R.box} scrim="none" mark={false} /></div>
                   <div style={{ flex: 1, minWidth: 0 }}>
@@ -4022,7 +4337,7 @@ function ScreenCommunityDetail({ id }) {
               style={{ fontSize: 13, fontWeight: 800, paddingBottom: 5, borderBottom: `2px solid ${tab === k ? T.green : "transparent"}`, color: tab === k ? T.ink : T.muted }}>{l}</button>
           ))}
         </div>
-        {list.length ? list.map((k) => <CommunitySnippet key={k.id} k={k} compact />)
+        {list.length ? list.map((k) => <ContributionCard key={k.id} k={k} />)
           : <EmptyState icon={MessageCircle} title="لا مساهمات هنا بعد" body="كن أول من يكتب — سؤال واحد يكفي لبدء النقاش." action="اكتب مساهمة" onAction={() => setComposer(true)} />}
       </div>
 
@@ -4046,11 +4361,11 @@ function ScreenCommunityDetail({ id }) {
 
 function ScreenThread({ id }) {
   const { state, dispatch, go, toast } = useApp();
-  const root = KB[id] || state.contributions.find((k) => k.id === id);
+  const root = findContribution(id, state);
   const [reply, setReply] = useState("");
   const [reportOpen, setReportOpen] = useState(false);
   if (!root) return <EmptyState title="لم نعد نجد هذه المساهمة" body="قد تكون أُزيلت." />;
-  const answers = [...answersFor(root.id), ...state.contributions.filter((k) => k.parent === root.id)];
+  const answers = answersFor(root.id, state);
   const o = root.obj ? getObj(root.obj) : null;
   const com = COM[root.communities[0]];
 
@@ -4061,7 +4376,7 @@ function ScreenThread({ id }) {
   };
 
   return (
-    <div className="scroll" style={{ paddingBottom: 110 }}>
+    <div className="scroll" style={{ display: "flex", flexDirection: "column", minHeight: "100%" }}>
       <div style={{ position: "sticky", top: 0, background: T.limestone, zIndex: 20, padding: "12px 16px 10px" }}>
         <div className="row" style={{ gap: 10 }}>
           <button className="press" onClick={() => go({ back: true })} aria-label="رجوع"><ChevronRight size={22} /></button>
@@ -4073,8 +4388,8 @@ function ScreenThread({ id }) {
         </div>
       </div>
 
-      <div style={{ padding: "6px 16px 0" }}>
-        <CommunitySnippet k={root} />
+      <div style={{ padding: "6px 16px 0", flex: 1 }}>
+        <ContributionCard k={root} onOpen={() => {}} />
         {o && (
           <button className="lift" onClick={() => go({ s: "object", id: o.id })}
             style={{ display: "flex", width: "100%", gap: 11, textAlign: "start", marginTop: 12, padding: "10px", borderRadius: R.box, background: T.paper, border: `1px solid ${T.line}` }}>
@@ -4088,6 +4403,15 @@ function ScreenThread({ id }) {
           </button>
         )}
 
+        {o && state.plan.some((p) => p.obj === o.id && p.state === "completed") && (
+          <div style={{ marginTop: 14, padding: "13px", borderRadius: R.box, background: T.sand }}>
+            <div style={{ fontSize: 13.5, fontWeight: 800 }}>أنت جرّبت هذا فعلًا</div>
+            <div style={{ fontSize: 12.5, color: T.muted, marginTop: 5, lineHeight: 1.8 }}>
+              إجابتك هنا أقوى من أي مصدر آخر، لأنها من زيارة حديثة.
+            </div>
+          </div>
+        )}
+
         <div style={{ marginTop: 18 }}>
           {answers.length === 0 && (
             <div style={{ padding: "18px 0", fontSize: 13.5, color: T.muted, lineHeight: 1.85 }}>
@@ -4096,16 +4420,9 @@ function ScreenThread({ id }) {
           )}
           {answers.map((k) => (
             <div key={k.id} style={{ borderInlineStart: `2px solid ${T.sand}`, paddingInlineStart: 12, marginBottom: 4 }}>
-              <CommunitySnippet k={k} />
-              <div className="row" style={{ gap: 12, paddingBottom: 12 }}>
-                <button className="press row" onClick={() => dispatch({ type: "helpful", k: k.id })}
-                  style={{ gap: 5, fontSize: 12, fontWeight: 800, color: state.helpful[k.id] ? T.ok : T.muted }}>
-                  <ThumbsUp size={13} />{state.helpful[k.id] ? "مفيدة" : "مفيدة؟"}
-                </button>
-                {k.providerReply && <span style={{ fontSize: 11.5, color: T.muted }}>ردّ مقدّم الخدمة أدناه</span>}
-              </div>
+              <ContributionCard k={k} onOpen={() => {}} />
               {k.providerReply && (
-                <div style={{ margin: "0 0 14px", padding: "11px 12px", borderRadius: R.box, background: T.sand }}>
+                <div style={{ margin: "-4px 0 14px", padding: "11px 12px", borderRadius: R.box, background: T.sand }}>
                   <div className="row" style={{ gap: 7, marginBottom: 5 }}>
                     <Store size={13} color="#54697E" /><span style={{ fontSize: 12, fontWeight: 800 }}>{k.providerReply.by}</span>
                     <span style={{ fontSize: 11, color: T.muted }}>— {ar(k.providerReply.days)} يوم</span>
@@ -4118,7 +4435,7 @@ function ScreenThread({ id }) {
         </div>
       </div>
 
-      <div style={{ position: "sticky", bottom: 0, zIndex: 30, padding: "12px 16px 14px", marginTop: 16, background: "linear-gradient(180deg, rgba(244,239,229,0), #F4EFE5 32%)" }}>
+      <div style={{ position: "sticky", bottom: 0, zIndex: 30, padding: "12px 16px 14px", marginTop: "auto", background: "linear-gradient(180deg, rgba(244,239,229,0), #F4EFE5 32%)" }}>
         <div className="row" style={{ gap: 8 }}>
           <input value={reply} onChange={(e) => setReply(e.target.value)} placeholder="اكتب إجابة من تجربتك" dir="rtl"
             style={{ flex: 1, background: T.paper, border: `1px solid ${T.line}`, borderRadius: R.ctl, padding: "11px 13px", fontSize: 13.5, outline: "none" }} />
@@ -4479,7 +4796,7 @@ function BottomNav({ tab, onTab, planCount }) {
   );
 }
 
-const TAB_OF = { home: "home", discover: "discover", community: "community", family: "community", thread: "community", plan: "plan" };
+const TAB_OF = { home: "home", discover: "discover", community: "community", family: "community", club: "community", thread: "community", plan: "plan" };
 
 export default function EyeMakkahApp() {
   const [state, dispatch] = useReducer(reducer, undefined, () => initialState());
@@ -4509,6 +4826,7 @@ export default function EyeMakkahApp() {
       case "discover": return <ScreenDiscover params={view} />;
       case "community": return view.id ? <ScreenCommunityDetail id={view.id} /> : <ScreenCommunity />;
       case "family": return <ScreenFamily id={view.id} />;
+      case "club": return <ScreenClub id={view.id} />;
       case "thread": return <ScreenThread id={view.id} />;
       case "plan": return <ScreenPlan />;
       case "object": return <ScreenObject id={view.id} />;
