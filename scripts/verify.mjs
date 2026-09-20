@@ -208,6 +208,37 @@ await step("home offers an assembled outing", async () => {
 });
 await shot("12-outing");
 
+await step("trust: conflicting hours are shown, not resolved silently", async () => {
+  await openByName("متحف برج الساعة");
+  const b = await appText();
+  if (!/توجد معلومات متعارضة/.test(b)) throw new Error("conflict not surfaced");
+  if (!/ننصح بالتأكد من المشغّل/.test(b)) throw new Error("confidence not reduced");
+  await page.getByText("اعرض المصادر المتعارضة", { exact: true }).click();
+  await page.waitForTimeout(500);
+  const b2 = await appText();
+  if (!/من مقدم الخدمة/.test(b2) || !/من المجتمع/.test(b2)) throw new Error("both source classes not shown");
+});
+await shot("13-conflict");
+
+await step("trust: a newer source resolves it everywhere", async () => {
+  await page.getByText("اطلب تحديثًا من المصدر", { exact: true }).click();
+  await page.waitForTimeout(600);
+  const b = await appText();
+  if (!/وصل تحديث أحدث من المشغّل/.test(b)) throw new Error("resolution not applied");
+});
+
+await step("expired content is archived, not promoted", async () => {
+  await page.getByLabel("إغلاق").first().click().catch(() => {});
+  await goTab("اكتشف");
+  const b = await appText();
+  if (/معرض الحرف السابق/.test(b)) throw new Error("ended event is being promoted");
+  await page.getByText(/الأرشيف —/).first().click();
+  await page.waitForTimeout(600);
+  const b2 = await appText();
+  if (!/انتهى|منتهٍ|غير نشط|متوقف مؤقتًا/.test(b2)) throw new Error("archive does not show ended content");
+});
+await shot("14-archive");
+
 console.log("\n──────── verification ────────");
 for (const [s, n] of results) console.log(`${s === "PASS" ? "✓" : "✗"} ${n}`);
 if (errors.length) { console.log("\nRUNTIME ERRORS:"); errors.slice(0, 12).forEach((e) => console.log("  " + e)); }

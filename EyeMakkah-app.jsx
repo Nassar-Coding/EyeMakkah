@@ -2306,6 +2306,7 @@ const initialState = (seed = {}) => ({
   blocked: [],
   notifications: [],
   removedInterests: [],
+  reviews: [],
   translated: {},
   lastDismissReason: null,
   ...seed,
@@ -2381,6 +2382,14 @@ function reducer(state, a) {
     }
     case "contribute": {
       const c = { ...a.contribution, id: `u${state.contributions.length + 1}`, at: new Date(t0), mine: true };
+      if (c.type === "correction" && c.obj) {
+        return {
+          ...state,
+          contributions: [c, ...state.contributions],
+          reviews: [{ id: `rv${(state.reviews || []).length + 1}`, obj: c.obj, body: c.body, at: new Date(t0), state: "pending" }, ...(state.reviews || [])],
+          log: logOf(state, "correction", c.obj, { type: c.type }),
+        };
+      }
       const notifications = a.expectAnswer
         ? [{ id: `n${state.notifications.length + 1}`, kind: "answer", k: c.id, obj: c.obj, at: new Date(t0 + 90000), read: false,
              title: "وصلتك إجابة على سؤالك", body: a.expectAnswer }, ...state.notifications]
@@ -2525,6 +2534,13 @@ function TrustChip({ state, small }) {
       <Icon size={small ? 11 : 12.5} strokeWidth={2.4} />{s.label}
     </span>
   );
+}
+
+function FreshnessChip({ o, small }) {
+  const { state } = useApp();
+  const tr = objectTrust(o, state.resolved);
+  if (!["conflicting", "possibly_stale"].includes(tr.state)) return null;
+  return <TrustChip state={tr.state} small={small} />;
 }
 
 function LifecycleChip({ o }) {
@@ -2695,6 +2711,7 @@ function RowCard({ x, showWhy = true, showDistance }) {
       <div style={{ flex: 1, minWidth: 0 }}>
         <div className="row" style={{ gap: 6, marginBottom: 4, flexWrap: "wrap" }}>
           <LifecycleChip o={o} />
+          <FreshnessChip o={o} small />
           <PlanStateChip o={o} />
         </div>
         <div className="clamp2" style={{ fontSize: 15.5, fontWeight: 800, lineHeight: 1.45 }}>{o.name}</div>
@@ -3246,7 +3263,9 @@ function ScreenDiscover({ params }) {
   const [intent, setIntent] = useState(params?.intent || null);
   const [page, setPage] = useState(1);
   const [filters, setFilters] = useState(false);
+  const [showArchive, setShowArchive] = useState(false);
   const activeCount = (cat ? 1 : 0) + (nb ? 1 : 0) + (intent ? 1 : 0);
+  const archive = useMemo(() => INVENTORY.filter((o) => !isPromotable(o)), []);
 
   useEffect(() => { if (params?.nb) setNb(params.nb); if (params?.cat) setCat(params.cat); if (params?.intent) setIntent(params.intent); }, [params]);
 
@@ -3357,6 +3376,19 @@ function ScreenDiscover({ params }) {
             </>
           )}
         </div>
+      ) : showArchive ? (
+        <div style={{ padding: "12px 16px 0" }}>
+          <div style={{ fontSize: 12.5, color: T.muted, lineHeight: 1.8, marginBottom: 12 }}>
+            محتوى انتهى أو خرج عن الصلاحية. يُحفظ كسجل ولا يظهر في الاكتشاف أو التوصيات.
+          </div>
+          {archive.length ? archive.map((o) => (
+            <div key={o.id} style={{ opacity: .72 }}><RowCard x={{ o }} showWhy={false} /></div>
+          )) : <EmptyState icon={Layers} title="الأرشيف فارغ" body="لا يوجد محتوى منتهٍ حاليًا." />}
+          <button className="press" onClick={() => setShowArchive(false)}
+            style={{ width: "100%", margin: "16px 0", padding: "12px", borderRadius: R.ctl, border: `1px solid ${T.line}`, background: T.paper, fontWeight: 800, fontSize: 13.5 }}>
+            رجوع إلى الاكتشاف
+          </button>
+        </div>
       ) : (
         <div style={{ paddingTop: 14 }}>
           {editorial.map((sec, i) => (
@@ -3374,6 +3406,13 @@ function ScreenDiscover({ params }) {
               )}
             </div>
           ))}
+          <div style={{ padding: "0 16px 6px" }}>
+            <button className="press" onClick={() => setShowArchive(true)}
+              style={{ width: "100%", padding: "12px", borderRadius: R.ctl, border: `1px solid ${T.line}`, background: T.paper, fontWeight: 800, fontSize: 13, color: T.muted }}>
+              <Layers size={14} style={{ verticalAlign: "-2px", marginInlineEnd: 6 }} />
+              الأرشيف — {countAr(archive.length, "عنصر", "عنصران", "عناصر")} انتهت أو خرجت عن الصلاحية
+            </button>
+          </div>
         </div>
       )}
     </div>
@@ -3652,8 +3691,13 @@ function ScreenObject({ id }) {
                     : trust.state === "expired" ? "نعرضه هنا كسجل، ولا يظهر ضمن ما هو متاح الآن."
                     : "تجاوزت بعض الحقول مدة التحديث المتوقعة."}
                 </div>
+                {trust.state === "conflicting" && (
+                  <div style={{ fontSize: 12.5, color: T.warn, marginTop: 7, fontWeight: 700, lineHeight: 1.75 }}>
+                    ننصح بالتأكد من المشغّل قبل الذهاب، خصوصًا إن كان الوقت ضيقًا.
+                  </div>
+                )}
                 <button className="press" onClick={() => setSourceField(trust.fields.find((f) => ["conflicting", "possibly_stale"].includes(f.state))?.field || trust.fields[0]?.field)}
-                  style={{ fontSize: 12.5, fontWeight: 800, color: T.warn, marginTop: 7 }}>اعرض المصادر</button>
+                  style={{ fontSize: 12.5, fontWeight: 800, color: T.warn, marginTop: 7 }}>اعرض المصادر المتعارضة</button>
               </div>
             </div>
           </div>
@@ -3892,6 +3936,7 @@ function SourceSheet({ o, field, onClose }) {
   const key = `${o.id}:${field}`;
   const canResolve = CONFLICT_RESOLUTIONS[key] && !state.resolved[key];
   const fields = uniq(o.claims.map((c) => c.field));
+  const pendingReviews = (state.reviews || []).filter((r) => r.obj === o.id && r.state === "pending");
 
   return (
     <Sheet open={!!field} onClose={onClose} title="المصدر والسياق" tall>
@@ -3918,6 +3963,28 @@ function SourceSheet({ o, field, onClose }) {
         </div>
       </div>
 
+      {ft.state === "conflicting" && (
+        <div style={{ display: "flex", gap: 9, marginBottom: 14 }}>
+          {ft.claims.slice().sort((a, b) => new Date(b.at) - new Date(a.at)).slice(0, 2).map((c) => (
+            <div key={c.id} style={{ flex: 1, padding: "11px", borderRadius: R.box, border: `1px solid ${SOURCE_CLASS[c.cls].tone}44`, background: T.paper }}>
+              <div style={{ fontSize: 11, fontWeight: 800, color: SOURCE_CLASS[c.cls].tone }}>{SOURCE_CLASS[c.cls].label}</div>
+              <div style={{ fontSize: 13, fontWeight: 700, marginTop: 6, lineHeight: 1.6 }}>{c.value}</div>
+              <div style={{ fontSize: 11, color: T.muted, marginTop: 6 }}>{agoAr(c.at)}</div>
+            </div>
+          ))}
+        </div>
+      )}
+      {pendingReviews.length > 0 && (
+        <div style={{ padding: "11px 12px", borderRadius: R.box, background: `${T.brass}12`, marginBottom: 14 }}>
+          <div className="row" style={{ gap: 7, marginBottom: 5 }}>
+            <Clock size={13} color={T.brass} /><span style={{ fontSize: 12.5, fontWeight: 800 }}>تصحيح بانتظار المراجعة</span>
+          </div>
+          <div style={{ fontSize: 12.5, color: T.muted, lineHeight: 1.75 }}>{pendingReviews[0].body}</div>
+          <div style={{ fontSize: 11, color: T.muted, marginTop: 6 }}>
+            سُجّل كمصدر مجتمعي بتاريخه. لا يغيّر معلومة أعلى سلطة حتى تراجعه الجهة المعنية.
+          </div>
+        </div>
+      )}
       {ft.claims.slice().sort((a, b) => new Date(b.at) - new Date(a.at)).map((c) => {
         const sc = SOURCE_CLASS[c.cls];
         const Icon = sc.icon;
@@ -4224,6 +4291,8 @@ function ScreenCommunity() {
   const { state, ctx, go, dispatch, toast } = useApp();
   const [tab, setTab] = useState("for-me");
   const [composer, setComposer] = useState(false);
+  const [showHeld, setShowHeld] = useState(false);
+  const heldItems = useMemo(() => CONTRIBUTIONS.filter((k) => k.flagged?.state === "held"), []);
   const mine = state.joinedCommunities;
   const following = state.followedCommunities;
   const relevant = (k) => k.communities.some((c) => mine.includes(c) || following.includes(c));
@@ -4378,6 +4447,27 @@ function ScreenCommunity() {
             <div style={{ marginTop: 14 }}>
               <SectionTitle title="تجارب وتوصيات" />
               <div style={{ padding: "0 16px" }}>{reports.map((k) => <ContributionCard key={k.id} k={k} />)}</div>
+            </div>
+          )}
+
+          {heldItems.length > 0 && (
+            <div style={{ margin: "6px 16px 18px" }}>
+              <button className="press row" onClick={() => setShowHeld(!showHeld)}
+                style={{ gap: 7, fontSize: 12.5, fontWeight: 800, color: T.muted }}>
+                <Shield size={13} />{countAr(heldItems.length, "مساهمة", "مساهمتان", "مساهمات")} قيد المراجعة {showHeld ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
+              </button>
+              {showHeld && heldItems.map((k) => (
+                <div key={k.id} style={{ marginTop: 10, padding: "12px", borderRadius: R.box, background: T.paper, border: `1px dashed ${T.warn}55` }}>
+                  <div className="row" style={{ gap: 7, marginBottom: 6 }}>
+                    <AlertTriangle size={13} color={T.warn} />
+                    <span style={{ fontSize: 12.5, fontWeight: 800, color: T.warn }}>{k.flagged.reason}</span>
+                  </div>
+                  <div className="clamp2" style={{ fontSize: 12.5, color: T.muted, lineHeight: 1.75 }}>{k.body}</div>
+                  <div style={{ fontSize: 11, color: T.muted, marginTop: 7, lineHeight: 1.7 }}>
+                    {k.flagged.note} تقلّ ظهوره حتى تكتمل المراجعة البشرية، ولصاحبه حق الاعتراض.
+                  </div>
+                </div>
+              ))}
             </div>
           )}
 
@@ -5059,7 +5149,34 @@ function ScreenProfile() {
           </>
         )}
 
-        <div style={{ margin: "24px 0 10px", padding: "13px", borderRadius: R.box, background: T.sand, fontSize: 12, color: T.muted, lineHeight: 1.9 }}>
+        <div style={{ fontSize: 13.5, fontWeight: 800, margin: "22px 0 8px" }}>السلامة والإشراف</div>
+        <div style={{ borderRadius: R.box, border: `1px solid ${T.line}`, overflow: "hidden", background: T.paper }}>
+          {[
+            { icon: Flag, label: "بلاغاتك", value: countAr(Object.keys(state.reported).length, "بلاغ", "بلاغان", "بلاغات"), note: "كل بلاغ يذهب لمراجعة بشرية، ولا يحذف المحتوى تلقائيًا" },
+            { icon: Ban, label: "حسابات محظورة", value: countAr(state.blocked.length, "حساب", "حسابان", "حسابات"), note: state.blocked.length ? state.blocked.join("، ") : "لا يظهر لك محتوى من تحظره" },
+            { icon: Pencil, label: "تصحيحات أرسلتها", value: countAr((state.reviews || []).length, "تصحيح", "تصحيحان", "تصحيحات"), note: "تُسجَّل كمصدر مجتمعي بتاريخها ولا تستبدل معلومة رسمية" },
+            { icon: Lock, label: "خصوصية الحضور", value: "غير معلنة", note: "لا نعرض قوائم المشاركين ولا مواقع المستخدمين لأحد" },
+          ].map((row, i, arr) => (
+            <div key={row.label} className="row" style={{ gap: 11, padding: "12px 13px", borderBottom: i < arr.length - 1 ? `1px solid ${T.lineSoft}` : "none", alignItems: "flex-start" }}>
+              <row.icon size={16} color={T.green} style={{ marginTop: 2 }} />
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div className="row" style={{ justifyContent: "space-between", gap: 8 }}>
+                  <span style={{ fontSize: 13.5, fontWeight: 700 }}>{row.label}</span>
+                  <span style={{ fontSize: 12.5, color: T.muted, fontWeight: 700 }}>{row.value}</span>
+                </div>
+                <div style={{ fontSize: 11.5, color: T.muted, marginTop: 4, lineHeight: 1.7 }}>{row.note}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div style={{ margin: "14px 0 10px", padding: "13px", borderRadius: R.box, background: T.limestone, fontSize: 11.5, color: T.muted, lineHeight: 1.9 }}>
+          <div style={{ fontWeight: 800, color: T.ink, marginBottom: 5 }}>ما لا نفعله</div>
+          لا نعرض مستخدمين قريبين منك، ولا نطابق بين الغرباء، ولا ننشر موقع أحد، ولا نستنتج
+          معلومات صحية أو دينية أو هوية من سلوكك، ولا نمنح شارة «موثوق» عامة بلا مصدر.
+        </div>
+
+        <div style={{ margin: "14px 0 10px", padding: "13px", borderRadius: R.box, background: T.sand, fontSize: 12, color: T.muted, lineHeight: 1.9 }}>
           <div style={{ fontWeight: 800, color: T.ink, marginBottom: 5 }}>عن هذا النموذج</div>
           EyeMakkah — مجتمع مكة الرقمي. نموذج منتج للسكان والزوار.
           الصور التعبيرية مرسومة داخل التطبيق، والقيم التشغيلية والمساهمات توضيحية ولا تمثل معلومات حيّة.
