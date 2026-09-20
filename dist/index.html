@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+<title>EyeMakkah — مجتمع مكة الرقمي</title>
+<meta name="description" content="EyeMakkah — نموذج تفاعلي لمجتمع مكة الرقمي: اكتشاف، مجتمع، مشاركة، وخطة شخصية للسكان والزوار."/>
+<meta name="robots" content="noindex, nofollow"/>
+<meta name="theme-color" content="#17463A"/>
+<meta property="og:title" content="EyeMakkah — مجتمع مكة الرقمي"/>
+<meta property="og:description" content="اكتشف مكة، تفاعل مع مجتمعها، وابنِ خطتك — نموذج تفاعلي."/>
+<meta property="og:type" content="website"/>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='24' fill='%2317463A'/><path d='M50 24 L74 48 L74 76 L26 76 L26 48 Z' fill='none' stroke='%23B8944A' stroke-width='6' stroke-linejoin='round'/><circle cx='50' cy='60' r='7' fill='%23B8944A'/></svg>"/>
+<style>
+  html,body{margin:0;padding:0;background:#EFE6D5;-webkit-font-smoothing:antialiased;}
+  #root{min-height:100vh;}
+  #boot{position:fixed;inset:0;display:grid;place-items:center;background:#EFE6D5;color:#17463A;
+        font-family:'Tajawal',system-ui,sans-serif;font-size:15px;letter-spacing:.04em;z-index:9999;transition:opacity .4s}
+</style>
+</head>
+<body>
+<div id="boot">EyeMakkah</div>
+<div id="root"></div>
+<script src="./app.js"></script>
+<script>
+  window.addEventListener('load',function(){
+    var b=document.getElementById('boot');
+    if(b){b.style.opacity='0';setTimeout(function(){b.remove();},420);}
+  });
+</script>
+</body>
+</html>
