@@ -46,37 +46,64 @@ const CSS = `
 
 .em *, .em *::before, .em *::after { box-sizing: border-box; }
 .em { font-family: ${T.ar}; color: ${T.ink}; -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; }
+.em[dir="ltr"] { font-family: ${T.en}; }
 .em .lat { font-family: ${T.en}; }
-.em button { font: inherit; color: inherit; cursor: pointer; background: none; border: none; padding: 0; }
+.em button { font: inherit; color: inherit; cursor: pointer; background: none; border: none; padding: 0; -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
 .em input, .em textarea, .em select { font: inherit; color: inherit; }
 .em ::-webkit-scrollbar { width: 0; height: 0; }
-.em .scroll { scrollbar-width: none; -ms-overflow-style: none; }
+.em .scroll { scrollbar-width: none; -ms-overflow-style: none; overscroll-behavior-y: contain; }
 .em .row { display: flex; align-items: center; }
+.em img, .em svg { max-width: 100%; }
+
+/* every screen is a phone screen: nothing may exceed the viewport inline size */
+.em .screen { width: 100%; max-width: 100%; overflow-x: clip; }
+.em .pad { padding-inline: 16px; }
+
+/* touch: no primary control smaller than a comfortable thumb */
 .em .press { transition: transform .16s cubic-bezier(.2,.8,.2,1), opacity .16s ease; }
-.em .press:active { transform: scale(.975); opacity: .9; }
+.em .press:active { transform: scale(.97); opacity: .9; }
 .em .lift { transition: transform .22s cubic-bezier(.2,.8,.2,1); }
-.em .lift:active { transform: scale(.99); }
-.em .hs { display: flex; gap: 12px; overflow-x: auto; scroll-snap-type: x proximity; -webkit-overflow-scrolling: touch; }
-.em .hs > * { scroll-snap-align: start; flex: 0 0 auto; }
+.em .lift:active { transform: scale(.985); }
+.em .tap { position: relative; }
+.em .tap::after { content: ""; position: absolute; inset: 50% 50% 50% 50%; width: 44px; height: 44px; transform: translate(50%, -50%); }
+.em[dir="ltr"] .tap::after { transform: translate(-50%, -50%); }
+
+/* horizontal rails — direction-agnostic, edge padding inside the scroller so the
+   last card can always be reached in both RTL and LTR */
+.em .rail {
+  display: flex; gap: 12px; overflow-x: auto; overflow-y: hidden;
+  padding-inline: 16px; padding-block-end: 4px;
+  scroll-snap-type: x proximity; scroll-padding-inline-start: 16px;
+  -webkit-overflow-scrolling: touch; touch-action: pan-x pan-y;
+  scrollbar-width: none; overscroll-behavior-x: contain;
+}
+.em .rail::-webkit-scrollbar { display: none; }
+.em .rail > * { scroll-snap-align: start; flex: 0 0 auto; }
+.em .rail::after { content: ""; flex: 0 0 4px; }
+
 .em .clamp1 { display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden; }
 .em .clamp2 { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .em .clamp3 { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
 .em .clamp4 { display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; }
+.em .break { overflow-wrap: anywhere; word-break: break-word; }
 
 @keyframes emUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
 @keyframes emIn { from { opacity: 0; } to { opacity: 1; } }
-@keyframes emSheet { from { transform: translateY(24px); opacity: .4; } to { transform: none; opacity: 1; } }
+@keyframes emSheet { from { transform: translateY(100%); } to { transform: none; } }
+@keyframes emScrim { from { opacity: 0; } to { opacity: 1; } }
 @keyframes emShimmer { 0% { background-position: 120% 0; } 100% { background-position: -120% 0; } }
-@keyframes emPulse { 0%,100% { opacity: .55; } 50% { opacity: 1; } }
 @keyframes emSpin { to { transform: rotate(360deg); } }
+@keyframes emPush { from { opacity: .4; transform: translateX(var(--push, 18px)); } to { opacity: 1; transform: none; } }
 .em .up { animation: emUp .34s cubic-bezier(.2,.8,.2,1) both; }
 .em .fade { animation: emIn .3s ease both; }
-.em .sheetIn { animation: emSheet .26s cubic-bezier(.2,.8,.2,1) both; }
+.em .sheetIn { animation: emSheet .3s cubic-bezier(.2,.9,.25,1) both; }
+.em .scrimIn { animation: emScrim .22s ease both; }
 .em .spin { animation: emSpin 1s linear infinite; }
+.em .push { animation: emPush .26s cubic-bezier(.2,.8,.2,1) both; }
 .em .shim { background: linear-gradient(90deg, ${T.sand} 25%, ${T.limestone} 50%, ${T.sand} 75%); background-size: 240% 100%; animation: emShimmer 1.4s linear infinite; }
 
 @media (prefers-reduced-motion: reduce) {
-  .em .up, .em .fade, .em .sheetIn, .em .shim, .em .spin { animation: none !important; }
+  .em .up, .em .fade, .em .sheetIn, .em .scrimIn, .em .shim, .em .spin, .em .push { animation: none !important; }
   .em .press, .em .lift { transition: none !important; }
 }
 `;
@@ -2658,7 +2685,8 @@ function SectionTitle({ title, sub, action, onAction, tone = T.ink }) {
         <div style={{ fontSize: 20, fontWeight: 800, color: tone, letterSpacing: "-.01em" }}>{title}</div>
         {sub && <div style={{ fontSize: 12.5, color: T.muted, marginTop: 3, lineHeight: 1.6 }}>{sub}</div>}
       </div>
-      {action && <button className="press" onClick={onAction} style={{ fontSize: 12.5, fontWeight: 800, color: T.green, whiteSpace: "nowrap" }}>{action}</button>}
+      {action && <button className="press" onClick={onAction}
+        style={{ fontSize: 12.5, fontWeight: 800, color: T.green, whiteSpace: "nowrap", minHeight: 36, paddingInline: 4 }}>{action}</button>}
     </div>
   );
 }
@@ -2705,22 +2733,33 @@ function Toast({ msg, onDone }) {
 }
 
 function Sheet({ open, onClose, title, children, tall }) {
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e) => { if (e.key === "Escape") onClose && onClose(); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [open, onClose]);
   if (!open) return null;
   return (
-    <div className="fade" style={{ position: "absolute", inset: 0, zIndex: 95, display: "flex", alignItems: "flex-end" }}>
-      <div onClick={onClose} style={{ position: "absolute", inset: 0, background: "rgba(20,16,12,.44)" }} />
-      <div className="sheetIn scroll" style={{
-        position: "relative", width: "100%", maxHeight: tall ? "88%" : "76%", overflowY: "auto",
-        background: T.paper, borderTopLeftRadius: 22, borderTopRightRadius: 22, boxShadow: "0 -18px 50px rgba(20,16,10,.26)",
+    <div style={{ position: "absolute", inset: 0, zIndex: 95, display: "flex", alignItems: "flex-end" }}>
+      <div className="scrimIn" onClick={onClose} style={{ position: "absolute", inset: 0, background: "rgba(20,16,12,.46)" }} />
+      <div className="sheetIn" style={{
+        position: "relative", width: "100%", maxHeight: tall ? "92%" : "80%", display: "flex", flexDirection: "column",
+        background: T.paper, borderTopLeftRadius: 24, borderTopRightRadius: 24, boxShadow: "0 -18px 50px rgba(20,16,10,.26)",
       }}>
-        <div style={{ position: "sticky", top: 0, background: T.paper, padding: "12px 16px 10px", zIndex: 2 }}>
-          <div style={{ width: 42, height: 4, borderRadius: 99, background: T.line, margin: "0 auto 12px" }} />
+        <div style={{ padding: "10px 16px 10px", flex: "0 0 auto" }}>
+          <div style={{ width: 40, height: 4.5, borderRadius: 99, background: T.line, margin: "0 auto 12px" }} />
           <div className="row" style={{ justifyContent: "space-between", gap: 10 }}>
-            <div style={{ fontSize: 17, fontWeight: 800 }}>{title}</div>
-            <button className="press" onClick={onClose} aria-label="إغلاق" style={{ color: T.muted }}><X size={19} /></button>
+            <div className="clamp1" style={{ fontSize: 17.5, fontWeight: 800 }}>{title}</div>
+            <button className="press tap" onClick={onClose} aria-label="إغلاق"
+              style={{ width: 32, height: 32, borderRadius: R.pill, display: "grid", placeItems: "center", background: T.limestone, color: T.muted, flex: "0 0 32px" }}>
+              <X size={17} />
+            </button>
           </div>
         </div>
-        <div style={{ padding: "0 16px 28px" }}>{children}</div>
+        <div className="scroll" style={{ padding: `0 16px calc(28px + env(safe-area-inset-bottom, 0px))`, overflowY: "auto", overflowX: "clip", flex: 1 }}>
+          {children}
+        </div>
       </div>
     </div>
   );
@@ -2794,7 +2833,7 @@ function SaveButton({ o, size = 18, onDark }) {
   const { state, dispatch, toast } = useApp();
   const on = !!state.saved[o.id];
   return (
-    <button className="press" aria-label={on ? "إزالة من المحفوظات" : "حفظ"}
+    <button className="press tap" aria-label={on ? "إزالة من المحفوظات" : "حفظ"}
       onClick={(e) => { e.stopPropagation(); dispatch({ type: "save", obj: o.id }); toast(on ? "أزلناه من المحفوظات" : "حُفظ — الحفظ لا يعني الحجز ولا الانضمام"); }}
       style={{
         width: size + 16, height: size + 16, borderRadius: R.pill, display: "grid", placeItems: "center",
@@ -2841,26 +2880,36 @@ function HeroCard({ x, kicker }) {
 }
 
 /* Editorial row — image beside text, the workhorse of Discover and Home lists. */
-function DismissButton({ o, onDone }) {
+function DismissButton({ o, onDark }) {
+  const { askDismiss } = useApp();
+  return (
+    <button className="press tap" aria-label="إخفاء" onClick={(e) => { e.stopPropagation(); askDismiss(o); }}
+      style={{
+        width: 26, height: 26, borderRadius: R.pill, display: "grid", placeItems: "center",
+        color: onDark ? "#FFF8EA" : T.muted,
+        background: onDark ? "rgba(20,16,12,.46)" : "transparent",
+        backdropFilter: onDark ? "blur(4px)" : undefined,
+      }}>
+      <X size={14} />
+    </button>
+  );
+}
+
+/* Rendered once by the shell so it always covers the phone, not a card. */
+function DismissSheet({ o, onClose }) {
   const { dispatch, toast, state } = useApp();
-  const [open, setOpen] = useState(false);
+  if (!o) return null;
   const count = state.dismissed[o.id] || 0;
   return (
-    <>
-      <button className="press" aria-label="إخفاء" onClick={(e) => { e.stopPropagation(); setOpen(true); }}
-        style={{ width: 30, height: 30, borderRadius: R.pill, display: "grid", placeItems: "center", color: T.muted }}>
-        <X size={15} />
-      </button>
-      <Sheet open={open} onClose={() => setOpen(false)} title="لماذا تخفيه؟">
-        <div style={{ fontSize: 13, color: T.muted, lineHeight: 1.8, marginBottom: 14 }}>
-          الإخفاء مرة واحدة يقلّل التكرار فقط — ولا نعتبره كرهًا دائمًا. يمكنك التراجع من «حسابي».
-        </div>
-        {["لا يناسبني الآن", "جرّبته من قبل", "بعيد عني", "لا تعجبني هذه الفئة", "يتكرر كثيرًا"].map((r) => (
-          <button key={r} className="press" onClick={() => { dispatch({ type: "dismiss", obj: o.id, reason: r }); setOpen(false); toast(count >= 1 ? "لن نعرضه مجددًا" : "قلّلنا ظهوره"); onDone && onDone(); }}
-            style={{ display: "block", width: "100%", textAlign: "start", padding: "13px 0", borderBottom: `1px solid ${T.lineSoft}`, fontSize: 14, fontWeight: 600 }}>{r}</button>
-        ))}
-      </Sheet>
-    </>
+    <Sheet open={!!o} onClose={onClose} title="لماذا تخفيه؟">
+      <div style={{ fontSize: 13, color: T.muted, lineHeight: 1.8, marginBottom: 14 }}>
+        الإخفاء مرة واحدة يقلّل التكرار فقط — ولا نعتبره كرهًا دائمًا. يمكنك التراجع من «حسابي».
+      </div>
+      {["لا يناسبني الآن", "جرّبته من قبل", "بعيد عني", "لا تعجبني هذه الفئة", "يتكرر كثيرًا"].map((r) => (
+        <button key={r} className="press" onClick={() => { dispatch({ type: "dismiss", obj: o.id, reason: r }); onClose(); toast(count >= 1 ? "لن نعرضه مجددًا" : "قلّلنا ظهوره"); }}
+          style={{ display: "block", width: "100%", textAlign: "start", padding: "14px 0", minHeight: 48, borderBottom: `1px solid ${T.lineSoft}`, fontSize: 14.5, fontWeight: 600 }}>{r}</button>
+      ))}
+    </Sheet>
   );
 }
 
@@ -2869,9 +2918,16 @@ function RowCard({ x, showWhy = true, showDistance, dismissible }) {
   const o = x.o || x;
   return (
     <div style={{ display: "flex", gap: 12, width: "100%", padding: "12px 0", borderBottom: `1px solid ${T.lineSoft}` }}>
-      <button className="lift" onClick={() => go({ s: "object", id: o.id })} style={{ width: 104, flex: "0 0 104px" }}>
-        <Photo kind={o.scene} seed={o.id} photo={o.photo} ratio="1 / 1" radius={R.box} scrim="none" />
-      </button>
+      <div style={{ width: 104, flex: "0 0 104px", position: "relative" }}>
+        <button className="lift" onClick={() => go({ s: "object", id: o.id })} style={{ display: "block", width: "100%" }}>
+          <Photo kind={o.scene} seed={o.id} photo={o.photo} ratio="1 / 1" radius={R.box} scrim="none" />
+        </button>
+        {dismissible && (
+          <div style={{ position: "absolute", top: 5, insetInlineStart: 5 }}>
+            <DismissButton o={o} onDark />
+          </div>
+        )}
+      </div>
       <button className="lift" onClick={() => go({ s: "object", id: o.id })} style={{ flex: 1, minWidth: 0, textAlign: "start" }}>
         <div className="row" style={{ gap: 6, marginBottom: 4, flexWrap: "wrap" }}>
           <LifecycleChip o={o} />
@@ -2883,9 +2939,8 @@ function RowCard({ x, showWhy = true, showDistance, dismissible }) {
         <div style={{ marginTop: 5 }}><MetaLine o={o} showDistance={showDistance} /></div>
         {showWhy && x.why?.length ? <div className="clamp1" style={{ fontSize: 11.5, color: T.ok, fontWeight: 700, marginTop: 5 }}>{x.why[0]}</div> : null}
       </button>
-      <div style={{ alignSelf: "center", display: "flex", flexDirection: "column", gap: 2, alignItems: "center" }}>
+      <div style={{ alignSelf: "center" }}>
         <SaveButton o={o} size={16} />
-        {dismissible && <DismissButton o={o} />}
       </div>
     </div>
   );
@@ -3089,7 +3144,7 @@ function CompletionSheet({ o, open, onClose }) {
           <div style={{ marginTop: 20 }}>
             <div style={{ fontSize: 13.5, fontWeight: 800, marginBottom: 4 }}>خطوة تالية تناسبك</div>
             <div style={{ fontSize: 12, color: T.muted, marginBottom: 10 }}>لن نعرض عليك نفس التجربة مرة أخرى.</div>
-            <div className="hs scroll" style={{ gap: 12 }}>
+            <div className="rail scroll" style={{ gap: 12, marginInline: -16 }}>
               {next.map((x) => <TileCard key={x.o.id} x={x} w={172} />)}
             </div>
           </div>
@@ -3228,7 +3283,8 @@ function CommunitySnippet({ k, compact }) {
         </button>
       )}
       <div className="row" style={{ gap: 10, marginTop: 9, flexWrap: "wrap" }}>
-        {o && <button className="press" onClick={() => go({ s: "object", id: o.id })} style={{ fontSize: 11.5, fontWeight: 800, color: T.clay }}>↳ {o.name}</button>}
+        {o && <button className="press" onClick={() => go({ s: "object", id: o.id })}
+          style={{ fontSize: 11.5, fontWeight: 800, color: T.clay, minHeight: 32, paddingInline: 2, textAlign: "start" }}>↳ {o.name}</button>}
         <span style={{ fontSize: 11.5, color: T.muted, fontWeight: 600 }}>{ar(k.helpful + (state.helpful[k.id] ? 1 : 0))} وجدوها مفيدة</span>
         {k.answers > 0 && <span style={{ fontSize: 11.5, color: T.muted, fontWeight: 600 }}>{countAr(k.answers, "إجابة واحدة", "إجابتان", "إجابات", "إجابة")}</span>}
       </div>
@@ -3269,9 +3325,9 @@ function ScreenHome() {
   const unread = allNotifications(state).filter((n) => !n.read).length;
 
   return (
-    <div className="scroll" style={{ paddingBottom: 96 }}>
+    <div className="screen scroll" style={{ paddingBottom: 96 }}>
       {/* header */}
-      <div style={{ padding: "14px 16px 12px" }}>
+      <div style={{ padding: "14px 16px 12px", paddingTop: "calc(14px + var(--safe-top))" }}>
         <div className="row" style={{ justifyContent: "space-between", gap: 10 }}>
           <div style={{ minWidth: 0 }}>
             <div style={{ fontSize: 12, color: T.muted, fontWeight: 700 }}>{greeting(p)}</div>
@@ -3303,22 +3359,17 @@ function ScreenHome() {
       <DegradedBanner />
 
       {!p.locationGranted && (
-        <div style={{ margin: "0 16px 16px", padding: "12px 14px", background: T.sand, borderRadius: R.box }}>
-          <div className="row" style={{ gap: 9, alignItems: "flex-start" }}>
-            <MapPin size={16} color={T.green} style={{ marginTop: 2 }} />
-            <div style={{ flex: 1 }}>
-              <div style={{ fontSize: 13, fontWeight: 800 }}>نعرض الآن نتائج {NB[p.nb]?.name}</div>
-              <div style={{ fontSize: 12, color: T.muted, marginTop: 3, lineHeight: 1.7 }}>تفعيل الموقع يجعل «قريب منك» دقيقًا. يعمل التطبيق بدونه أيضًا.</div>
-            </div>
-            <button className="press" onClick={() => dispatch({ type: "profile", patch: { locationGranted: true } })}
-              style={{ fontSize: 12, fontWeight: 800, color: T.green, whiteSpace: "nowrap" }}>فعّل الموقع</button>
-          </div>
-        </div>
+        <button className="press row" onClick={() => dispatch({ type: "profile", patch: { locationGranted: true } })}
+          style={{ width: "calc(100% - 32px)", margin: "0 16px 16px", padding: "10px 12px", background: T.sand, borderRadius: R.pill, gap: 8, textAlign: "start", minHeight: 44 }}>
+          <MapPin size={15} color={T.green} />
+          <span className="clamp1" style={{ flex: 1, fontSize: 12.5, fontWeight: 700 }}>نتائج {NB[p.nb]?.name} — فعّل الموقع لنتائج أدق</span>
+          <ChevronLeft size={15} color={T.green} />
+        </button>
       )}
 
       <div style={{ padding: "0 16px 18px" }}>
         <div style={{ fontSize: 12.5, fontWeight: 800, marginBottom: 8 }}>كم معك وقت الآن؟</div>
-        <div className="hs scroll" style={{ gap: 8 }}>
+        <div className="rail scroll" style={{ gap: 8, marginInline: -16 }}>
           {[[60, "ساعة"], [120, "ساعتان"], [240, "المساء كله"], [null, "غير محدد"]].map(([v, l]) => (
             <Chip key={String(v)} active={p.timeAvailable === v} onClick={() => dispatch({ type: "profile", patch: { timeAvailable: v } })}>{l}</Chip>
           ))}
@@ -3345,7 +3396,7 @@ function HomeModule({ m, index }) {
           </div>
         );
       case "scroller":
-        return <div className="hs scroll" style={{ padding: "0 16px 4px" }}>{m.items.map((x) => <TileCard key={x.o.id} x={x} />)}</div>;
+        return <div className="rail scroll">{m.items.map((x) => <TileCard key={x.o.id} x={x} />)}</div>;
       case "rows":
         return <div style={{ padding: "0 16px" }}>{m.items.map((x) => <RowCard key={x.o.id} x={x} showDistance dismissible />)}</div>;
       case "hero+rows":
@@ -3384,7 +3435,7 @@ function HomeModule({ m, index }) {
         return <OutingsRow items={m.items} />;
       case "hoods":
         return (
-          <div className="hs scroll" style={{ padding: "0 16px 4px" }}>
+          <div className="rail scroll">
             {NEIGHBORHOODS.filter((n) => n.id !== "haram-area").slice(0, 10).map((n) => (
               <button key={n.id} className="lift" onClick={() => go({ s: "discover", nb: n.id })} style={{ width: 150, textAlign: "start" }}>
                 <Photo kind={["alley", "market", "garden", "skyline"][hash(n.id) % 4]} seed={"nb" + n.id} ratio="4 / 3" radius={R.media} scrim="strong" mark={false}>
@@ -3414,7 +3465,7 @@ function OutingsRow({ items }) {
   const [open, setOpen] = useState(null);
   return (
     <>
-      <div className="hs scroll" style={{ padding: "0 16px 4px" }}>
+      <div className="rail scroll">
         {items.map((out) => <OutingCard key={out.id} outing={out} onOpen={() => setOpen(out)} />)}
       </div>
       <OutingSheet outing={open} open={!!open} onClose={() => setOpen(null)} />
@@ -3509,8 +3560,8 @@ function ScreenDiscover({ params }) {
   }, [ctx]);
 
   return (
-    <div className="scroll" style={{ paddingBottom: 96 }}>
-      <div style={{ position: "sticky", top: 0, zIndex: 20, background: T.limestone, paddingTop: 12, boxShadow: `0 8px 12px -12px ${T.ink}` }}>
+    <div className="screen scroll" style={{ paddingBottom: 96 }}>
+      <div style={{ position: "sticky", top: 0, zIndex: 20, background: "rgba(244,239,229,.92)", backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)", paddingTop: "calc(12px + var(--safe-top))", boxShadow: `0 8px 12px -12px ${T.ink}` }}>
         <div className="row" style={{ gap: 9, padding: "0 16px 10px" }}>
           <button className="press row" onClick={() => go({ s: "search" })}
             style={{ flex: 1, gap: 9, background: T.paper, border: `1px solid ${T.line}`, borderRadius: R.ctl, padding: "10px 12px", color: T.muted }}>
@@ -3526,7 +3577,7 @@ function ScreenDiscover({ params }) {
             {mode === "map" ? <List size={17} /> : <MapIcon size={17} />}
           </button>
         </div>
-        <div className="hs scroll" style={{ padding: "0 16px 10px", gap: 8 }}>
+        <div className="rail scroll" style={{ paddingBlockEnd: 10, gap: 8 }}>
           {INTENTS.map((i) => <Chip key={i.id} active={intent === i.id} onClick={() => { setIntent(intent === i.id ? null : i.id); setPage(1); }}>{i.label}</Chip>)}
         </div>
         {(cat || nb) && (
@@ -3607,7 +3658,7 @@ function ScreenDiscover({ params }) {
               ) : sec.kind === "rows" ? (
                 <div style={{ padding: "0 16px" }}>{sec.items.map((x) => <RowCard key={x.o.id} x={x} />)}</div>
               ) : (
-                <div className="hs scroll" style={{ padding: "0 16px 4px" }}>{sec.items.map((x) => <TileCard key={x.o.id} x={x} />)}</div>
+                <div className="rail scroll">{sec.items.map((x) => <TileCard key={x.o.id} x={x} />)}</div>
               )}
             </div>
           ))}
@@ -3723,8 +3774,8 @@ function ScreenSearch() {
   const empty = q.trim() && !typing && !res.objects.length && !res.communities.length && !res.contributions.length;
 
   return (
-    <div className="scroll" style={{ paddingBottom: 96 }}>
-      <div style={{ position: "sticky", top: 0, background: T.limestone, zIndex: 20, padding: "12px 16px 10px" }}>
+    <div className="screen scroll" style={{ paddingBottom: 96 }}>
+      <div style={{ position: "sticky", top: 0, background: "rgba(244,239,229,.92)", backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)", zIndex: 20, padding: "12px 16px 10px", paddingTop: "calc(12px + var(--safe-top))" }}>
         <div className="row" style={{ gap: 9 }}>
           <button className="press" onClick={() => go({ back: true })} aria-label="رجوع" style={{ color: T.ink }}><ChevronRight size={22} /></button>
           <div className="row" style={{ flex: 1, gap: 8, background: T.paper, border: `1px solid ${T.line}`, borderRadius: R.ctl, padding: "9px 12px" }}>
@@ -3847,15 +3898,15 @@ function ScreenObject({ id }) {
   }, [o.id, ctx]);
 
   return (
-    <div className="scroll" style={{ display: "flex", flexDirection: "column", minHeight: "100%" }}>
+    <div className="screen scroll" style={{ display: "flex", flexDirection: "column", minHeight: "100%" }}>
       {/* A — identity / desirability */}
       <div style={{ position: "relative" }}>
         <Photo kind={o.scene} seed={o.id} photo={o.photo} ratio="4 / 3" radius={0} scrim="strong" />
         <button className="press" onClick={() => go({ back: true })} aria-label="رجوع"
-          style={{ position: "absolute", insetInlineStart: 14, top: 14, width: 36, height: 36, borderRadius: R.pill, background: "rgba(20,16,12,.44)", color: "#FFF8EA", display: "grid", placeItems: "center", backdropFilter: "blur(4px)" }}>
+          style={{ position: "absolute", insetInlineStart: 14, top: "calc(14px + var(--safe-top))", width: 40, height: 40, borderRadius: R.pill, background: "rgba(20,16,12,.46)", color: "#FFF8EA", display: "grid", placeItems: "center", backdropFilter: "blur(6px)" }}>
           <ChevronRight size={20} />
         </button>
-        <div style={{ position: "absolute", insetInlineEnd: 14, top: 14 }}><SaveButton o={o} onDark /></div>
+        <div style={{ position: "absolute", insetInlineEnd: 14, top: "calc(14px + var(--safe-top))" }}><SaveButton o={o} onDark /></div>
         <div style={{ position: "absolute", insetInlineStart: 16, insetInlineEnd: 16, bottom: 14 }}>
           <div className="row" style={{ gap: 6, marginBottom: 8, flexWrap: "wrap" }}>
             <Pill tone="#FFF8EA" bg="rgba(20,16,12,.42)" strong>{o.typeLabel}</Pill>
@@ -3882,7 +3933,7 @@ function ScreenObject({ id }) {
           الصورة: {REAL_PHOTOS[o.photo].credit}
         </div>
       )}
-      <div style={{ padding: "14px 16px 0" }}>
+      <div style={{ padding: "14px 16px 0", paddingTop: "calc(14px + var(--safe-top))" }}>
         {o.tagline && <div style={{ fontSize: 15.5, fontWeight: 700, lineHeight: 1.65, marginBottom: 8 }}>{o.tagline}</div>}
         <div style={{ fontSize: 14.5, lineHeight: 1.95, color: T.ink }}>{o.about}</div>
 
@@ -3977,7 +4028,7 @@ function ScreenObject({ id }) {
           </div>
         )}
         {cs.length > 0 && (
-          <div className="hs scroll" style={{ gap: 8, marginTop: 12 }}>
+          <div className="rail scroll" style={{ gap: 8, marginTop: 12, marginInline: -16 }}>
             {cs.map((c) => <Chip key={c} icon={Users} onClick={() => go({ s: "community", id: c })}>{COM[c].name}</Chip>)}
           </div>
         )}
@@ -4001,7 +4052,7 @@ function ScreenObject({ id }) {
       {/* G — what next */}
       <div style={{ padding: "24px 0 0" }}>
         <SectionTitle title="وبعدها؟" sub={`خطوات قريبة من ${NB[o.neighborhood]?.name || "الموقع"}`} />
-        <div className="hs scroll" style={{ padding: "0 16px 4px" }}>{whatNext.map((x) => <TileCard key={x.o.id} x={x} w={176} />)}</div>
+        <div className="rail scroll">{whatNext.map((x) => <TileCard key={x.o.id} x={x} w={176} />)}</div>
       </div>
 
       {linked && (
@@ -4159,7 +4210,7 @@ function SourceSheet({ o, field, onClose }) {
     <Sheet open={!!field} onClose={onClose} title="المصدر والسياق" tall>
       <div style={{ marginBottom: 14 }}>
         <div style={{ fontSize: 13, color: T.muted, marginBottom: 8 }}>{o.name}</div>
-        <div className="hs scroll" style={{ gap: 7 }}>
+        <div className="rail scroll" style={{ gap: 7, marginInline: -16 }}>
           {fields.map((f) => (
             <Chip key={f} active={f === field} onClick={() => { const el = document.getElementById("srcfield-" + hash(f)); el?.scrollIntoView({ behavior: "smooth", block: "center" }); }}>{f === "identity" ? "التعريف" : f}</Chip>
           ))}
@@ -4386,7 +4437,7 @@ function AskSheet({ o: objProp, open, onClose, presetCommunity, presetObject }) 
           </div>
         </div>
       )}
-      <div className="hs scroll" style={{ gap: 7, marginBottom: 14 }}>
+      <div className="rail scroll" style={{ gap: 7, marginBottom: 14, marginInline: -16 }}>
         {TYPES.map((t) => <Chip key={t.id} icon={t.icon} active={type === t.id} onClick={() => setType(t.id)}>{t.label}</Chip>)}
       </div>
       <textarea value={text} onChange={(e) => setText(e.target.value)} dir="rtl" rows={5}
@@ -4395,7 +4446,7 @@ function AskSheet({ o: objProp, open, onClose, presetCommunity, presetObject }) 
 
       <div style={{ marginTop: 14 }}>
         <div style={{ fontSize: 12.5, fontWeight: 800, marginBottom: 8 }}>ينشر في</div>
-        <div className="hs scroll" style={{ gap: 7 }}>
+        <div className="rail scroll" style={{ gap: 7, marginInline: -16 }}>
           {suggested.map((c) => <Chip key={c.id} active={target === c.id} onClick={() => setTarget(c.id)}>{c.name}</Chip>)}
         </div>
       </div>
@@ -4461,7 +4512,8 @@ function ContributionCard({ k, onOpen }) {
           </div>
           <div style={{ fontSize: 11, color: T.muted, marginTop: 1 }}>{k.author.role} — {agoAr(k.at)}</div>
         </div>
-        {com && <button className="press" onClick={() => go({ s: "community", id: com.id })} style={{ fontSize: 11, fontWeight: 800, color: T.green, whiteSpace: "nowrap" }}>{com.name}</button>}
+        {com && <button className="press" onClick={() => go({ s: "community", id: com.id })}
+          style={{ fontSize: 11, fontWeight: 800, color: T.green, whiteSpace: "nowrap", minHeight: 32, paddingInline: 3 }}>{com.name}</button>}
       </div>
       <button className="press" onClick={() => (onOpen ? onOpen() : go({ s: "thread", id: k.parent || k.id }))} style={{ textAlign: "start", width: "100%" }}>
         <div className="clamp4" style={{ fontSize: 14, lineHeight: 1.85, fontWeight: k.type === "question" ? 700 : 500 }}>
@@ -4493,9 +4545,11 @@ function ContributionCard({ k, onOpen }) {
         </button>
       )}
       <div className="row" style={{ gap: 12, marginTop: 10, flexWrap: "wrap" }}>
-        {o && <button className="press" onClick={() => go({ s: "object", id: o.id })} style={{ fontSize: 11.5, fontWeight: 800, color: T.clay }}>↳ {o.name}</button>}
-        <button className="press row" onClick={() => dispatch({ type: "helpful", k: k.id })} style={{ gap: 4, fontSize: 11.5, fontWeight: 700, color: state.helpful[k.id] ? T.ok : T.muted }}>
-          <ThumbsUp size={12} />{ar(helpful)}
+        {o && <button className="press" onClick={() => go({ s: "object", id: o.id })}
+          style={{ fontSize: 11.5, fontWeight: 800, color: T.clay, minHeight: 32, paddingInline: 2, textAlign: "start" }}>↳ {o.name}</button>}
+        <button className="press row tap" onClick={() => dispatch({ type: "helpful", k: k.id })}
+          style={{ gap: 5, fontSize: 12, fontWeight: 700, minHeight: 32, paddingInline: 2, color: state.helpful[k.id] ? T.ok : T.muted }}>
+          <ThumbsUp size={13} />{ar(helpful)}
         </button>
         {k.answers > 0 && <span style={{ fontSize: 11.5, color: T.muted, fontWeight: 600 }}>{countAr(k.answers, "إجابة واحدة", "إجابتان", "إجابات", "إجابة")}</span>}
         {k.type === "question" && k.answers === 0 && <Pill tone={T.brass} size={10.5}>بلا إجابة</Pill>}
@@ -4543,8 +4597,8 @@ function ScreenCommunity() {
     }).sort((a, b) => b.s - a.s).slice(0, 4).map((x) => x.c), [mine, state.profile.nb, state.profile.mode, ctx.interests]);
 
   return (
-    <div className="scroll" style={{ paddingBottom: 96 }}>
-      <div style={{ position: "sticky", top: 0, background: T.limestone, zIndex: 20, padding: "14px 16px 10px" }}>
+    <div className="screen scroll" style={{ paddingBottom: 96 }}>
+      <div style={{ position: "sticky", top: 0, background: "rgba(244,239,229,.92)", backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)", zIndex: 20, padding: "14px 16px 10px", paddingTop: "calc(14px + var(--safe-top))" }}>
         <div className="row" style={{ justifyContent: "space-between" }}>
           <div>
             <div style={{ fontSize: 21, fontWeight: 800, letterSpacing: "-.02em" }}>المجتمع</div>
@@ -4558,7 +4612,7 @@ function ScreenCommunity() {
         <div className="row" style={{ gap: 14, marginTop: 12 }}>
           {[["for-me", "لك"], ["all", "كل المجتمعات"], ["browse", "تصفّح"]].map(([id, label]) => (
             <button key={id} className="press" onClick={() => setTab(id)}
-              style={{ fontSize: 13.5, fontWeight: 800, paddingBottom: 6, borderBottom: `2px solid ${tab === id ? T.green : "transparent"}`, color: tab === id ? T.ink : T.muted }}>
+              style={{ fontSize: 13.5, fontWeight: 800, padding: "10px 2px 8px", minHeight: 40, borderBottom: `2px solid ${tab === id ? T.green : "transparent"}`, color: tab === id ? T.ink : T.muted }}>
               {label}
             </button>
           ))}
@@ -4591,7 +4645,7 @@ function ScreenCommunity() {
             </div>
           )}
 
-          <div className="hs scroll" style={{ padding: "12px 16px 6px", gap: 10 }}>
+          <div className="rail scroll" style={{ paddingBlockStart: 12, gap: 10 }}>
             {FAMILIES.map((f) => (
               <button key={f.id} className="lift" onClick={() => go({ s: "family", id: f.id })} style={{ width: 132, textAlign: "start" }}>
                 <Photo kind={f.scene} seed={"fam" + f.id} ratio="4 / 3" radius={R.media} scrim="strong">
@@ -4621,7 +4675,7 @@ function ScreenCommunity() {
           {myClubs.length > 0 && (
             <div style={{ marginTop: 14 }}>
               <SectionTitle title="أنديتك ومجموعاتك" sub="مشاركة تتكرر — لا زيارة واحدة" />
-              <div className="hs scroll" style={{ padding: "0 16px 4px" }}>
+              <div className="rail scroll">
                 {myClubs.map((cl) => <ClubTile key={cl.id} cl={cl} />)}
               </div>
             </div>
@@ -4629,13 +4683,13 @@ function ScreenCommunity() {
 
           <div style={{ marginTop: 22 }}>
             <SectionTitle title="من النقاش إلى المشاركة" sub="أنشطة تبدأ من هذه المجتمعات ويمكنك الانضمام إليها" />
-            <div className="hs scroll" style={{ padding: "0 16px 4px" }}>{activityPrompts.map((x) => <TileCard key={x.o.id} x={x} w={190} />)}</div>
+            <div className="rail scroll">{activityPrompts.map((x) => <TileCard key={x.o.id} x={x} w={190} />)}</div>
           </div>
 
           {photos.length > 0 && (
             <div style={{ marginTop: 22 }}>
               <SectionTitle title="صور من المجتمع" sub="مما شاركه الناس مؤخرًا" />
-              <div className="hs scroll" style={{ padding: "0 16px 4px" }}>
+              <div className="rail scroll">
                 {photos.map((k) => {
                   const o = k.obj ? getObj(k.obj) : null;
                   return (
@@ -4751,11 +4805,11 @@ function ScreenClub({ id }) {
   const threads = com ? contributionsIn(com.id, state).filter((k) => !k.parent).slice(0, 4) : [];
 
   return (
-    <div className="scroll" style={{ paddingBottom: 96 }}>
+    <div className="screen scroll" style={{ paddingBottom: 96 }}>
       <div style={{ position: "relative" }}>
         <Photo kind={act?.scene || "garden"} seed={"clubhero" + cl.id} ratio="16 / 9" radius={0} scrim="strong" />
         <button className="press" onClick={() => go({ back: true })} aria-label="رجوع"
-          style={{ position: "absolute", insetInlineStart: 14, top: 14, width: 36, height: 36, borderRadius: R.pill, background: "rgba(20,16,12,.44)", color: "#FFF8EA", display: "grid", placeItems: "center" }}><ChevronRight size={20} /></button>
+          style={{ position: "absolute", insetInlineStart: 14, top: "calc(14px + var(--safe-top))", width: 40, height: 40, borderRadius: R.pill, background: "rgba(20,16,12,.46)", color: "#FFF8EA", display: "grid", placeItems: "center", backdropFilter: "blur(6px)" }}><ChevronRight size={20} /></button>
         <div style={{ position: "absolute", insetInlineStart: 16, bottom: 14, insetInlineEnd: 16 }}>
           <Pill tone="#FFF8EA" bg="rgba(20,16,12,.45)" strong>نادٍ — مشاركة متكررة</Pill>
           <div style={{ fontSize: 23, fontWeight: 800, color: "#FFF8EA", marginTop: 8 }}>{cl.name}</div>
@@ -4821,10 +4875,10 @@ function ScreenFamily({ id }) {
   const subs = subCommunities(id);
   if (!f) return <EmptyState title="غير موجود" body="" />;
   return (
-    <div className="scroll" style={{ paddingBottom: 96 }}>
+    <div className="screen scroll" style={{ paddingBottom: 96 }}>
       <div style={{ position: "relative" }}>
         <Photo kind={f.scene} seed={"famhero" + f.id} ratio="16 / 9" radius={0} scrim="strong" mark={false} />
-        <button className="press" onClick={() => go({ back: true })} style={{ position: "absolute", insetInlineStart: 14, top: 14, width: 36, height: 36, borderRadius: R.pill, background: "rgba(20,16,12,.44)", color: "#FFF8EA", display: "grid", placeItems: "center" }}><ChevronRight size={20} /></button>
+        <button className="press" onClick={() => go({ back: true })} style={{ position: "absolute", insetInlineStart: 14, top: "calc(14px + var(--safe-top))", width: 40, height: 40, borderRadius: R.pill, background: "rgba(20,16,12,.46)", color: "#FFF8EA", display: "grid", placeItems: "center", backdropFilter: "blur(6px)" }}><ChevronRight size={20} /></button>
         <div style={{ position: "absolute", insetInlineStart: 16, bottom: 14, insetInlineEnd: 16 }}>
           <div style={{ fontSize: 23, fontWeight: 800, color: "#FFF8EA" }}>{f.name}</div>
           <div style={{ fontSize: 13, color: "rgba(255,247,230,.85)", marginTop: 4 }}>{f.blurb}</div>
@@ -4854,17 +4908,17 @@ function ScreenCommunityDetail({ id }) {
   const clubs = CLUBS.filter((cl) => cl.community === c.id);
 
   return (
-    <div className="scroll" style={{ paddingBottom: 96 }}>
+    <div className="screen scroll" style={{ paddingBottom: 96 }}>
       <div style={{ position: "relative" }}>
         <Photo kind={c.scene} seed={"com" + c.id} ratio="16 / 9" radius={0} scrim="strong" mark={false} />
-        <button className="press" onClick={() => go({ back: true })} style={{ position: "absolute", insetInlineStart: 14, top: 14, width: 36, height: 36, borderRadius: R.pill, background: "rgba(20,16,12,.44)", color: "#FFF8EA", display: "grid", placeItems: "center" }}><ChevronRight size={20} /></button>
+        <button className="press" onClick={() => go({ back: true })} style={{ position: "absolute", insetInlineStart: 14, top: "calc(14px + var(--safe-top))", width: 40, height: 40, borderRadius: R.pill, background: "rgba(20,16,12,.46)", color: "#FFF8EA", display: "grid", placeItems: "center", backdropFilter: "blur(6px)" }}><ChevronRight size={20} /></button>
         <div style={{ position: "absolute", insetInlineStart: 16, bottom: 14, insetInlineEnd: 16 }}>
           <div style={{ fontSize: 22, fontWeight: 800, color: "#FFF8EA" }}>{c.name}</div>
           <div style={{ fontSize: 12.5, color: "rgba(255,247,230,.85)", marginTop: 4 }}>{ar(c.members.toLocaleString("en-US"))} عضو — {c.state === "active" ? "نشط" : "غير نشط"}</div>
         </div>
       </div>
 
-      <div style={{ padding: "14px 16px 0" }}>
+      <div style={{ padding: "14px 16px 0", paddingTop: "calc(14px + var(--safe-top))" }}>
         <div style={{ fontSize: 14, lineHeight: 1.85 }}>{c.blurb}</div>
         <div className="row" style={{ gap: 9, marginTop: 14 }}>
           <button className="press" onClick={() => { dispatch({ type: "join_community", com: c.id }); toast(joined ? "غادرت المجتمع" : "انضممت — ستظهر معرفته في رئيسيتك"); }}
@@ -4913,7 +4967,7 @@ function ScreenCommunityDetail({ id }) {
       {linkedObjects.length > 0 && (
         <div style={{ marginTop: 20 }}>
           <SectionTitle title="أماكن وأنشطة يتحدث عنها المجتمع" />
-          <div className="hs scroll" style={{ padding: "0 16px 4px" }}>{linkedObjects.map((x) => <TileCard key={x.o.id} x={x} w={180} />)}</div>
+          <div className="rail scroll">{linkedObjects.map((x) => <TileCard key={x.o.id} x={x} w={180} />)}</div>
         </div>
       )}
 
@@ -4921,7 +4975,7 @@ function ScreenCommunityDetail({ id }) {
         <div className="row" style={{ gap: 14, marginBottom: 6 }}>
           {[["useful", "الأكثر فائدة"], ["questions", "أسئلة"], ["reports", "تجارب وتحديثات"]].map(([k, l]) => (
             <button key={k} className="press" onClick={() => setTab(k)}
-              style={{ fontSize: 13, fontWeight: 800, paddingBottom: 5, borderBottom: `2px solid ${tab === k ? T.green : "transparent"}`, color: tab === k ? T.ink : T.muted }}>{l}</button>
+              style={{ fontSize: 13, fontWeight: 800, padding: "10px 2px 8px", minHeight: 40, borderBottom: `2px solid ${tab === k ? T.green : "transparent"}`, color: tab === k ? T.ink : T.muted }}>{l}</button>
           ))}
         </div>
         {list.length ? list.map((k) => <ContributionCard key={k.id} k={k} />)
@@ -4963,15 +5017,15 @@ function ScreenThread({ id }) {
   };
 
   return (
-    <div className="scroll" style={{ display: "flex", flexDirection: "column", minHeight: "100%" }}>
-      <div style={{ position: "sticky", top: 0, background: T.limestone, zIndex: 20, padding: "12px 16px 10px" }}>
+    <div className="screen scroll" style={{ display: "flex", flexDirection: "column", minHeight: "100%" }}>
+      <div style={{ position: "sticky", top: 0, background: "rgba(244,239,229,.92)", backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)", zIndex: 20, padding: "12px 16px 10px", paddingTop: "calc(12px + var(--safe-top))" }}>
         <div className="row" style={{ gap: 10 }}>
-          <button className="press" onClick={() => go({ back: true })} aria-label="رجوع"><ChevronRight size={22} /></button>
+          <button className="press tap" onClick={() => go({ back: true })} aria-label="رجوع" style={{ width: 36, height: 36, display: "grid", placeItems: "center", marginInlineStart: -6 }}><ChevronRight size={23} /></button>
           <div style={{ flex: 1, minWidth: 0 }}>
             <div className="clamp1" style={{ fontSize: 15, fontWeight: 800 }}>{com?.name || "نقاش"}</div>
             <div style={{ fontSize: 11.5, color: T.muted }}>{countAr(answers.length, "إجابة واحدة", "إجابتان", "إجابات", "إجابة")}</div>
           </div>
-          <button className="press" onClick={() => setReportOpen(true)} aria-label="إبلاغ"><Flag size={16} color={T.muted} /></button>
+          <button className="press tap" onClick={() => setReportOpen(true)} aria-label="إبلاغ" style={{ width: 36, height: 36, display: "grid", placeItems: "center" }}><Flag size={17} color={T.muted} /></button>
         </div>
       </div>
 
@@ -5095,8 +5149,8 @@ function ScreenPlan() {
 
   if (!items.length) {
     return (
-      <div className="scroll" style={{ paddingBottom: 96 }}>
-        <div style={{ padding: "16px 16px 0" }}>
+      <div className="screen scroll" style={{ paddingBottom: 96 }}>
+        <div style={{ padding: "16px 16px 0", paddingTop: "calc(16px + var(--safe-top))" }}>
           <div style={{ fontSize: 21, fontWeight: 800 }}>خطتي</div>
           <div style={{ fontSize: 12.5, color: T.muted, marginTop: 3 }}>ما ستفعله، وما بعده</div>
         </div>
@@ -5108,8 +5162,8 @@ function ScreenPlan() {
   }
 
   return (
-    <div className="scroll" style={{ paddingBottom: 96 }}>
-      <div style={{ padding: "16px 16px 10px" }}>
+    <div className="screen scroll" style={{ paddingBottom: 96 }}>
+      <div style={{ padding: "16px 16px 10px", paddingTop: "calc(16px + var(--safe-top))" }}>
         <div style={{ fontSize: 21, fontWeight: 800 }}>خطتي</div>
         <div style={{ fontSize: 12.5, color: T.muted, marginTop: 3 }}>
           {countAr(items.length, "عنصر واحد", "عنصران", "عناصر", "عنصر")} — كل حالة تعني شيئًا مختلفًا
@@ -5158,7 +5212,7 @@ function ScreenPlan() {
       {whatNext.length > 0 && (
         <div style={{ marginBottom: 24 }}>
           <SectionTitle title="ماذا بعد؟" sub="بناءً على ما أكملته — بدون إعادة عرض نفس التجربة" />
-          <div className="hs scroll" style={{ padding: "0 16px 4px" }}>{whatNext.map((x) => <TileCard key={x.o.id} x={x} w={182} />)}</div>
+          <div className="rail scroll">{whatNext.map((x) => <TileCard key={x.o.id} x={x} w={182} />)}</div>
         </div>
       )}
 
@@ -5268,10 +5322,10 @@ function ScreenProfile() {
   const saved = Object.keys(state.saved);
 
   return (
-    <div className="scroll" style={{ paddingBottom: 96 }}>
-      <div style={{ padding: "14px 16px 0" }}>
+    <div className="screen scroll" style={{ paddingBottom: 96 }}>
+      <div style={{ padding: "14px 16px 0", paddingTop: "calc(14px + var(--safe-top))" }}>
         <div className="row" style={{ gap: 10 }}>
-          <button className="press" onClick={() => go({ back: true })} aria-label="رجوع"><ChevronRight size={22} /></button>
+          <button className="press tap" onClick={() => go({ back: true })} aria-label="رجوع" style={{ width: 36, height: 36, display: "grid", placeItems: "center", marginInlineStart: -6 }}><ChevronRight size={23} /></button>
           <div style={{ fontSize: 20, fontWeight: 800 }}>حسابي</div>
         </div>
       </div>
@@ -5285,7 +5339,7 @@ function ScreenProfile() {
         </div>
 
         <div style={{ fontSize: 13.5, fontWeight: 800, margin: "18px 0 8px" }}>حيّك أو منطقتك الحالية</div>
-        <div className="hs scroll" style={{ gap: 8 }}>
+        <div className="rail scroll" style={{ gap: 8, marginInline: -16 }}>
           {NEIGHBORHOODS.filter((n) => n.id !== "haram-area").map((n) => (
             <Chip key={n.id} active={p.nb === n.id} onClick={() => dispatch({ type: "profile", patch: { nb: n.id } })}>{n.name}</Chip>
           ))}
@@ -5455,10 +5509,10 @@ function ScreenProvider() {
     .filter((k) => k.type === "question" && k.obj && mine.some((o) => o.id === k.obj)), [state, mine]);
 
   return (
-    <div className="scroll" style={{ paddingBottom: 96 }}>
-      <div style={{ padding: "14px 16px 0" }}>
+    <div className="screen scroll" style={{ paddingBottom: 96 }}>
+      <div style={{ padding: "14px 16px 0", paddingTop: "calc(14px + var(--safe-top))" }}>
         <div className="row" style={{ gap: 10 }}>
-          <button className="press" onClick={() => go({ back: true })} aria-label="رجوع"><ChevronRight size={22} /></button>
+          <button className="press tap" onClick={() => go({ back: true })} aria-label="رجوع" style={{ width: 36, height: 36, display: "grid", placeItems: "center", marginInlineStart: -6 }}><ChevronRight size={23} /></button>
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ fontSize: 20, fontWeight: 800 }}>أدوات مقدّم التجربة</div>
             <div className="clamp1" style={{ fontSize: 12, color: T.muted, marginTop: 2 }}>{prov?.name} — {prov?.kind}</div>
@@ -5467,7 +5521,7 @@ function ScreenProvider() {
         <div className="row" style={{ gap: 14, marginTop: 14 }}>
           {[["content", "محتواي"], ["people", "المشاركون"], ["questions", "الأسئلة"], ["signals", "الإشارات"]].map(([id, l]) => (
             <button key={id} className="press" onClick={() => setTab(id)}
-              style={{ fontSize: 13, fontWeight: 800, paddingBottom: 6, borderBottom: `2px solid ${tab === id ? T.green : "transparent"}`, color: tab === id ? T.ink : T.muted }}>{l}</button>
+              style={{ fontSize: 13, fontWeight: 800, padding: "10px 2px 8px", minHeight: 40, borderBottom: `2px solid ${tab === id ? T.green : "transparent"}`, color: tab === id ? T.ink : T.muted }}>{l}</button>
           ))}
         </div>
       </div>
@@ -5600,7 +5654,7 @@ function ProviderPublishSheet({ open, onClose }) {
       <input value={name} onChange={(e) => setName(e.target.value)} dir="rtl" placeholder="مثال: ورشة تذهيب للمبتدئين"
         style={{ width: "100%", border: `1px solid ${T.line}`, borderRadius: R.ctl, padding: "11px 12px", fontSize: 14, background: T.paper, outline: "none" }} />
       <div style={{ fontSize: 12.5, fontWeight: 800, margin: "16px 0 8px" }}>الحي</div>
-      <div className="hs scroll" style={{ gap: 7 }}>
+      <div className="rail scroll" style={{ gap: 7, marginInline: -16 }}>
         {NEIGHBORHOODS.filter((n) => n.id !== "haram-area").map((n) => <Chip key={n.id} active={nb === n.id} onClick={() => setNb(n.id)}>{n.name}</Chip>)}
       </div>
       <div style={{ fontSize: 12.5, fontWeight: 800, margin: "16px 0 8px" }}>الرسوم بالريال</div>
@@ -5770,8 +5824,8 @@ function ScreenNotifications() {
   const list = allNotifications(state);
   useEffect(() => { const t = setTimeout(() => dispatch({ type: "read_all" }), 900); return () => clearTimeout(t); }, [dispatch]);
   return (
-    <div className="scroll" style={{ paddingBottom: 96 }}>
-      <div style={{ padding: "14px 16px 6px" }} className="row">
+    <div className="screen scroll" style={{ paddingBottom: 96 }}>
+      <div style={{ padding: "14px 16px 6px", paddingTop: "calc(14px + var(--safe-top))" }} className="row">
         <button className="press" onClick={() => go({ back: true })} aria-label="رجوع" style={{ marginInlineEnd: 10 }}><ChevronRight size={22} /></button>
         <div style={{ fontSize: 20, fontWeight: 800 }}>الإشعارات</div>
       </div>
@@ -5811,20 +5865,36 @@ const TABS = [
   { id: "plan", label: "خطتي", icon: CalendarCheck },
 ];
 
-function BottomNav({ tab, onTab, planCount }) {
+/* On a phone the app owns the whole viewport; on a desktop it is presented inside
+   a device frame at true phone width. */
+function useDeviceViewport() {
+  const read = () => (typeof window === "undefined" ? false : window.innerWidth <= 560 || window.innerHeight <= 720);
+  const [device, setDevice] = useState(read);
+  useEffect(() => {
+    const on = () => setDevice(read());
+    window.addEventListener("resize", on);
+    window.addEventListener("orientationchange", on);
+    return () => { window.removeEventListener("resize", on); window.removeEventListener("orientationchange", on); };
+  }, []);
+  return device;
+}
+
+function BottomNav({ tab, onTab, planCount, safeBottom = "0px" }) {
   return (
     <div style={{
-      position: "absolute", insetInline: 0, bottom: 0, zIndex: 50, background: T.paper,
-      borderTop: `1px solid ${T.line}`, padding: "7px 8px 9px", display: "flex",
+      position: "absolute", insetInline: 0, bottom: 0, zIndex: 50,
+      background: "rgba(255,252,246,.94)", backdropFilter: "blur(14px)", WebkitBackdropFilter: "blur(14px)",
+      borderTop: `1px solid ${T.line}`, paddingTop: 8, paddingBottom: `calc(8px + ${safeBottom})`,
+      paddingInline: 6, display: "flex",
     }}>
       {TABS.map((t) => {
         const on = tab === t.id;
         const Icon = t.icon;
         return (
-          <button key={t.id} className="press" data-nav={t.id} onClick={() => onTab(t.id)}
-            style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 3, padding: "4px 0", position: "relative" }}>
-            <div style={{ position: "relative" }}>
-              <Icon size={21} color={on ? T.green : T.muted} strokeWidth={on ? 2.3 : 1.8} />
+          <button key={t.id} className="press" data-nav={t.id} onClick={() => onTab(t.id)} aria-current={on ? "page" : undefined}
+            style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 3, padding: "6px 0 4px", minHeight: 50, position: "relative" }}>
+            <div style={{ position: "relative", display: "grid", placeItems: "center", width: 44, height: 26, borderRadius: R.pill, background: on ? `${T.green}12` : "transparent", transition: "background .18s" }}>
+              <Icon size={20} color={on ? T.green : T.muted} strokeWidth={on ? 2.4 : 1.8} />
               {t.id === "plan" && planCount > 0 && (
                 <span style={{ position: "absolute", top: -4, insetInlineEnd: -7, minWidth: 15, height: 15, padding: "0 3px", borderRadius: 99, background: T.clay, color: "#FFF8EA", fontSize: 9.5, fontWeight: 800, display: "grid", placeItems: "center" }}>
                   {ar(planCount)}
@@ -5883,11 +5953,23 @@ export default function EyeMakkahApp() {
 
   useEffect(() => { if (scrollRef.current) scrollRef.current.scrollTop = 0; }, [stack.length, view?.s, view?.id]);
 
-  const api = { state, dispatch, ctx, go, setTab, toast };
+  const [dismissTarget, setDismissTarget] = useState(null);
+  const askDismiss = useCallback((o) => setDismissTarget(o), []);
+  const api = { state, dispatch, ctx, go, setTab, toast, askDismiss };
   const planCount = state.plan.filter((p) => ["planned", "going", "registered", "confirmed", "active", "awaiting"].includes(p.state)).length;
   const tab = TAB_OF[view.s] || (["object", "search", "profile", "notifications", "provider"].includes(view.s) ? TAB_OF[stack[0]?.s] || "home" : "home");
   const hideNav = ["search", "thread", "object"].includes(view.s);
   const ts = state.profile.textScale || 1;
+  const device = useDeviceViewport();
+  const dir = "rtl";
+  const safeBottom = "env(safe-area-inset-bottom, 0px)";
+  const depth = stack.length;
+  const prevDepth = useRef(depth);
+  const [anim, setAnim] = useState("fade");
+  useEffect(() => {
+    setAnim(depth > prevDepth.current ? "push" : depth < prevDepth.current ? "fade" : "fade");
+    prevDepth.current = depth;
+  }, [depth, view.s, view.id]);
 
   const render = () => {
     switch (view.s) {
@@ -5910,29 +5992,42 @@ export default function EyeMakkahApp() {
   return (
     <App.Provider value={api}>
       <style>{CSS}</style>
-      <div className="em" style={{
-        minHeight: "100vh", background: `radial-gradient(1200px 700px at 50% -10%, #FBF6EC 0%, #EFE6D5 52%, ${T.sandDeep} 100%)`,
-        display: "flex", alignItems: "center", justifyContent: "center", padding: "20px 12px",
-      }}>
-        <div style={{ width: 412, maxWidth: "100%" }}>
-          <div style={{
-            position: "relative", height: 844, maxHeight: "calc(100vh - 40px)", borderRadius: 34, overflow: "hidden",
-            background: T.limestone, boxShadow: "0 30px 70px -26px rgba(38,28,16,.45)", border: `1px solid ${T.line}`,
-          }} dir="rtl">
+      <div className="em" data-app style={{
+        minHeight: "100dvh", background: device ? T.limestone : `radial-gradient(1200px 700px at 50% -10%, #FBF6EC 0%, #EFE6D5 52%, ${T.sandDeep} 100%)`,
+        display: "flex", alignItems: "center", justifyContent: "center",
+        padding: device ? 0 : "22px 12px",
+      }} dir={dir}>
+        <div style={{ width: device ? "100%" : 390, maxWidth: "100%" }}>
+          <div data-phone style={{
+            "--safe-top": device ? "env(safe-area-inset-top, 0px)" : "0px",
+            "--safe-bottom": device ? "env(safe-area-inset-bottom, 0px)" : "0px",
+            position: "relative",
+            height: device ? "100dvh" : 844,
+            maxHeight: device ? "none" : "calc(100dvh - 44px)",
+            borderRadius: device ? 0 : 38,
+            overflow: "hidden", background: T.limestone,
+            boxShadow: device ? "none" : "0 30px 70px -26px rgba(38,28,16,.45)",
+            border: device ? "none" : `1px solid ${T.line}`,
+          }}>
             {/* text size works the way a device setting does: content reflows to a
                 narrower box and is scaled up, so nothing is clipped. */}
             <div ref={scrollRef} className="scroll" key={view.s + (view.id || "")}
+              data-screen
               style={{
-                position: "absolute", inset: 0, overflowY: "auto", paddingBottom: hideNav ? 0 : 64,
+                position: "absolute", inset: 0, overflowY: "auto", overflowX: "clip",
+                paddingBottom: hideNav ? 0 : `calc(66px + ${safeBottom})`,
                 zoom: ts === 1 ? undefined : ts,
                 width: ts === 1 ? undefined : `${100 / ts}%`,
                 height: ts === 1 ? undefined : `${100 / ts}%`,
               }}>
               <ErrorBoundary viewKey={view.s + (view.id || "")} onReset={() => setStack([{ s: "home" }])}>
-                {render()}
+                <div className={anim} style={{ "--push": dir === "rtl" ? "-18px" : "18px" }}>
+                  {render()}
+                </div>
               </ErrorBoundary>
             </div>
-            {!hideNav && <BottomNav tab={tab} onTab={setTab} planCount={planCount} />}
+            {!hideNav && <BottomNav tab={tab} onTab={setTab} planCount={planCount} safeBottom={safeBottom} />}
+            <DismissSheet o={dismissTarget} onClose={() => setDismissTarget(null)} />
             <Toast msg={toastMsg} onDone={() => setToastMsg(null)} />
           </div>
         </div>

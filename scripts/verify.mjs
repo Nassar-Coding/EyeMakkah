@@ -23,7 +23,7 @@ await new Promise((r) => server.listen(4321, r));
 
 const errors = [];
 const browser = await chromium.launch({ executablePath: "/opt/pw-browsers/chromium-1194/chrome-linux/chrome", args: ["--no-sandbox"] });
-const page = await browser.newPage({ viewport: { width: 1280, height: 950 } });
+const page = await browser.newPage({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, deviceScaleFactor: 2 });
 page.on("console", (m) => { if (m.type() === "error") { const t = m.text(); if (!/fonts\.googleapis|ERR_|net::|Failed to load resource/.test(t)) errors.push("console: " + t); } });
 page.on("pageerror", (e) => errors.push("pageerror: " + e.message));
 

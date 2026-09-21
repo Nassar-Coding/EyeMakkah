@@ -12,7 +12,7 @@ const server = createServer(async (req, res) => {
 await new Promise((r) => server.listen(4466, r));
 const out = process.env.OUT || "/tmp/claude-0/-home-user-EyeMakkah/bdda0f4a-9b40-5755-97f3-db2bbfc5eb30/scratchpad/final";
 const browser = await chromium.launch({ executablePath: "/opt/pw-browsers/chromium-1194/chrome-linux/chrome", args: ["--no-sandbox"] });
-const page = await browser.newPage({ viewport: { width: 470, height: 920 }, deviceScaleFactor: 2 });
+const page = await browser.newPage({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
 await page.goto("http://127.0.0.1:4466/", { waitUntil: "networkidle" });
 await page.waitForTimeout(800);
 const shot = (n) => page.screenshot({ path: `${out}/${n}.png` });
@@ -34,19 +34,19 @@ const open = async (name) => {
 };
 
 await shot("A-home");
-await page.mouse.move(235, 500); await page.mouse.wheel(0, 1400); await page.waitForTimeout(600); await shot("B-home-scrolled");
+await page.mouse.move(195, 480); await page.mouse.wheel(0, 1400); await page.waitForTimeout(600); await shot("B-home-scrolled");
 await home(); await page.locator('[data-nav="discover"]').click(); await page.waitForTimeout(700); await shot("C-discover");
-await page.mouse.move(235, 500); await page.mouse.wheel(0, 1200); await page.waitForTimeout(500); await shot("D-discover-scrolled");
+await page.mouse.move(195, 480); await page.mouse.wheel(0, 1200); await page.waitForTimeout(500); await shot("D-discover-scrolled");
 await open("حي حراء الثقافي"); await shot("E-decision");
-await page.mouse.move(235, 500); await page.mouse.wheel(0, 1000); await page.waitForTimeout(500); await shot("F-decision-scrolled");
+await page.mouse.move(195, 480); await page.mouse.wheel(0, 1000); await page.waitForTimeout(500); await shot("F-decision-scrolled");
 await home(); await page.locator('[data-nav="community"]').click(); await page.waitForTimeout(700); await shot("G-community");
-await page.mouse.move(235, 500); await page.mouse.wheel(0, 1200); await page.waitForTimeout(500); await shot("H-community-scrolled");
+await page.mouse.move(195, 480); await page.mouse.wheel(0, 1200); await page.waitForTimeout(500); await shot("H-community-scrolled");
 await open("ورشة خط للمبتدئين"); await page.waitForTimeout(400);
 await page.getByText("انضم — سأحضر", { exact: true }).click().catch(() => {}); await page.waitForTimeout(500);
 await shot("I-activity-joined");
 await home(); await page.locator('[data-nav="plan"]').click(); await page.waitForTimeout(700); await shot("J-plan");
 await home(); await page.getByLabel("حسابي").click(); await page.waitForTimeout(600); await shot("K-profile");
-await page.mouse.move(235, 500); await page.mouse.wheel(0, 1600); await page.waitForTimeout(500); await shot("L-profile-scrolled");
+await page.mouse.move(195, 480); await page.mouse.wheel(0, 1600); await page.waitForTimeout(500); await shot("L-profile-scrolled");
 await page.getByText("أدوات مقدّم التجربة", { exact: true }).first().click(); await page.waitForTimeout(600); await shot("M-provider");
 await page.getByText("الإشارات", { exact: true }).click(); await page.waitForTimeout(600); await shot("N-signals");
 await browser.close(); server.close();
