@@ -9,12 +9,16 @@ const server = createServer(async (req, res) => {
   try { const b = await readFile(f); res.writeHead(200, { "Content-Type": MIME[extname(f)] || "text/plain" }); res.end(b); }
   catch { res.writeHead(404); res.end(); }
 });
-await new Promise((r) => server.listen(4466, r));
+await new Promise((r) => server.listen(4467, r));
 const out = process.env.OUT || "/tmp/claude-0/-home-user-EyeMakkah/bdda0f4a-9b40-5755-97f3-db2bbfc5eb30/scratchpad/final";
 const browser = await chromium.launch({ executablePath: "/opt/pw-browsers/chromium-1194/chrome-linux/chrome", args: ["--no-sandbox"] });
 const page = await browser.newPage({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
-await page.goto("http://127.0.0.1:4466/", { waitUntil: "networkidle" });
+await page.goto("http://127.0.0.1:4467/", { waitUntil: "networkidle" });
 await page.waitForTimeout(800);
+await page.getByText(/^(ابدأ|Enter EyeMakkah)$/).first().click();
+await page.waitForTimeout(600);
+await page.locator(`[data-lang="${process.env.LANG_PICK || "ar"}"]`).click();
+await page.waitForTimeout(1000);
 const shot = (n) => page.screenshot({ path: `${out}/${n}.png` });
 const home = async () => {
   for (let i = 0; i < 6; i++) {

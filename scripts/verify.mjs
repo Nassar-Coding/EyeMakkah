@@ -60,6 +60,11 @@ const openByName = async (name) => {
 
 await page.goto("http://127.0.0.1:4321/", { waitUntil: "networkidle" });
 await page.waitForTimeout(700);
+// Entry flow: Landing -> Language -> transformed app
+await page.getByText(/^(ابدأ|Enter EyeMakkah)$/).first().click();
+await page.waitForTimeout(600);
+await page.locator('[data-lang="ar"]').click();
+await page.waitForTimeout(900);
 
 const steps = JSON.parse(process.env.STEPS || "[]");
 const results = [];

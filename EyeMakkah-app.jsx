@@ -94,6 +94,9 @@ const CSS = `
 @keyframes emShimmer { 0% { background-position: 120% 0; } 100% { background-position: -120% 0; } }
 @keyframes emSpin { to { transform: rotate(360deg); } }
 @keyframes emPush { from { opacity: .4; transform: translateX(var(--push, 18px)); } to { opacity: 1; transform: none; } }
+@keyframes emRise { 0% { transform: translateY(0); opacity: 0; } 12% { opacity: 1; } 100% { transform: translateY(-190px); opacity: 0; } }
+@keyframes emLangFlowR { to { stroke-dashoffset: 0; } }
+@keyframes emLangFlowL { to { stroke-dashoffset: 0; } }
 .em .up { animation: emUp .34s cubic-bezier(.2,.8,.2,1) both; }
 .em .fade { animation: emIn .3s ease both; }
 .em .sheetIn { animation: emSheet .3s cubic-bezier(.2,.9,.25,1) both; }
@@ -104,6 +107,7 @@ const CSS = `
 
 @media (prefers-reduced-motion: reduce) {
   .em .up, .em .fade, .em .sheetIn, .em .scrimIn, .em .shim, .em .spin, .em .push { animation: none !important; }
+  .em [style*="emRise"] { animation: none !important; opacity: .35 !important; }
   .em .press, .em .lift { transition: none !important; }
 }
 `;
@@ -111,7 +115,1695 @@ const CSS = `
 /* ───────────────────────── 2. SMALL UTILITIES ───────────────────────── */
 
 const AR_DIGITS = ["٠", "١", "٢", "٣", "٤", "٥", "٦", "٧", "٨", "٩"];
-const ar = (v) => String(v).replace(/[0-9]/g, (d) => AR_DIGITS[+d]);
+
+/* One dictionary translates every Arabic string the product can render — data
+   fields, labels and JSX literals alike. Anything missing simply stays Arabic. */
+const EN_TXT = {
+  " ووضعك كزائر": " and your visitor status",
+  "clock-museum:ساعات الزيارة": "clock-museum:Visiting hours",
+  "، ": ", ",
+  "آخر تحديث": "Last updated",
+  "آخر دخول ١٠:٣٠ م — الباب أُغلق الساعة ١٠:٤٥": "Last entry 10:30 PM — the door closed at 10:45",
+  "آخر نشاط": "Last active",
+  "أبريل": "April",
+  "أبقيناه غير مؤكد في خطتك": "We kept it unconfirmed in your plan",
+  "أبقيناه في خطتك كغير مؤكد": "We kept it in your plan as unconfirmed",
+  "أبو فيصل": "Abu Faisal",
+  "أثر تاريخي يروي كيف وصل الماء إلى مكة قرونًا طويلة. يُزار عادة ضمن مسار تراثي مع شرح، لا كمحطة منفردة.": "A historic waterway that tells how water reached Makkah for centuries. It is usually visited as part of a guided heritage route rather than on its own.",
+  "أجياد": "Ajyad",
+  "أحضر لترًا على الأقل": "Bring at least a litre",
+  "أحمد": "Ahmed",
+  "أحياء سكنية واسعة، مطاعم عائلية ومقاهٍ تفتح متأخرًا.": "Wide residential streets, family restaurants and cafés that stay open late.",
+  "أربع محطات في مشية واحدة": "Four stops in one walk",
+  "أربع محطات مشيًا": "Four stops on foot",
+  "أربعة أنشطة بسعر واحد": "Four activities for one price",
+  "أرصفة غير مستوية في أجزاء": "Uneven pavements in places",
+  "أرفق صورة": "Attach a photo",
+  "أزل من خطتي": "Remove from my plan",
+  "أزلناه من المحفوظات": "Removed from your saved items",
+  "أزلناه من خطتك": "Removed from your plan",
+  "أزلناه — ستقل نتائجه دون أن تختفي بقية السياق": "Removed — its results will show less without losing the rest of the context",
+  "أسئلة": "questions",
+  "أسئلة الزيارة الأولى، اللغات، والوصول.": "First-visit questions, languages and access.",
+  "أسئلة السكن والخدمات": "Questions about housing and services",
+  "أسئلة تنتظر إجابة": "Questions waiting for an answer",
+  "أسئلة عملية عن المسافات والمواعيد ونقاط اللقاء.": "Practical questions about distances, times and meeting points.",
+  "أسئلة من يزور لأول مرة — بلا حرج.": "Questions from first-time visitors — no embarrassment.",
+  "أساسيات التصوير بالجوال": "Phone photography basics",
+  "أسبوعيًا مساء الجمعة": "Weekly on Friday evening",
+  "أسر منتجة ومأكولات": "Home producers and food",
+  "أسرة مكية تستضيف تجربة طعام وحديث عن حياة الحي.": "A Makkawi family hosting a meal and conversation about neighbourhood life.",
+  "أسماء الحارات القديمة تختفي شوي شوي. جدي كان يسمي المنطقة باسم ثاني تمامًا، وما عاد أحد يعرفه إلا كبار السن.": "The old quarter names are slowly disappearing. My grandfather called this area something else entirely, and only the elderly still know it.",
+  "أسواق وتسوق": "Markets & shopping",
+  "أسواق يومية وأسعار ومواسم.": "Daily markets, prices and seasons.",
+  "أصبح في خطتك — لم يُحجز بعد": "Now in your plan — not booked yet",
+  "أصغر": "Smaller",
+  "أصناف محلية ومذاق مختلف": "Local varieties, different flavours",
+  "أضف إلى خطتي": "Add to my plan",
+  "أضفنا الخطة كاملة — لم يُحجز أي شيء بعد": "We added the whole plan — nothing has been booked yet",
+  "أضيف: اسأل عن طبق اليوم. غالبًا أطيب من القائمة الثابتة وأرخص.": "I'd add: ask for the dish of the day. It's usually better than the fixed menu and cheaper.",
+  "أطباق بيتية بأسعار معقولة": "Home cooking at fair prices",
+  "أعلى بعد الفجر مباشرة": "Busiest right after Fajr",
+  "أعمال فنانين محليين": "Work by local artists",
+  "أغسطس": "August",
+  "أغلب المحلات تفتح بعد العصر فقط": "Most shops only open after Asr",
+  "أفضل سفري": "My best trip",
+  "أفضل مطعم في مكة بلا منازع، جربوه اليوم وخصم خاص لمتابعيني — تواصلوا معي مباشرة.": "Best restaurant in Makkah, hands down — try it today, special discount for my followers, message me directly.",
+  "أفضل وقت": "Best time",
+  "أفضل وقت، ما تطلبه، أو ما تمنيت معرفته": "The best time, what to order, or what you wish you'd known",
+  "أفضل وقت؟": "Best time?",
+  "أفضّل مسارات بدون درج": "I prefer step-free routes",
+  "أقل": "Less",
+  "أقل شهرة — ويستحق": "Less known — and worth it",
+  "أقل من ساعة": "Under an hour",
+  "أكبر": "Larger",
+  "أكتوبر": "October",
+  "أكثر من مساهمة حديثة ومستقلة تؤكد المعلومة نفسها.": "More than one recent, independent contribution confirms the same detail.",
+  "أكدتها مساهمات حديثة": "Confirmed by recent contributions",
+  "أكل مكة: ماذا تطلب، وأين، ومتى.": "Makkah food: what to order, where and when.",
+  "أكل مكي": "Makkawi food",
+  "أكملت هذا": "You completed this",
+  "أكّد الحجز": "Confirm booking",
+  "أكّد الحجز أو ألغِه": "Confirm the booking or cancel it",
+  "أم خالد": "Umm Khaled",
+  "أماكن وأنشطة يتحدث عنها المجتمع": "Places and activities the community is talking about",
+  "أمس": "Yesterday",
+  "أمسية تراثية في حي جرول: عروض حرفية، أكل مكي قديم، وجلسات حكواتي.": "A heritage evening in Jarwal: craft demonstrations, old Makkan food, and storytelling sessions.",
+  "أمسية شعرية": "Poetry evening",
+  "أمسية شعرية لشعراء من مكة مع فقرة مفتوحة للحضور.": "A poetry evening with poets from Makkah and an open slot for the audience.",
+  "أمسية قراءة ونقاش حول كتاب الشهر، مفتوحة للجميع بلا رسوم.": "A reading and discussion evening around the book of the month, open to everyone and free.",
+  "أمسية قرائية": "Reading evening",
+  "أمسية قرائية بالمكتبة: العدد صغير والنقاش هادئ. ينفع لو تحب تسمع أكثر من تتكلم.": "Reading evening at the library: small group, quiet discussion. Good if you prefer listening to talking.",
+  "أن الحجز المسبق ضروري في الإجازة": "that advance booking is essential during holidays",
+  "أنا دخلت الأسبوع اللي طاف الساعة ١١ عادي. يمكن اختلف الجدول هالأسبوع.": "I got in at 11 last week with no problem. Maybe the schedule changed this week.",
+  "أنت": "You",
+  "أنت ضمن اللقاء القادم": "You're in the next meet-up",
+  "أنت عضو": "You're a member",
+  "أندية ومجموعات متكررة": "Recurring clubs and groups",
+  "أندية، فعاليات، ومجموعات مذاكرة.": "Clubs, events and study groups.",
+  "أنديتك ومجموعاتك": "Your clubs and groups",
+  "أنشطة تبدأ من هذه المجتمعات ويمكنك الانضمام إليها": "Activities that start in these communities and that you can join",
+  "أنشطة طلابية وبرامج إثرائية ومبادرات مجتمعية.": "Student activities, enrichment programmes and community initiatives.",
+  "أنشطة وألعاب ومأكولات": "Activities, games and food",
+  "أنشطة يمكنك الانضمام إليها فعلًا": "Activities you can actually join",
+  "أهدأ قبل ٨ مساءً": "Quieter before 8 PM",
+  "أوسع للعائلات مع نقل": "More room for families, with transport",
+  "أوقات الازدحام": "Busy times",
+  "أوقفناه مؤقتًا — لن يُرشَّح كمجموعة نشطة": "Paused — it won't be recommended as an active group",
+  "أول اثنين من كل شهر": "First Monday of every month",
+  "أول زيارة لحي حراء مع الوالدة. كم يحتاج الوقت فعليًا، وهل المشي داخل الحي طويل؟": "First visit to Hira district with my mother. How long does it really take, and is there much walking inside?",
+  "أول زيارة لمكة": "First visit to Makkah",
+  "أول عمرة": "First Umrah",
+  "أول عمرة — كم أحتاج وقت بين الوصول والبدء؟": "First Umrah — how much time do I need between arriving and starting?",
+  "أول مرة أتطوع. هل التسجيل يحتاج شروط معينة؟": "First time volunteering. Does registration have any requirements?",
+  "أي كاميرا أو جوال": "Any camera or phone",
+  "أين نخرج، ومتى، وكيف نتفادى الزحام.": "Where to go out, when, and how to avoid the crowds.",
+  "أُضيف إلى خطتي — لم يُحجز ولم تُسجّل بعد": "Added to my plan — not booked and not registered yet",
+  "إبراز الأنشطة المخصصة للنساء": "Highlight women-only activities",
+  "إبلاغ": "Report",
+  "إجابات": "answers",
+  "إجابات وجدها الناس مفيدة": "Answers people found helpful",
+  "إجابة": "answer",
+  "إجابة واحدة": "1 answer",
+  "إجابتان": "2 answers",
+  "إخفاء": "Hide",
+  "إرسال": "Send",
+  "إرشاد وسقيا في محيط الحرم": "Guidance and water around the Haram",
+  "إزالة المرشّحات": "Clear filters",
+  "إزالة من المحفوظات": "Remove from saved",
+  "إسعافات أولية — أساسيات": "First aid — the basics",
+  "إضافة لخطة": "Add to plan",
+  "إطلالة على المدينة قبل الغروب": "A view over the city before sunset",
+  "إغلاق": "Close",
+  "إقامة": "Stays",
+  "إقامة أجياد — قريب من الحرم": "Ajyad stay — close to the Haram",
+  "إكمال": "Complete",
+  "إكمال الحجز خارج EyeMakkah": "Completing the booking outside EyeMakkah",
+  "إيقاف مؤقت": "Paused",
+  "ابحث عن مكان أو تجربة أو مجتمع": "Search for a place, an experience or a community",
+  "ابحث في مكة": "Search Makkah",
+  "ابدأ": "Start",
+  "ابدأ الآن": "Start now",
+  "اجیاد میں نائٹ کیفے دیر تک کھلا رہتا ہے — نمازوں کے درمیان مفید ہے۔": "The night café in Ajyad stays open late — handy between prayers.",
+  "احتياج يومي قريب": "Daily needs, close by",
+  "احجز": "Book",
+  "احضر لقاء الوافدين الجدد، يشرحون السكن والمدارس والخدمات في جلسة وحدة. وبعدها انضم لمجتمع الحي.": "Go to the newcomers' meet-up — they cover housing, schools and services in one session. Then join your neighbourhood community.",
+  "احفظ ما يعجبك، أو أضف شيئًا إلى خطتك. الحفظ ليس حجزًا، والإضافة إلى الخطة ليست تسجيلًا ولا تأكيدًا — نُبقي الفرق واضحًا دائمًا.": "Save what you like, or add something to your plan. Saving is not booking, and adding to your plan is not registering or confirming — we always keep the difference clear.",
+  "اردو": "Urdu",
+  "استئناف": "Appeal",
+  "استخدام العرض": "Use the offer",
+  "استخدام الموقع": "Location use",
+  "استخدم العرض": "Use the offer",
+  "اطلب رقم الترخيص وتأكد منه لدى الجهة المختصة. وأي أحد يطلب تحويل مبلغ كامل مقدمًا بدون عقد أو إيصال — تجنبه.": "Ask for the licence number and check it with the relevant authority. Avoid anyone asking for a full transfer up front with no contract or receipt.",
+  "اطلبي سليق وإذا حابة تجربين شي مختلف خذي «مفروكة». وإذا كنتِ لحالك نص طلب يكفي، الحصص كبيرة.": "Order saleeg, and if you want something different try mafrookah. If you're on your own a half portion is enough — the servings are large.",
+  "اعرض تفاصيل العرض": "Show offer details",
+  "افتتاحات جديدة": "New openings",
+  "افتح الاتجاهات": "Open directions",
+  "افتح المصدر الرسمي": "Open the official source",
+  "اقتصادي وقريب من الأكل المحلي": "Budget, and close to local food",
+  "اكتب إجابة من تجربتك": "Write an answer from your experience",
+  "اكتب ردًا عمليًا ومباشرًا": "Write a practical, direct reply",
+  "اكتب مساهمة": "Write a contribution",
+  "اكتب من تجربتك: متى زرته، وما الذي تمنيت أن تعرفه قبلها.": "Write from your visit: when you went, and what you wish you'd known beforehand.",
+  "اكتب من تجربتك، وحدّد الوقت والمكان.": "Write from your own visit, and say when and where.",
+  "اكتب نصيحة عملية": "Write a practical tip",
+  "اكتشف": "Discover",
+  "اكتشف · شارك · ابنِ خطتك": "Discover · Contribute · Build your plan",
+  "الآن": "Now",
+  "الأحد": "Sunday",
+  "الأحياء": "Neighbourhoods",
+  "الأدلة غير كافية. هذه المعلومة تتغير لحظيًا، والمصدر الرسمي هو المرجع.": "The evidence isn't sufficient. This detail changes by the minute, and the official source is authoritative.",
+  "الأدوات": "Tools",
+  "الأربعاء": "Wednesday",
+  "الأرشيف فارغ": "The archive is empty",
+  "الأرضية": "Ground floor",
+  "الأسئلة": "Questions",
+  "الأسعار": "Prices",
+  "الأسواق والتسوق": "Markets and shopping",
+  "الأسواق والورش وأهل الحرف.": "Markets, workshops and craftspeople.",
+  "الأطباق المكية وأين تجدها وما يُطلب فعلًا.": "Makkawi dishes, where to find them and what people actually order.",
+  "الأطباق مشمولة في الرسوم": "Dishes are included in the fee",
+  "الأطفال": "Children",
+  "الأطفال يطبخون بأنفسهم": "The children do the cooking",
+  "الأفضل طلبًا": "Most ordered",
+  "الأكبر": "Largest",
+  "الأكثر فائدة": "Most helpful",
+  "الأكل المكي": "Makkawi food",
+  "الأندية والهوايات": "Clubs and hobbies",
+  "الإبلاغ عن محتوى": "Report content",
+  "الإرشاد داخل الحرم": "Guidance inside the Haram",
+  "الإشارات": "Signals",
+  "الإشعارات": "Notifications",
+  "الإشعارات المفيدة": "Useful notifications",
+  "الإنارة": "Lighting",
+  "الإنجليزية والأردية والإندونيسية": "English, Urdu and Indonesian",
+  "الاتجاهات": "Directions",
+  "الاثنين": "Monday",
+  "الازدحام": "Crowding",
+  "الاستعداد والخطوات والأسئلة الشائعة.": "Preparation, the steps and common questions.",
+  "الاستلام": "Pickup",
+  "الالتزام بالوقت": "Punctuality",
+  "الانتظار": "Waiting",
+  "البديل الأفضل": "Better alternative",
+  "البيئة والتشجير": "Environment and greening",
+  "التبادل": "Exchange",
+  "التجربة": "Experience",
+  "التجربة الأبرز في حي حراء": "The flagship experience in Hira District",
+  "التجربة الكاملة بالعربية": "The full experience in Arabic",
+  "التحضير، الحملات، والتجربة العملية.": "Preparation, campaigns and hands-on experience.",
+  "التخصيص متوقف — هذه اختيارات عامة": "Personalisation is off — these are general picks",
+  "التخصيص من سلوكك": "Personalisation from your activity",
+  "التذكرة": "Ticket",
+  "التذوق": "Tasting",
+  "التراث والمسارات": "Heritage and trails",
+  "الترجمة طبقة عرض فقط — النص الأصلي وكاتبه يبقيان ظاهرين دائمًا.": "Translation is a display layer only — the original text and its author always stay visible.",
+  "الترخيص": "Licence",
+  "التسجيل": "Registration",
+  "التسجيل عبر منصة الجهة نفسها، والعمر ١٨ فأكثر. فيه تدريب قصير قبل الوردية، وما تحتاج خبرة سابقة.": "You register on the organisation's own platform, ages 18 and over. There's a short training session before the shift, and no prior experience is needed.",
+  "التسعير": "Pricing",
+  "التسويق الشخصي يحتاج إفصاحًا واضحًا.": "Self-promotion needs a clear disclosure.",
+  "التصوير": "Photography",
+  "التطوع الصحي": "Health volunteering",
+  "التطوع والمبادرات": "Volunteering and initiatives",
+  "التعريف": "About",
+  "التعريف والوصف": "About and description",
+  "التعليم والهوايات": "Learning and hobbies",
+  "التنسيق": "Coordination",
+  "التنعيم": "Al-Tan'eem",
+  "التوصيل": "Delivery",
+  "الثقافة والتاريخ": "Culture and history",
+  "الثلاثاء": "Tuesday",
+  "الجامعة": "University",
+  "الجلسات": "Sessions",
+  "الجلسات، الأطفال، والانتظار.": "Seating, kids and waiting times.",
+  "الجلوس": "Seating",
+  "الجمعة": "Friday",
+  "الجمعة ٦:٠٠ م": "Friday 6:00 PM",
+  "الجهة الصحية": "Health authority",
+  "الجهة المشغّلة": "Operating body",
+  "الجهة المنظّمة": "Organising body",
+  "الجهد": "Effort",
+  "الجولة المسائية": "The evening tour",
+  "الجولة المسائية فقط": "Evening tour only",
+  "الحالة": "Status",
+  "الحج والعمرة": "Hajj and Umrah",
+  "الحجز": "Booking",
+  "الحجز المسبق مطلوب": "Advance booking required",
+  "الحدائق والعائلات ومرافق الحي.": "Parks, families and neighbourhood facilities.",
+  "الحديبية": "Al-Hudaybiyah",
+  "الحرف والمهارات": "Crafts and skills",
+  "الحضور": "Attendance",
+  "الحفظ لا يعني الحجز": "Saving is not booking",
+  "الحملات والمجموعات": "Campaigns and groups",
+  "الحي القديم، أكله وحكاياته.": "The old quarter, its food and its stories.",
+  "الحياة في مكة": "Life in Makkah",
+  "الخبرة": "Experience",
+  "الخدمات والصيانة": "Services and maintenance",
+  "الخدمة": "Service",
+  "الخدمة كانت بطيئة والطلب تأخر أكثر من ساعة. المكان ممتاز لكن الوقت ما كان مناسب.": "The service was slow and the order took over an hour. Great place, but the timing didn't work.",
+  "الخرائط": "Maps",
+  "الخريطة": "Map",
+  "الخريطة الرسمية للحرمين": "The official Two Holy Mosques map",
+  "الخصوصية": "Privacy",
+  "الخميس": "Thursday",
+  "الدخول": "Entry",
+  "الدفع": "Payment",
+  "الدوام": "Hours",
+  "الرئيسية": "Home",
+  "الرصيفة": "Al-Rusayfah",
+  "الزاهر": "Al-Zahir",
+  "الزيارة": "Visit",
+  "السبت": "Saturday",
+  "السدو، الخط، الفخار، الجلد، والعطور.": "Sadu weaving, calligraphy, pottery, leather and perfumes.",
+  "السعر": "Price",
+  "السكن والتنقل في الموسم": "Housing and getting around in season",
+  "السكن، الخدمات، والوصول، وحياة المدينة اليومية.": "Housing, services, access and the city's daily life.",
+  "السكن، المدارس، والخدمات.": "Housing, schools and services.",
+  "السليق باللبن والدجاج": "Saleeg with milk and chicken",
+  "الشرح بالعربية، لكن المدربة تقدر تشرح الخطوات بالإنجليزية لو أخبرتونا عند الحجز. العمل نفسه عملي أكثر منه كلام.": "It's taught in Arabic, but the instructor can explain the steps in English if you tell us when booking. The session is hands-on more than talk.",
+  "الشروط": "Terms",
+  "الششة": "Al-Shishah",
+  "الشفافية": "Transparency",
+  "الشوقية": "Al-Shawqiyah",
+  "الصالة": "Hall",
+  "الصباح الباكر أفضل بكثير": "Early morning is much better",
+  "الصباح للخضار، والمساء للحركة": "Mornings for produce, evenings for the buzz",
+  "الصعوبة": "Difficulty",
+  "الصعود": "Ascent",
+  "الضوء الأخير فوق مكة": "The last light over Makkah",
+  "الطريق": "Route",
+  "الطلب": "Request",
+  "الطلبات الكبيرة": "Large orders",
+  "الطول": "Length",
+  "العائلات": "Families",
+  "العربية": "Arabic",
+  "العربية والإنجليزية": "Arabic and English",
+  "العرض": "Offer",
+  "العرض الذي حفظته ينتهي الليلة": "The offer you saved ends tonight",
+  "العرض مرتبط بـ": "Offer linked to",
+  "العرض ينتهي الليلة ولا مستمر؟": "Does the offer end tonight or continue?",
+  "العزيزية": "Al-Aziziyah",
+  "العمر": "Age",
+  "العمل عن بعد": "Remote work",
+  "العنصر": "Item",
+  "العوالي": "Al-Awali",
+  "الفئات": "Categories",
+  "الفترة": "Period",
+  "الفرع": "Branch",
+  "الفعالية": "Event",
+  "القسم": "Section",
+  "القسم العائلي توسّع، صار فيه طاولات أكثر من قبل.": "The family section has been expanded — there are more tables than before.",
+  "القطعة تُسلّم بعد الحرق بأسبوع": "The piece is handed over a week after firing",
+  "الكتاب": "Book",
+  "الكراسي المتحركة": "Wheelchairs",
+  "الكعكية": "Al-Kakiyah",
+  "الكل": "All",
+  "اللغات": "Languages",
+  "اللغة": "Language",
+  "الليلة": "Tonight",
+  "الليلة حتى منتصف الليل": "Tonight until midnight",
+  "الليلة في مكة": "Tonight in Makkah",
+  "الليلة ٨:٠٠ م — ١١:٠٠ م": "Tonight 8:00 PM – 11:00 PM",
+  "الليلة ٨:٥٠ م": "Tonight 8:50 PM",
+  "الماء": "Water",
+  "المتاحف والمعارض": "Museums and exhibitions",
+  "المجتمع": "Community",
+  "المجموعة": "Group",
+  "المحتوى قيد المراجعة — لا يُعرض ضمن التوصيات.": "This content is under review — it isn't shown in recommendations.",
+  "المحطات": "Stops",
+  "المحل": "Shop",
+  "المدة": "Duration",
+  "المدة الفعلية": "Actual duration",
+  "المدة المقترحة": "Suggested duration",
+  "المدينة كما يعرفها أهلها": "The city as its people know it",
+  "المرشد": "Guide",
+  "المرشدة": "Guide",
+  "المركز": "Centre",
+  "المركز الذي تدور حوله المدينة وخدماتها وحركتها اليومية. الخدمات التشغيلية والمسارات الرسمية تُدار عبر الجهات المختصة وتطبيقاتها.": "The centre the city, its services and its daily movement revolve around. Operational services and official routing are handled by the responsible authorities and their own apps.",
+  "المركز — الحرم وما حوله من ساحات وخدمات.": "The centre — the Haram and the courtyards and services around it.",
+  "المزيد": "More",
+  "المساء كله": "The whole evening",
+  "المسار": "Route",
+  "المسار فيه أرصفة غير مستوية في جزء منه. نقدر نختصره ونبدأ من نقطة ثانية لو أخبرتونا قبلها. الوقت يصير ساعة بدل ساعة ونصف.": "Part of the route has uneven pavements. We can shorten it and start from another point if you tell us beforehand — it becomes an hour instead of an hour and a half.",
+  "المسار مضاء بالكامل": "The route is fully lit",
+  "المسافة": "Distance",
+  "المسافة على الخريطة ٤٠٠ متر، بس الطريق صاعد وفيه جزء بدون ظل. مع كرسي متحرك أخذ منا ضعف الوقت المتوقع. رجعنا بالنقل الداخلي وكان أسهل بكثير.": "The map says 400 metres, but the road is uphill with an unshaded stretch. With a wheelchair it took us twice the expected time. We came back on the internal shuttle, which was far easier.",
+  "المستوى": "Level",
+  "المسجد الحرام": "Al-Masjid al-Haram",
+  "المسفلة": "Al-Misfalah",
+  "المشاركون": "Participants",
+  "المشي والرياضة": "Walking and sport",
+  "المصدر الرسمي": "Official source",
+  "المصدر والسياق": "Source and context",
+  "المصوّر": "Photographer",
+  "المضيف": "Host",
+  "المطاعم والتجارب": "Restaurants and experiences",
+  "المطبخ": "Cuisine",
+  "المطعم": "Restaurant",
+  "المعرض الحالي": "Current exhibition",
+  "المعلم الذي يطل على مكة": "The landmark that looks over Makkah",
+  "المعلومة داخل مدة التحديث المتوقعة لهذا النوع من الحقول.": "The detail is within the expected refresh window for this kind of field.",
+  "المعلّم": "Instructor",
+  "المقاعد": "Seats",
+  "المقاهي": "Cafés",
+  "المقهى": "Café",
+  "المكان": "Place",
+  "الملتقى نفسه فيه تسجيل مباشر. لو ما لحقت، أغلب الأندية تفتح تسجيل إلكتروني بعده بأسبوع.": "There's on-the-spot registration at the fair itself. If you miss it, most clubs open online registration a week later.",
+  "المنظّم": "Organiser",
+  "المهن القديمة والسوق اليومي.": "Old trades and the daily market.",
+  "المواد": "Materials",
+  "المواقع التاريخية ومسارات المشي.": "Historic sites and walking trails.",
+  "المواقف": "Parking",
+  "الموعد": "Time",
+  "الموقع": "Location",
+  "النادي": "Club",
+  "النسيم": "Al-Naseem",
+  "النشاط": "Activity",
+  "النقل": "Transport",
+  "النقل الداخلي في أوقات الصلوات": "Internal transport at prayer times",
+  "الهجرة": "Al-Hijrah",
+  "الوردية": "Shift",
+  "الوردية الماضية كانت أربع ساعات فعلية. الأفضل تجي قبل نص ساعة عشان الترتيب والتوزيع.": "The last shift was four actual hours. Best to arrive half an hour early for the briefing and assignments.",
+  "الورش والدورات": "Workshops and courses",
+  "الورشة": "Workshop",
+  "الوصول": "Access",
+  "الوقت": "Time",
+  "الوقت الفعلي": "Actual time",
+  "اليوم": "Today",
+  "امتداد جنوبي، مساحات مفتوحة وفعاليات موسمية.": "The southern extension — open space and seasonal events.",
+  "امتلأت مبكرًا": "Filled up early",
+  "انتحال شخصية": "Impersonation",
+  "انتقال لحجز": "Going to book",
+  "انتقلت حديثًا للعزيزية. من وين أبدأ لمعرفة خدمات الحي؟": "I just moved to Aziziyah. Where do I start with the neighbourhood's services?",
+  "انتقلت لإكمال الحجز": "You left to complete the booking",
+  "انتقلت لإكمال الحجز ولم يصلنا تأكيد": "You left to complete the booking and we haven't received a confirmation",
+  "انتقلت لإكمال الحجز — غير مؤكد بعد": "You left to complete the booking — not confirmed yet",
+  "انتهت": "Ended",
+  "انتهت الصلاحية": "Expired",
+  "انتهت صلاحيته": "No longer valid",
+  "انتهت — متاح ملخصها في المجتمع": "Ended — the discussion continues in the community",
+  "انتهى": "Ended",
+  "انتهى — اعرض بدائل": "Ended — show alternatives",
+  "انتهى — يُعرض في الأرشيف": "Ended — kept in the archive",
+  "انشر نشاطك الأول ليظهر في الاكتشاف وفي مجتمعات مكة.": "Publish your first activity so it appears in Discover and in Makkah's communities.",
+  "انضم": "Join",
+  "انضم للقاء القادم": "Join the next meet-up",
+  "انضم — سأحضر": "Join — I'm going",
+  "انضمام أو تسجيل": "Joining or registering",
+  "انضممت — ستظهر معرفته في رئيسيتك": "You joined — its knowledge will appear on your home",
+  "باقة العائلة — أنشطة الحديقة": "Family bundle — park activities",
+  "باقة النقل اليومية": "Day transport bundle",
+  "باقة تشمل أربعة أنشطة داخل الحديقة للعائلة الواحدة.": "A bundle covering four activities inside the park for one family.",
+  "باقة نقل بسعر ثابت لليوم الواحد داخل المدينة.": "A transport bundle at a fixed price for one day inside the city.",
+  "بالتعاون مع جهة صحية": "In cooperation with a health body",
+  "بالساعة أو اليوم": "By the hour or day",
+  "بالساعة أو نصف اليوم": "By the hour or half-day",
+  "بالساعة — يفضّل مسبقًا": "By the hour — best booked ahead",
+  "بانتظار تأكيد الحجز": "Awaiting booking confirmation",
+  "بتنسيق مسبق عبر الجهة المشغّلة": "By prior arrangement with the operator",
+  "بخور وعطور ومواد تقليدية": "Incense, perfume and traditional goods",
+  "بدأ للتو": "Just started",
+  "بدأت — الاتجاهات والمعلومات العملية أولًا": "Started — directions and practical details first",
+  "بدأت — المعلومات العملية أولًا": "Started — practical details first",
+  "بدأت — نعرض الآن ما تحتاجه أثناء التنفيذ": "Started — we now show what you need while you're there",
+  "بداية مناسبة لأول زيارة": "A good start for a first visit",
+  "بدون حجز": "No booking",
+  "بدون درج": "Step-free",
+  "بدون رسوم": "No fees",
+  "برامج وأنشطة للصغار.": "Programmes and activities for kids.",
+  "برجر الحي — النسيم": "Neighbourhood Burger — Al-Naseem",
+  "برياني الرصيفة": "Biryani Al-Rusayfah",
+  "برياني ومطبخ هندي محلي": "Biryani and local Indian cooking",
+  "بطاقة جامعية سارية": "A valid university card",
+  "بطحاء قريش": "Bat-ha Quraish",
+  "بعد أحد عشر يومًا": "In eleven days",
+  "بعد أسبوعين": "In two weeks",
+  "بعد العصر وحتى العشاء": "From Asr until Isha",
+  "بعد العمرة": "After Umrah",
+  "بعد المغرب": "After Maghrib",
+  "بعد المغرب لتفادي الحر": "After Maghrib to avoid the heat",
+  "بعد تسعة أيام": "In nine days",
+  "بعد ثلاثة أيام — ٧:٠٠ م": "In three days — 7:00 PM",
+  "بعد خمسة أيام": "In five days",
+  "بعد غد ٥:٠٠ م": "Day after tomorrow 5:00 PM",
+  "بعد غد — ٤ ساعات": "Day after tomorrow — 4 hours",
+  "بعد يومين — ٧:٣٠ م": "In two days — 7:30 PM",
+  "بعض الأجزاء غير ممهّدة": "Some parts are unpaved",
+  "بعيد عني": "Far from me",
+  "بعيدًا عن المسار المعتاد": "Away from the usual route",
+  "بقالة الحي الكبيرة": "The big district grocer",
+  "بلاغ": "Report",
+  "بلاغ واحد": "1 report",
+  "بلاغات": "reports",
+  "بلاغاتك": "Your reports",
+  "بلاغان": "2 reports",
+  "بمرافقة ولي الأمر": "Accompanied by a guardian",
+  "بمفردي": "On my own",
+  "بموافقة الأسر مسبقًا": "With families' prior consent",
+  "بناءً على ما أكملته — بدون إعادة عرض نفس التجربة": "Based on what you completed — without repeating the same experience",
+  "بيانات المشاركين في هذا النموذج توضيحية": "Participant data in this prototype is illustrative",
+  "بيت أبو فيصل المكي": "Abu Faisal's Makkawi house",
+  "بيت السدو المكي": "Makkawi Sadu House",
+  "بيت السليق": "Bayt Al-Saleeg",
+  "بيت الطباخ": "The Cook's House",
+  "بيت قديم مُعاد ترميمه يعرض تفاصيل الروشان والعمارة المكية التقليدية.": "A restored old house showing the detail of the rawshan and traditional Makkan architecture.",
+  "بيت مكي مُرمَّم": "A restored Makkan house",
+  "بيت مكي مُرمَّم: الطابق الثاني بدرج فقط، والمعرض الأرضي يغطي أغلب المحتوى.": "Restored Makkawi house: the second floor is stairs-only, and the ground-floor exhibition covers most of the content.",
+  "بيت مُعاد ترميمه — جلسة أرضية": "A restored house — floor seating",
+  "تأجير كرسي متحرك": "Wheelchair rental",
+  "تأكيد": "Confirm",
+  "تابِع": "Continue",
+  "تبادل لغوي — عربي/إنجليزي": "Language exchange — Arabic/English",
+  "تتابعه": "you follow",
+  "تتابعه الآن — يظهر محتواه دون أن تكون عضوًا": "You now follow it — its content appears without you being a member",
+  "تتغير كلما تفاعلت أكثر": "This changes as you use the app",
+  "تتغير لحظيًا — تُراجع من المصدر الرسمي": "Changes by the minute — check the official source",
+  "تتغير لحظيًا — تُراجع من المصدر الرسمي.": "Changes by the minute — check the official source.",
+  "تجارب بسيطة من ٧ إلى ١٢ سنة": "Simple experiments, ages 7 to 12",
+  "تجارب تستحق": "Experiences worth it",
+  "تجارب حقيقية مع مزوّدي الخدمات.": "Real experiences with service providers.",
+  "تجارب واقعية عن المسارات والمداخل والكراسي المتحركة.": "Real experiences of routes, entrances and wheelchair access.",
+  "تجارب وتحديثات": "Experiences and updates",
+  "تجارب وتوصيات": "Experiences and tips",
+  "تجاوزت المعلومة مدة التحديث المتوقعة لهذا النوع من الحقول ولم يصلنا تأكيد أحدث.": "The detail is past the expected refresh window for this kind of field and we haven't had a newer confirmation.",
+  "تجاوزت بعض الحقول مدة التحديث المتوقعة.": "Some fields are past their expected refresh window.",
+  "تجربة": "Experience",
+  "تجربة مسار داخل حي حراء تروي قصة الهجرة بترتيب زمني ومحطات شرح.": "A route experience inside Hira District telling the story of the migration in order, with interpreted stops.",
+  "تجربتي مع ورشة الصيانة: جاؤوا نفس اليوم لكن السعر النهائي اختلف عن المتفق. اطلبوا السعر كتابة قبل البدء.": "My experience with the repair workshop: they came the same day, but the final price differed from what was agreed. Get the price in writing before they start.",
+  "تحتاج تأكيدًا حديثًا.": "Needs a recent confirmation.",
+  "تحتاج خبرة؟": "Need experience?",
+  "تحديث معلومة": "Update a detail",
+  "تحديث من المشغّل يوضّح اختلاف آخر موعد دخول عن موعد الإغلاق.": "An update from the operator clarifying that last entry differs from closing time.",
+  "تحديثات وتصحيحات": "Updates and corrections",
+  "تدخلات ثقة": "Trust interventions",
+  "تذكرة الحافلة — سعر مخفّض": "Bus ticket — reduced price",
+  "تذكرة عائلية": "Family ticket",
+  "تراث ومسارات": "Heritage & trails",
+  "ترتيب وتصفية": "Sort and filter",
+  "ترجمة المساهمات تلقائيًا": "Translate contributions automatically",
+  "تركيب عطر شخصي": "Blend your own perfume",
+  "ترويج غير مفصح عنه": "Undisclosed promotion",
+  "تسجيل مسبق وحضور تدريب قصير": "Advance registration and a short training session",
+  "تسوق ومطاعم تحت سقف واحد": "Shops and restaurants under one roof",
+  "تشجير الحي": "Planting the district",
+  "تصحيح": "correction",
+  "تصحيح واحد": "1 correction",
+  "تصحيحات": "corrections",
+  "تصحيحات أرسلتها": "Corrections you sent",
+  "تصحيحان": "2 corrections",
+  "تصفّح": "Browse",
+  "تصفّح اكتشف": "Browse Discover",
+  "تصفّح مكة بالأحياء": "Browse Makkah by district",
+  "تصوير مكة": "Makkah photography",
+  "تطبخ سليقًا ومعصوبًا": "You cook saleeg and ma'soub",
+  "تطوع": "Volunteer",
+  "تطوع ومبادرات": "Volunteering & initiatives",
+  "تعرّف على أندية الجامعة": "Meet the university clubs",
+  "تعلّم الأطفال": "Kids learn",
+  "تعلّم وورش": "Learning & workshops",
+  "تغيّرات لاحظها الناس على أرض الواقع": "Changes people noticed on the ground",
+  "تفاصيل العمارة عن قرب": "Architectural detail, up close",
+  "تفاصيل العنوان تُرسل بعد التأكيد فقط": "The address is sent only after confirmation",
+  "تفاوض معتاد في أغلب المحلات": "Haggling is normal in most shops",
+  "تم التأكيد بناءً على تأكيدك أنت": "Confirmed based on your own confirmation",
+  "تم فتح الوجهة الخارجية": "The external destination was opened",
+  "تنتهي بتاريخ معلن.": "Ends on an announced date.",
+  "تنسج قطعتك في جلسة واحدة": "Weave your own piece in one session",
+  "تنسيق المجموعات وأسئلتها العملية.": "Coordinating groups and their practical questions.",
+  "تنظيف، تشجير، وخدمة الجيران.": "Cleaning, planting and helping neighbours.",
+  "تواصل": "Contact",
+  "توجد معلومات متعارضة": "There is conflicting information",
+  "توصية": "Recommendation",
+  "توصيل إلى مكان الإقامة": "Delivered to where you are staying",
+  "توصيل وجولات بسائق": "Transfers and chauffeured tours",
+  "توفّرها المبادرة": "Provided by the initiative",
+  "تُحجز عبر المشغّل": "Booked through the operator",
+  "تُحجز مسبقًا عبر المشغّل": "Booked in advance through the operator",
+  "تُحجز مسبقًا — الأمسيات تمتلئ أسرع": "Booked ahead — evenings fill up faster",
+  "تُراجع دوريًا.": "Reviewed periodically.",
+  "تُرسل للمشاركين قبل الموعد": "Sent to participants before the time",
+  "تُسجَّل كمصدر مجتمعي بتاريخها ولا تستبدل معلومة رسمية": "Recorded as a community source with its date; it doesn't replace an official detail",
+  "تُوفّر في الورشة": "Provided at the workshop",
+  "ثالي وأطباق خفيفة": "Thali and light dishes",
+  "ثقافة وتاريخ": "Culture & history",
+  "ثلاث نقاط على المسار": "Three points along the route",
+  "ثلاثة أيام مع ورش حية": "Three days with live workshops",
+  "جارٍ الآن": "On now",
+  "جامعة أم القرى": "Umm Al-Qura University",
+  "جبل النور": "Jabal al-Nour",
+  "جبل ثور": "Jabal Thawr",
+  "جبل جنوب مكة، مسار صعوده طويل ويحتاج استعدادًا. الزيارة أقرب لتجربة مشي جبلي منها لجولة قصيرة.": "A mountain south of Makkah with a long ascent that needs preparation. It is closer to a hike than to a short visit.",
+  "جبل مرتفع شمال شرق مكة، الصعود شاق ويستغرق وقتًا طويلًا، ويحتاج لياقة وماء ووقت مناسب من اليوم.": "A high mountain north-east of Makkah. The climb is hard and long, and needs fitness, water and the right time of day.",
+  "جدول الشتاء: آخر دخول ١٠:٣٠ م — الإغلاق ١١:٠٠ م": "Winter schedule: last entry 10:30 PM — closing 11:00 PM",
+  "جديد عليك": "New to you",
+  "جديد عليك — لم تجرّبه بعد": "New to you — you haven't tried it",
+  "جرول": "Jarwal",
+  "جري مكة — النسخة المسائية": "Makkah Run — evening edition",
+  "جرّب توسيع النطاق أو إزالة أحد المرشّحات. لا نعرض محتوى منتهيًا لمجرد ملء الصفحة.": "Try widening the range or removing a filter. We don't show expired content just to fill the page.",
+  "جرّبته من قبل": "I've tried it before",
+  "جلسات خارجية ومشاوي، يناسب المجموعات في الأمسيات المعتدلة.": "Outdoor seating and grills — good for groups on a mild evening.",
+  "جلسات عائلية خارجية": "Outdoor family seating",
+  "جلسات عائلية ومسار مضاء": "Family seating and a lit path",
+  "جلسات قصيرة": "Short sessions",
+  "جلسات مذاكرة جماعية": "Group study sessions",
+  "جلسات مذاكرة جماعية للطلاب قبل الاختبارات، بتنظيم بسيط ومقاعد محدودة.": "Group study sessions for students before exams — lightly organised, with limited seats.",
+  "جلسات مريحة": "Comfortable seating",
+  "جلسة أسبوعية مفتوحة": "An open weekly session",
+  "جلسة التبادل اللغوي ساعدتني كثير في أول أسبوع. الناس متعاونين وما فيه أي إحراج.": "The language exchange helped me a lot in my first week. People are welcoming and there's no awkwardness.",
+  "جلسة تبادل لغوي أسبوعية بين متحدثي العربية والإنجليزية.": "A weekly language exchange between Arabic and English speakers.",
+  "جلسة تعريفية بتركيب العطور تخرج منها بعبوة صغيرة من تركيبك.": "An introductory perfume-blending session you leave with a small bottle of your own blend.",
+  "جلسة تعريفية وتجربة": "An introduction and a trial",
+  "جلسة تعلّم ← عشاء خفيف": "Learning session → light dinner",
+  "جلسة تمهيدية تعلّم عبارات يومية مفيدة للزوار غير الناطقين بالعربية.": "An introductory session teaching useful everyday phrases for visitors who do not speak Arabic.",
+  "جلسة حكايات عن مكة القديمة تناسب العائلات والأطفال فوق ست سنوات.": "A storytelling session about old Makkah, suitable for families and children over six.",
+  "جلسة حكواتي": "Storyteller session",
+  "جلسة خط عربي للمبتدئين مساء الجمعة. مجموعة صغيرة، ومناسبة للحضور منفردًا.": "An Arabic calligraphy session for beginners on Friday evening. Small group, and comfortable to attend on your own.",
+  "جلسة سطح مرتفعة بإطلالة على محيط الحي، تمتلئ بسرعة بعد العشاء.": "A rooftop seat looking over the district; it fills quickly after dinner.",
+  "جلسة طبخ بسيطة للأطفال تحت إشراف، ينتهون فيها بطبق من صنعهم.": "A simple supervised cooking session for children, ending with a dish they made themselves.",
+  "جلسة عملية قصيرة": "A short hands-on session",
+  "جلسة عملية لأساسيات التصوير بالجوال، تنتهي بتطبيق ميداني قصير.": "A hands-on session on the basics of phone photography, ending with a short practical walk.",
+  "جلسة عملية لثلاث ساعات": "A three-hour hands-on session",
+  "جلسة عملية للمبتدئين": "A hands-on session for beginners",
+  "جلسة قصص أسبوعية": "A weekly story session",
+  "جلسة قصص تفاعلية للأطفال من ٤ إلى ٩ سنوات، بحضور ولي الأمر.": "An interactive story session for children aged 4 to 9, with a parent present.",
+  "جلسة قهوة عربية ومعجنات مكية في بيت قديم مُعاد ترميمه.": "Arabic coffee and Makkan pastries in a restored old house.",
+  "جلسة قهوة وحكايات الحارة": "Coffee and stories of the old quarter",
+  "جلسة قهوة ومعجنات مكية وحكايات الحارة القديمة.": "Coffee, Makkawi pastries and stories from the old quarter.",
+  "جلسة مرتفعة بعد العشاء": "A high seat after dinner",
+  "جلسة مسائية قصيرة: قهوة مكية، معجنات، وحكايات عن الحارة قبل التوسعات.": "A short evening session: Makkan coffee, pastries, and stories of the quarter before the expansions.",
+  "جنوب مكة، مسار جبلي معروف": "South of Makkah, a well-known mountain trail",
+  "جهة تعليمية": "Educational body",
+  "جهة ثقافية": "Cultural body",
+  "جهة رسمية": "Official body",
+  "جوالك يكفي": "Your phone is enough",
+  "جولات تاريخية بالعربية والإنجليزية": "Historical tours in Arabic and English",
+  "جولات تصوير ومراجعة أعمال للأعضاء.": "Photo walks and work reviews for members.",
+  "جولات ثقافية للعائلات والمجموعات النسائية.": "Cultural tours for families and women's groups.",
+  "جولات للعائلات والمجموعات النسائية": "Tours for families and women's groups",
+  "جولات مشي تاريخية بإشراف مرشدين محليين.": "Historic walking tours led by local guides.",
+  "جولة السوق الليلي": "Night market walk",
+  "جولة بالحافلة تمر على معالم المدينة مع شرح صوتي، مناسبة لمن يريد صورة عامة عن مكة في وقت محدود.": "A bus tour past the city's landmarks with audio commentary — good if you want an overview of Makkah in limited time.",
+  "جولة بالحافلة مع شرح صوتي": "A bus tour with audio commentary",
+  "جولة تصوير مسائية": "Evening photo walk",
+  "جولة تصوير مع مجموعة صغيرة في وقت الغروب، مع مراجعة سريعة للصور في النهاية.": "A photo walk with a small group at sunset, ending with a quick review of the shots.",
+  "جولة دراجات عائلية": "Family bike ride",
+  "جولة دراجات عائلية على مسار قصير آمن، دراجات متاحة للإيجار قرب المسار.": "A family bike ride on a short safe route, with bikes available to rent nearby.",
+  "جولة ذوق بين أربع محطات أكل في الحي القديم، مع شرح عن أصل كل طبق.": "A tasting walk between four food stops in the old quarter, with the origin of each dish explained.",
+  "جولة كل أربعاء ومراجعة أعمال": "A walk every Wednesday and a work review",
+  "جولة مسائية داخل السوق الشعبي مع تذوق وشرح عن المهن القديمة.": "An evening walk through the popular market with tastings and an account of the old trades.",
+  "جولة مشي مع مرشد محلي بين الحارات القديمة، تشرح العمارة والأسماء والحكايات اليومية.": "A walk with a local guide through the old quarters, covering the architecture, the street names and everyday stories.",
+  "حافلة معالم مكة": "Makkah Landmarks Bus",
+  "حجزت جولة مع سعيد. عرض رقم الترخيص من نفسه قبل ما أسأل، والوقت كان مضبوط.": "I booked a tour with Saeed. He showed his licence number before I even asked, and the timing was spot on.",
+  "حديقة النسيم": "Al-Naseem Park",
+  "حديقة حي واسعة فيها مسار مشي وألعاب أطفال، أنشط بعد المغرب.": "A large district park with a walking path and children's play area — busiest after sunset.",
+  "حدّد نقطة لقاء ثابتة لمجموعتك من البداية، وخلها بعيدة عن الأبواب المزدحمة.": "Agree one fixed meeting point for your group from the start, away from the busy gates.",
+  "حراء": "Hira",
+  "حرف وعروض وأكل قديم": "Crafts, demonstrations and old food",
+  "حرف ومهارات": "Crafts & skills",
+  "حرفة تُصنع أمام عينيك": "A craft made in front of you",
+  "حرفيون محليون ومنتجات يدوية": "Local artisans and handmade goods",
+  "حركة الحي اليومية وخدماته.": "The neighbourhood's daily life and services.",
+  "حركة دائمة، مطاعم ومقاهٍ وخدمات قريبة من طريق الحرم.": "Always busy — restaurants, cafés and services along the road to the Haram.",
+  "حساب": "Account",
+  "حساب المطعم": "Restaurant account",
+  "حساب الورشة": "Workshop account",
+  "حساب جديد": "New account",
+  "حساب واحد": "1 account",
+  "حسابات": "accounts",
+  "حسابات محظورة": "Blocked accounts",
+  "حسابان": "2 accounts",
+  "حسابي": "Profile",
+  "حسب موقعك الحالي": "Based on your current location",
+  "حصة سباحة للنساء في مسبح مغلق مع مدربة، بعدد محدود.": "A women's swimming class in an enclosed pool with a female coach, limited places.",
+  "حصة سباحة — للنساء": "Swimming class — women",
+  "حضرت وأكملت": "Attended and completed",
+  "حفظ": "Save",
+  "حفظ أمتعة": "Luggage storage",
+  "حكايات مكة للعائلة": "Makkah's stories, for the family",
+  "حكاية": "Story",
+  "حكاية الماء في مكة": "The story of water in Makkah",
+  "حلقة الحرفيين": "The artisans' circle",
+  "حلقة تجمع حرفيين وهواة لتبادل المهارات وعرض الأعمال.": "A circle where artisans and hobbyists trade skills and show their work.",
+  "حلقة تحفيظ للأطفال": "Children's Qur'an circle",
+  "حلقة تحفيظ مسائية للأطفال في مسجد الحي، بتنظيم من أهالي الحي.": "An evening memorisation circle for children at the district mosque, organised by residents.",
+  "حلقة حي مسائية": "An evening circle in the district",
+  "حلويات جرول": "Jarwal Sweets",
+  "حلويات جرول: اطلب الكنافة قبل ١٠ مساءً، بعد كذا تكون الكمية خلصت غالبًا.": "Jarwal sweets: order the kunafa before 10 PM — after that it's usually sold out.",
+  "حلويات مكية وكنافة": "Makkan sweets and kunafa",
+  "حلى وقهوة بعد العشاء": "Dessert and coffee after dinner",
+  "حملات وتدريب وإسعافات.": "Campaigns, training and first aid.",
+  "حملة تبرع بالدم": "Blood donation drive",
+  "حملة تبرع بالدم في مقر الحي بالتعاون مع جهة صحية مختصة.": "A blood donation drive at the district centre in cooperation with a specialised health body.",
+  "حي حراء الثقافي": "Hira Cultural District",
+  "حي شرقي حديث، حدائق ومرافق عائلية.": "A newer eastern district with parks and family facilities.",
+  "حي شمالي شرقي، مجتمع سكني ومبادرات حي نشطة.": "A north-eastern district with an active residential community and local initiatives.",
+  "حي شمالي هادئ نسبيًا، أسواق يومية وحياة أسرية.": "A calmer northern district with daily markets and family life.",
+  "حي عريق غرب الحرم، مهن قديمة وسوق يومي.": "An old district west of the Haram: traditional trades and a daily market.",
+  "حياة الحي وخدماته اليومية.": "Neighbourhood life and everyday services.",
+  "حُدّثت المعلومة — وظهر تاريخها في سجل المصادر": "The detail was updated — its date now appears in the source record",
+  "حُفظ — الحفظ لا يعني الحجز ولا الانضمام": "Saved — saving is not booking and not joining",
+  "خارج المدينة — يحتاج وسيلة نقل": "Outside the city — you'll need transport",
+  "خارجية — قد تكون حارة قبل المغرب": "Outdoors — can be hot before Maghrib",
+  "خالد": "Khaled",
+  "خالد — زائر متكرر": "Khaled — frequent visitor",
+  "خدمات": "Services",
+  "خدمات الحي وأسواقه.": "The neighbourhood's services and markets.",
+  "خدمة": "Service",
+  "خدمة الزوار": "Visitor service",
+  "خدمة تأجير كراسٍ متحركة مع توصيل إلى مكان الإقامة داخل المدينة.": "A wheelchair rental service delivered to your accommodation inside the city.",
+  "خدمة حفظ أمتعة بالساعة أو اليوم قرب محيط الحرم.": "Luggage storage by the hour or by the day near the Haram area.",
+  "خدمة زوار بتنظيم رسمي": "Serving visitors under official organisation",
+  "خدمة صيانة منزلية سريعة داخل الأحياء الغربية.": "A quick home maintenance service across the western districts.",
+  "خدمة قريبة وسريعة": "Close and quick",
+  "خدمة مترجم مرافق للزوار، تُحجز بالساعة أو نصف اليوم.": "An accompanying interpreter for visitors, booked by the hour or half-day.",
+  "خدمة نقل داخلية في أوقات الصلوات": "Internal transport service at prayer times",
+  "خدمة نقل مرخّصة للتنقل داخل المدينة وللجولات المجدولة.": "A licensed transport service for getting around the city and for scheduled tours.",
+  "خدمة نقل مرخّصة — نموذج أولي.": "Licensed transport service — prototype.",
+  "خدمة يومية داخل الحي بساعات عمل طويلة.": "A daily service inside the district with long opening hours.",
+  "خذ كتابًا واترك كتابًا": "Take a book, leave a book",
+  "خصم الحلويات بعد العشاء": "After-dinner sweets discount",
+  "خصم الطلاب على الورش": "Student discount on workshops",
+  "خصم على الطبق الثاني": "A discount on the second dish",
+  "خصم للطلاب على ورش الخط والحرف عند إبراز البطاقة الجامعية.": "A student discount on calligraphy and craft workshops on showing a university card.",
+  "خصم مسائي على الحلويات المكية في الفترة المتأخرة.": "A late-evening discount on Makkan sweets.",
+  "خصوصية الحضور": "Attendance privacy",
+  "خضار وتمور وبهارات": "Vegetables, dates and spices",
+  "خطتك فارغة الآن": "Your plan is empty right now",
+  "خطتي": "My plan",
+  "خطوات قريبة تكمل ما التزمت به": "Nearby steps that round out what you committed to",
+  "خيار خفيف مسائي": "A light evening option",
+  "خيارات نباتية وسلطات": "Vegetarian dishes and salads",
+  "خياطة يدوية ومنتج صغير": "Hand stitching and a small piece to keep",
+  "داخل مكة": "Inside Makkah",
+  "داخلي محدود وخارجي بعد المغرب": "Limited indoors, outdoors after Maghrib",
+  "دخول الحي مجاني — بعض المرافق تذكرة مستقلة": "Entry to the district is free — some facilities have a separate ticket",
+  "درج داخلي بين الطوابق": "Internal stairs between floors",
+  "درج عند المدخل الرئيسي": "Steps at the main entrance",
+  "درج قصير عند المدخل": "A short step at the entrance",
+  "درس طبخ عملي لأطباق مكية، تطبخ وتأكل ما صنعته في نهاية الجلسة.": "A hands-on cooking class for Makkan dishes — you cook, then eat what you made.",
+  "دروس تقوية لطلاب الثانوية في مجموعات صغيرة.": "Tutoring for secondary school students in small groups.",
+  "دروس تقوية — ثانوي": "Tutoring — secondary school",
+  "دور نشر محلية وجلسات توقيع": "Local publishers and signings",
+  "دورة قصيرة في الإسعافات الأولية الأساسية بتدريب عملي.": "A short course in basic first aid with hands-on practice.",
+  "ديسمبر": "December",
+  "ربما انتهى أو أُزيل من المحتوى.": "It may have ended or been removed.",
+  "رجوع": "Back",
+  "رحت متحف برج الساعة أمس الساعة ١٠:٤٥ مساءً ولقيت الدخول مقفل. الموظف قال آخر تذكرة ١٠:٣٠.": "I went to the Clock Tower museum yesterday at 10:45 PM and the entrance was closed. Staff said the last ticket is 10:30.",
+  "رحت مع والدتي الشهر الماضي وكانت مرتاحة. المسار داخل المعرض بدون درج، والمقاعد موجودة في أكثر من نقطة.": "I went with my mother last month and she was comfortable. The route inside the exhibition is step-free and there's seating at several points.",
+  "رحلات مجدولة إلى محيط الحرم": "Scheduled trips to the Haram area",
+  "رحلات مكتملة": "Completed trips",
+  "ردّ أحد أعضاء المجتمع على سؤالك.": "A community member replied to your question.",
+  "ردّ على سؤالك، تغيّر في خطتك، أو عرض حفظته على وشك الانتهاء. لا إشعارات تسويقية عامة.": "A reply to your question, a change in your plan, or a saved offer about to end. No generic marketing notifications.",
+  "ردّ مقدّم الخدمة": "Provider's reply",
+  "رعاية أطفال أثناء الفعاليات": "Childcare during events",
+  "رقم ترخيص معروض لدى الجهة المختصة": "A licence number on file with the relevant authority",
+  "ركن ألعاب داخلي": "Indoor play corner",
+  "ركن الألعاب": "Play corner",
+  "ركن الشطرنج": "The chess corner",
+  "ركن القراءة للأطفال": "Children's reading corner",
+  "ركن القهوة": "Coffee Corner",
+  "ركن رعاية أطفال مشرف عليه أثناء بعض الفعاليات، بحجز مسبق ومقاعد محدودة.": "A supervised childcare corner during some events, by advance booking and with limited places.",
+  "ركن مشرف عليه": "A supervised corner",
+  "رمزية عند الباب": "Nominal at the door",
+  "رياضة ومشي": "Sport & walking",
+  "ريوق مكة": "Rayouq Makkah",
+  "ز": "Z",
+  "زائر": "Visitor",
+  "زائر متكرر": "Frequent visitor",
+  "زائر — الرياض": "Visitor — Riyadh",
+  "زائر — باكستان": "Visitor — Pakistan",
+  "زائرة — إندونيسيا": "Visitor — Indonesia",
+  "زائرة — المملكة المتحدة": "Visitor — United Kingdom",
+  "زائرون — اردو": "Visitors — Urdu",
+  "زرت أغلب المعالم المعروفة. فيه شي أقل شهرة يستاهل؟": "I've seen most of the well-known sights. Is there something less famous worth it?",
+  "زرنا معرض الوحي الخميس الماضي مع ثلاثة أطفال. المعرض منظّم والوقت مضبوط، لكن آخر جولة تمتلئ بسرعة. حجزنا قبلها بيومين.": "We visited the Revelation Exhibition last Thursday with three kids. It's well-organised and runs on time, but the last tour fills fast. We booked two days ahead.",
+  "زوار مكة": "Makkah visitors",
+  "زوايا وأوقات وضوء المدينة.": "The city's angles, hours and light.",
+  "زيارة في نفس اليوم": "Same-day visit",
+  "زيارة قصيرة لأسرة مكية: سفرة بيتية، حديث عن الحي وعاداته، وأسئلة مفتوحة. مجموعة صغيرة فقط.": "A short visit with a Makkan family: a home-cooked table, conversation about the district and its customs, and open questions. Small groups only.",
+  "زيارة كبار السن": "Visiting older neighbours",
+  "زيارة ميدانية أمس": "Visited in person yesterday",
+  "سأحضر": "I'm going",
+  "سؤال": "Question",
+  "ساحة الأطفال": "Children's yard",
+  "ساحة الحي — الهجرة": "District square — Al-Hijrah",
+  "ساحة مفتوحة تستضيف فعاليات الحي الموسمية وجلسات مسائية.": "An open square hosting the district's seasonal events and evening gatherings.",
+  "ساحة مفتوحة للفعاليات": "An open square for events",
+  "ساري لمدة أسبوع": "Valid for a week",
+  "ساعات الزيارة": "Visiting hours",
+  "ساعات العمل": "Opening hours",
+  "ساعة": "An hour",
+  "ساعة ونصف بين الحارات": "An hour and a half through the old quarters",
+  "ساعتان": "Two hours",
+  "ساعتان إلى ثلاث": "Two to three hours",
+  "ساعتان تكفي للمعرض وجلسة قهوة. المشي بين المرافق قصير، وفيه عربات نقل داخلية إذا احتجتوها. الأفضل تجون بعد المغرب، النهار حار.": "Two hours is enough for the exhibition and a coffee. The walk between facilities is short, and there are internal shuttles if you need them. Best to come after Maghrib — the daytime is hot.",
+  "ساعتان مع أهل الحي": "Two hours with your neighbours",
+  "ساعتان ونصف": "Two and a half hours",
+  "ساعد شخصًا يسأل": "Help someone who asked",
+  "سبتمبر": "September",
+  "ستُرفق صورة من تجربتك": "A photo from your visit will be attached",
+  "سجّل": "Register",
+  "سجّلت حضورك — بدون حجز": "You marked yourself going — no booking",
+  "سجّلنا اهتمامك، ونذكّرك إن اقترب موعده": "We noted your interest and will remind you when it's close",
+  "سجّلناه كاهتمام — نذكّرك إن اقترب موعده": "Noted as interest — we'll remind you when it's close",
+  "سعد": "Saad",
+  "سعر ثابت لليوم": "A fixed price for the day",
+  "سعر خاص على مشروبات التقطير في الفترة الصباحية.": "A special price on pour-over drinks in the morning.",
+  "سعر خاص قبل ١٠ ص": "A special price before 10 AM",
+  "سعر مجموعة لأربعة أفراد": "A group price for four",
+  "سعر مخفّض على الجولة المسائية بحافلة المعالم عند الحجز عبر المشغّل.": "A reduced price on the evening landmarks bus tour when booked through the operator.",
+  "سعر مخفّض للتذكرة العائلية عند الحجز المسبق عبر المشغّل.": "A reduced family ticket price when booked in advance through the operator.",
+  "سعيد": "Saeed",
+  "سعيد — مرشد محلي": "Saeed — local guide",
+  "سفرة الحي": "District Table",
+  "سفرة العوالي": "Sufrat Al-Awali",
+  "سفرة العوالي أفضل قبل الثامنة. بعدها الانتظار يوصل نص ساعة في نهاية الأسبوع.": "Sufrat Al-Awali is better before eight. After that the wait reaches half an hour at weekends.",
+  "سفرة كاملة وقهوة وحديث": "A full spread, coffee and conversation",
+  "سفرة وحديث في بيت مكي": "A table and conversation in a Makkan home",
+  "سليق حجازي كل خميس": "Hijazi saleeg, every Thursday",
+  "سمك البحر الأحمر": "Red Sea Fish",
+  "سمك طازج بطريقة حجازية": "Fresh fish, Hijazi style",
+  "سمك مقلي — الكعكية": "Fried Fish — Al-Kakiyah",
+  "سنسجّل «انتقلت لإكمال الحجز» في خطتك. لن يتحول إلى «مؤكد» إلا بتأكيد منك أو من مزوّد الخدمة.": "We'll record “you left to complete the booking” in your plan. It only becomes “confirmed” with a confirmation from you or the provider.",
+  "سهل — مواقف قريبة": "Easy — parking nearby",
+  "سهولة الوصول": "Accessibility",
+  "سوق التمور": "The dates market",
+  "سوق التمور بالششة. البائعين يخلونك تذوق قبل الشراء، والأسعار أنظف من المحلات السياحية.": "The date market in Shisha. Sellers let you taste before buying and the prices are fairer than the tourist shops.",
+  "سوق الحرفيين المسائي": "Evening artisans' market",
+  "سوق الحرفيين المسائي بجرول ممتاز لهالوقت. مفتوح لين متأخر، وما يحتاج حجز، والأطفال يستمتعون بالعروض الحية.": "The evening artisans' market in Jarwal is great at this hour. Open late, no booking needed, and the kids enjoy the live demonstrations.",
+  "سوق الحي المسائي — العوالي": "Evening district market — Al-Awali",
+  "سوق الخضار اليومي": "Daily vegetable market",
+  "سوق الذهب بجرول: أغلب المحلات صارت تفتح بعد العصر فقط.": "Jarwal gold market: most shops now only open after Asr.",
+  "سوق الذهب — جرول": "Gold market — Jarwal",
+  "سوق الشوقية الشعبي": "Al-Shawqiyah popular market",
+  "سوق العتيبية": "Al-Otaibiyah Market",
+  "سوق العتيبية بعد العصر أفضل بكثير. الصباح للبضاعة الطازجة، والمساء للحركة والأسعار.": "Utaybiyah market is much better after Asr. Mornings are for fresh produce, evenings for the buzz and the prices.",
+  "سوق العطارة": "The perfumers' market",
+  "سوق العطارة: اطلب خلطة جاهزة وجرّبها قبل ما تشتري كمية.": "Spice market: ask for a ready-made blend and try it before buying a large amount.",
+  "سوق شعبي تجد فيه الخضار والتمور والبهارات والأدوات المنزلية، وأفضل أوقاته بعد العصر.": "A popular market for vegetables, dates, spices and household goods. It is at its best after the afternoon prayer.",
+  "سوق صغير للبخور والعطور والمواد التقليدية، تجد فيه خلطات محلية.": "A small market for incense, perfume and traditional goods, with local blends.",
+  "سوق مخصص للتمور بأصناف محلية، البائعون يسمحون بالتذوق قبل الشراء.": "A market dedicated to dates with local varieties; sellers let you taste before you buy.",
+  "سوق مسائي للأسر المنتجة في ساحة الحي، أكل ومنتجات يدوية.": "An evening market for home producers in the district square — food and handmade goods.",
+  "سوق مسائي يجمع حرفيين محليين: سدو، فخار، جلد، وعطور. عروض حية للصناعة.": "An evening market of local artisans — Sadu, pottery, leather and perfume — with live demonstrations.",
+  "سوق يومي بنبض محلي": "A daily market with a local pulse",
+  "سوق يومي للخضار والتمور والبهارات، أسعاره أفضل في الصباح.": "A daily market for vegetables, dates and spices — prices are better in the morning.",
+  "سوق ← حلو بعد العشاء": "Market → dessert after dinner",
+  "سياق أضافه EyeMakkah": "Context added by EyeMakkah",
+  "سُجّل حضورك في اللقاء القادم — الانضمام ليس حجزًا": "You're marked as going to the next meet-up — joining is not a booking",
+  "سُجّل حضورك — الانضمام ليس حجزًا ولا تأكيدًا": "You're marked as going — joining is not a booking or a confirmation",
+  "شارك المجتمع": "Share with the community",
+  "شارك تجربتك": "Share your experience",
+  "شارك صورة": "Share a photo",
+  "شارك هذا الأسبوع": "Take part this week",
+  "شاورما النسيم": "Shawarma Al-Naseem",
+  "شاورما وسندويشات سريعة": "Shawarma and quick sandwiches",
+  "شرح بالإنجليزية": "Explained in English",
+  "شعراء محليون ونقاش": "Local poets and discussion",
+  "شقق العزيزية المخدومة": "Al-Aziziyah serviced apartments",
+  "شقق مخدومة أوسع للعائلات مع خدمة نقل مجدولة إلى محيط الحرم.": "Serviced apartments with more space for families and a scheduled shuttle to the Haram area.",
+  "شكرًا — أضفنا مساهمتك": "Thank you — your contribution was added",
+  "شمال شرق، امتداد سكني ومرافق رياضية.": "North-east — residential streets and sports facilities.",
+  "شمال غرب الحرم، متاحف ومرافق ثقافية.": "North-west of the Haram — museums and cultural venues.",
+  "شمال غرب مكة، ميقات ومحيط خدمي.": "North-west Makkah — a miqat and the services around it.",
+  "شهريًا": "monthly",
+  "شوربة وسلطات — جرول": "Soup & Salads — Jarwal",
+  "شيء جديد عليك": "Something new to you",
+  "ص": "AM",
+  "صار فيه سوق مسائي جديد بالعوالي — أحد يعرف لين متى يستمر؟": "There's a new evening market in Awali — does anyone know how late it runs?",
+  "صالة الحي الرياضية": "District sports hall",
+  "صالة حي فيها ملاعب وحصص مسائية، الحجز بالساعة للمجموعات.": "A district hall with courts and evening classes; groups book by the hour.",
+  "صباح الخير": "Good morning",
+  "صخري ومتدرج — أحذية مناسبة ضرورية": "Rocky and stepped — proper shoes are essential",
+  "صعب مع كرسي متحرك — منحدر صاعد": "Hard with a wheelchair — uphill slope",
+  "صف من محلات الصياغة القديمة، أغلبها يفتح بعد العصر.": "A row of old goldsmiths, most of which open after the afternoon prayer.",
+  "صلاحية محددة": "Limited validity",
+  "صور من المجتمع": "Photos from the community",
+  "صور وحكايات وأسماء الحارات.": "Photos, stories and the names of the quarters.",
+  "صورة": "Photo",
+  "صورة حديثة تساعد من لم يزره بعد": "A recent photo helps people who haven't been yet",
+  "صورة للروشان من بيت قديم في جرول قبل الترميم.": "A photo of the rawshan of an old house in Jarwal before restoration.",
+  "صيدلية الحي": "District pharmacy",
+  "ضعف المتوقع": "Twice the expected",
+  "ضيافة أسرة مكية": "Hosted by a Makkan family",
+  "ضيافة أم خالد": "Umm Khaled's hospitality",
+  "طالبة بأم القرى": "Umm Al-Qura student",
+  "طبيعة وجبال": "Nature & mountains",
+  "طريق صاعد — مركبة مناسبة": "Uphill road — a suitable vehicle",
+  "طلاب أم القرى": "Umm Al-Qura students",
+  "طلبات سفري سريعة": "Quick takeaway",
+  "طلبات عائلية كبيرة": "Large family orders",
+  "عائلات وأطفال": "Families & children",
+  "عاد النشاط — يظهر في التوصيات": "The activity is back — it appears in recommendations",
+  "عادي": "Normal",
+  "عبارات يومية مفيدة": "Useful everyday phrases",
+  "عبر المسارات والخدمات الرسمية": "Through official routes and services",
+  "عبر المنصة الرسمية للجهة": "Through the body's official platform",
+  "عدنا إلى العربية": "Back to Arabic",
+  "عربي وإنجليزي": "Arabic and English",
+  "عربية للزوار — جلسة تمهيدية": "Arabic for visitors — an introduction",
+  "عرض": "View",
+  "عرض الترجمة": "Show translation",
+  "عرض الترخيص مسبقًا": "Licence shown in advance",
+  "عرض العشاء العائلي": "Family dinner offer",
+  "عرض العشاء العائلي بسفرة العوالي شغال فعلًا، بس الفرع الثاني ما يطبّقه.": "The family dinner offer at Sufrat Al-Awali is genuinely running, but the second branch doesn't honour it.",
+  "عرض المساء — مقهى السطح": "Evening offer — Rooftop Café",
+  "عرض المشاوي — انتهى": "Grill offer — ended",
+  "عرض تشجيعي على حجز مقعدين في ورشة الخط للمبتدئين.": "An introductory offer on booking two seats at the beginners' calligraphy workshop.",
+  "عرض ساري": "Offer active",
+  "عرض قصير مناسب للصغار": "A short show for younger children",
+  "عرض مسائي انتهت صلاحيته. يظهر في السجل فقط ولا يُعرض ضمن العروض السارية.": "An evening offer that has expired. It appears in the record only and is not shown among valid offers.",
+  "عرض مسائي على المشروبات في الفترة من ٥ إلى ٧ مساءً.": "An evening drinks offer between 5 and 7 PM.",
+  "عرض مسرحي قصير للأطفال، مقاعد محدودة ويفضّل الحجز.": "A short theatre show for children; seats are limited, so booking is advised.",
+  "عرض من المطعم على الطبق الثاني ضمن الطلب العائلي، داخل الفرع فقط.": "An offer from the restaurant on the second dish within a family order, in-branch only.",
+  "عرض من مقدّم الخدمة": "Offer from the provider",
+  "عروض سارية تناسبك": "Valid offers that suit you",
+  "عروض قصيرة ونقاش": "Short talks and discussion",
+  "عضو جديد": "New member",
+  "علم الفلك والوقت فوق مكة": "Astronomy and timekeeping above Makkah",
+  "على جلسة الجمعة فقط": "On the Friday session only",
+  "على خطاه": "Ala Khutah",
+  "عمارة الروشان عن قرب": "Rawshan architecture, up close",
+  "عمر": "Omar",
+  "عمران": "Imran",
+  "عناصر": "items",
+  "عند الإيقاف تصبح النتائج عامة وتختفي أسباب «لماذا ظهر لك».": "When it's off, results become generic and the “why you're seeing this” reasons disappear.",
+  "عندك ساعة؟": "Got an hour?",
+  "عندك ساعتان؟": "Got two hours?",
+  "عندك وقت؟": "Got some time?",
+  "عندما يسأل أحد عن نشاطك سيظهر السؤال هنا.": "When someone asks about your activity, the question appears here.",
+  "عندما ينضم أحد إلى نشاطك ستظهر الأعداد هنا.": "When someone joins your activity, the numbers appear here.",
+  "عندنا ساعتين بس الليلة مع طفلين. وش أفضل خيار قريب ما يحتاج حجز؟": "We only have two hours tonight with two kids. What's the best nearby option with no booking?",
+  "عنصر": "item",
+  "عنصر واحد": "1 item",
+  "عنصران": "2 items",
+  "عين زبيدة": "Ain Zubaydah",
+  "غادرت المجتمع": "You left the community",
+  "غدًا": "Tomorrow",
+  "غدًا من ١٠ ص": "Tomorrow from 10 AM",
+  "غرب مكة، أسواق شعبية وورش ومهن محلية.": "West Makkah: popular markets, workshops and local trades.",
+  "غرب مكة، مجتمع سكني وأسواق قريبة.": "West Makkah — a residential community with markets close by.",
+  "غير محدد": "Not sure",
+  "غير مطلوب عادة إلا للمجموعات": "Not usually needed except for groups",
+  "غير مطلوبة": "Not required",
+  "غير معلنة": "Not announced",
+  "غير ممهّدة في أجزاء": "Unpaved in parts",
+  "غير موجود": "Not found",
+  "غير نشط": "Inactive",
+  "غير نشط حاليًا": "Currently inactive",
+  "فبراير": "February",
+  "فترتان — راجع المحل قبل الزيارة": "Two shifts — check with the shop before going",
+  "فحسة ومندي": "Fahsa and mandi",
+  "فرص منظّمة عبر جهات مرخّصة.": "Organised opportunities through licensed bodies.",
+  "فرص موثوقة ومبادرات الأحياء.": "Trusted opportunities and neighbourhood initiatives.",
+  "فرصة تطوعية منظّمة لخدمة الزوار: إرشاد، توزيع ماء، ومساعدة كبار السن. تدريب قصير قبل الوردية.": "An organised volunteering opportunity serving visitors: guidance, handing out water and helping older visitors. A short briefing precedes the shift.",
+  "فرع العوالي فقط": "Awali branch only",
+  "فريق تطوعي": "Volunteer team",
+  "فريق مجتمع EyeMakkah": "EyeMakkah community team",
+  "فريق هديّة التطوعي": "Hadiyyah volunteer team",
+  "فطور التنعيم": "Al-Tan'eem breakfast",
+  "فطور حجازي بجلسة هادئة": "Hijazi breakfast in a calm room",
+  "فطور مكي من الصباح الباكر": "Makkan breakfast from first light",
+  "فعاليات": "Events",
+  "فعاليات وأنشطة": "Events and activities",
+  "فعالية": "Event",
+  "فعالية جري ٥ كم في مسار مغلق، فئات للمبتدئين وللمتقدمين.": "A 5 km run on a closed course, with categories for beginners and for experienced runners.",
+  "فعالية عائلية في حديقة الحي: ألعاب للأطفال، عربات طعام، وركن للأسر.": "A family event in the district park: children's games, food trucks and a family area.",
+  "فول وتميس من الفجر": "Foul and tamees from dawn",
+  "فول ومعصوب الحارة": "Foul & Ma'soub Al-Harah",
+  "فول ومعصوب الحارة: رحت الساعة ٦ صباحًا وكان الزحام معقول. المعصوب ممتاز، والمكان بسيط وما فيه جلسات كثيرة.": "Foul and Ma'soub Al-Harah: I went at 6 AM and the queue was reasonable. The ma'soub is excellent; the place is simple with little seating.",
+  "في الأرشيف": "In the archive",
+  "في الهواء الطلق": "Outdoors",
+  "في خطتك — لم يُحجز": "In your plan — not booked",
+  "في خطتي": "In my plan",
+  "فيصل": "Faisal",
+  "فيه أحد جرّب ركن رعاية الأطفال أثناء الفعاليات؟ كيف كان؟": "Has anyone tried the childcare corner during events? How was it?",
+  "فيه مكان يفتح بدري للدراسة ويكون هادي؟": "Is there somewhere that opens early for studying and stays quiet?",
+  "قائمة المشاركات غير معلنة": "The list of participants isn't public",
+  "قائمة شوربات وسلطات، مناسب لوجبة خفيفة بعد المغرب.": "A menu of soups and salads — good for a light meal after sunset.",
+  "قائمة نباتية وسلطات وأطباق خفيفة، خيار عملي لمن يبحث عن وجبة أخف.": "A vegetarian menu with salads and light dishes — a practical choice for a lighter meal.",
+  "قادم": "Upcoming",
+  "قاعة عائلية واسعة": "A large family hall",
+  "قبل أكثر من خمسة أشهر": "More than five months ago",
+  "قبل الفجر أو بعد العصر لتفادي الحر": "Before Fajr or after Asr to avoid the heat",
+  "قبل ٧ صباحًا": "Before 7 AM",
+  "قد تكون أُزيلت.": "It may have been removed.",
+  "قد تكون الكلمة غير مستخدمة في مكة بهذا الشكل. جرّب كلمة أقرب للمعنى، أو تصفّح حسب الحي أو الفئة.": "The word may not be used that way in Makkah. Try a closer term, or browse by neighbourhood or category.",
+  "قد تكون المعلومة قديمة": "This detail may be out of date",
+  "قد تكون بعض المعلومات قديمة": "Some details may be out of date",
+  "قد تناسبك": "May suit you",
+  "قد يصل ٢٠ دقيقة في الذروة": "Can reach 20 minutes at peak",
+  "قد يكون أُرشف.": "It may have been archived.",
+  "قراءة وبرامج ثقافية قرب الحرم": "Reading and cultural programmes near the Haram",
+  "قراءة ونقاش مفتوح": "Reading and open discussion",
+  "قرب محيط الحرم": "Near the Haram area",
+  "قريب من الحرم ويفتح متأخرًا": "Close to the Haram and open late",
+  "قريب من الحرم، طابع قديم وأكل مكي أصيل.": "Close to the Haram, older in character, and home to real Makkan food.",
+  "قريب من شيء في خطتك": "Near something in your plan",
+  "قريب منك الآن": "Near you right now",
+  "قسم عائلي منفصل": "Separate family section",
+  "قسم مستقل وجلسات هادئة": "A separate section and quiet seating",
+  "قصر الزاهر وتاريخ المدينة": "Al-Zahir Palace and the history of the city",
+  "قلب مكة ومركز حركتها": "The heart of Makkah and the centre of its movement",
+  "قلم وحبر وأول كلمة": "A pen, ink, and your first word",
+  "قلّلنا ظهوره": "We showed it less",
+  "قهوة التراث — جرول": "Heritage Coffee — Jarwal",
+  "قهوة الحارة": "Qahwat Al-Harah",
+  "قهوة الحارة مكان صغير بس صاحبه يعرف زبائنه. لو تبي جلسة هادية بعد العصر، هذا مكانك.": "Qahwat Al-Harah is small, but the owner knows his regulars. If you want a quiet sit-down after Asr, this is your place.",
+  "قهوة الصباح": "Morning coffee",
+  "قهوة سريعة قرب البيت": "A quick coffee close to home",
+  "قهوة عربية ومعجنات": "Arabic coffee and pastries",
+  "قهوة مختصة وتحميص محلي": "Specialty coffee, roasted locally",
+  "قهوة هادئة": "Quiet coffee",
+  "قهوة ورفوف كتب": "Coffee and shelves of books",
+  "قهوة ومعجنات وحديث قديم": "Coffee, pastries and old conversation",
+  "قهوة ← ورشة ← عشاء": "Coffee → workshop → dinner",
+  "قهوة، جلسات، ومساحات عمل ودراسة.": "Coffee, seating and space to work and study.",
+  "كبدة الشوقية": "Kibdah Al-Shawqiyah",
+  "كبدة وسندويشات مسائية": "Liver and evening sandwiches",
+  "كبسة البيت — الهجرة": "Home Kabsa — Al-Hijrah",
+  "كل أربعاء": "Every Wednesday",
+  "كل أربعاء قبل الغروب": "Every Wednesday before sunset",
+  "كل أسبوعين": "Every two weeks",
+  "كل المجتمعات": "All communities",
+  "كل بلاغ يذهب لمراجعة بشرية، ولا يحذف المحتوى تلقائيًا": "Every report goes to a human reviewer and never deletes content automatically",
+  "كل ثلاثاء": "Every Tuesday",
+  "كل ثلاثاء ٧:٣٠ م": "Every Tuesday 7:30 PM",
+  "كل ثلاثاء — مسار مختلف": "Every Tuesday — a different route",
+  "كل جمعة": "Every Friday",
+  "كل جمعة صباحًا": "Every Friday morning",
+  "كل جمعة ٨:٠٠ ص": "Every Friday 8:00 AM",
+  "كل خميس": "Every Thursday",
+  "كل خميس بعد المغرب": "Every Thursday after sunset",
+  "كل سبت": "Every Saturday",
+  "كل سبت صباحًا": "Every Saturday morning",
+  "كل سبتين": "Every other Saturday",
+  "كم معك وقت الآن؟": "How much time do you have?",
+  "كن أول من يكتب — سؤال واحد يكفي لبدء النقاش.": "Be the first to write — one question is enough to start the discussion.",
+  "كيف أتأكد أن المرشد مرخّص؟ وصلتني عروض من حسابات ما أعرفها.": "How do I check a guide is licensed? I've had offers from accounts I don't know.",
+  "كيف كان الوصول؟": "How was getting there?",
+  "لأجلك": "For you",
+  "لا": "No",
+  "لا أسئلة مرتبطة بمحتواك": "No questions linked to your content",
+  "لا إشعارات الآن": "No notifications right now",
+  "لا تحتاج خبرة سابقة": "No prior experience needed",
+  "لا تسجيلات بعد": "No registrations yet",
+  "لا تعتمد على نقاط بيع في الأعلى": "Don't count on card machines up top",
+  "لا تعجبني هذه الفئة": "I don't like this category",
+  "لا تنشر أرقامًا شخصية أو مواقع دقيقة لأحد.": "Don't post anyone's personal numbers or exact locations.",
+  "لا توجد جلسات": "No sessions",
+  "لا محتوى منشور بعد": "Nothing published yet",
+  "لا مساهمات هنا بعد": "No contributions here yet",
+  "لا موعد محدد الآن": "No set time right now",
+  "لا نتائج بهذه المرشّحات": "No results with these filters",
+  "لا نعرض قوائم المشاركين ولا مواقع المستخدمين لأحد": "We don't show participant lists or users' locations to anyone",
+  "لا يجمع مع عروض أخرى": "Not combinable with other offers",
+  "لا يظهر لك محتوى من تحظره": "You don't see content from accounts you block",
+  "لا يناسبني الآن": "Not right for me now",
+  "لا يوجد محتوى منتهٍ حاليًا.": "There's no expired content right now.",
+  "لا، القائمة غير معلنة. تعرفين العدد فقط، وتشوفين من حضر عند اللقاء نفسه.": "No, the list isn't public. You only see the count, and you meet whoever comes on the day.",
+  "لطلاب وطالبات الجامعة": "For university students",
+  "لغة النشاط: العربية": "Activity language: Arabic",
+  "لقاء أسبوعي لعائلات الحي في الحديقة، أنشطة بسيطة للأطفال وترتيب تطوعي من الأهالي.": "A weekly meet-up for the district's families in the park, with simple activities for children organised by the parents themselves.",
+  "لقاء أسبوعي مفتوح": "An open weekly meet",
+  "لقاء التقنية الشهري": "Monthly tech meet-up",
+  "لقاء العائلات": "Family meet-up",
+  "لقاء العائلات — حديقة النسيم": "Families meet-up — Al-Naseem Park",
+  "لقاء الوافدين الجدد لمكة": "Newcomers to Makkah meet-up",
+  "لقاء شطرنج أسبوعي مفتوح لكل المستويات في ركن المقهى.": "A weekly chess meet-up open to all levels in the café corner.",
+  "لقاء شهري حول كتاب": "A monthly meeting around one book",
+  "لقاء شهري لمن انتقل حديثًا إلى مكة: أسئلة السكن والمدارس والخدمات.": "A monthly meet-up for people who recently moved to Makkah: housing, schools and services.",
+  "لقاء شهري لمهتمي التقنية بعروض قصيرة ونقاش مفتوح.": "A monthly meet-up for people interested in technology, with short talks and open discussion.",
+  "لقاء قرائي شهري مفتوح للجميع.": "A monthly reading meet-up open to everyone.",
+  "لقاء مفتوح يتناول عمارة مكة قبل التوسعات، مع جلسة أسئلة في النهاية.": "An open talk on Makkah's architecture before the expansions, with questions at the end.",
+  "لقاء نصف شهري": "A fortnightly meeting",
+  "لقاء: عمارة مكة القديمة": "Talk: the architecture of old Makkah",
+  "لك": "For you",
+  "لكل حي إيقاعه ومجتمعه": "Every district has its own rhythm and community",
+  "للحضور منفردًا": "For going alone",
+  "للعائلة": "For families",
+  "للمتاحف الكبيرة نعم، خصوصًا المساء. المعارض الصغيرة عادة ما تحتاج.": "For the big museums yes, especially in the evening. Small exhibitions usually don't need it.",
+  "لم نتمكن من التحقق": "We couldn't verify",
+  "لم نعد نجد هذا العنصر": "We can no longer find this item",
+  "لم نعد نجد هذه المساهمة": "We can no longer find this contribution",
+  "لم يكتمل": "Not completed",
+  "لماذا تخفيه؟": "Why hide it?",
+  "لن تظهر لك مساهمات هذا الحساب": "You won't see this account's contributions",
+  "لن نعرضه مجددًا": "We won't show it again",
+  "لن نُظهر محتواه في رئيسيتك": "We won't show their content on your home",
+  "لو زرت المعرض سابقًا، جرّب «على خطاه» هالمرة. تجربة مختلفة تمامًا وأهدأ.": "If you've been to the exhibition before, try “In His Footsteps” this time. A completely different, quieter experience.",
+  "ليلة التراث في جرول": "Heritage night in Jarwal",
+  "ليلة العائلة بحديقة النسيم: وصلنا ٨ وكانت المواقف ممتلئة. ركّنا بالشارع الخلفي ومشينا خمس دقائق. الأطفال استمتعوا، والعربات كثيرة.": "Family night at Naseem Park: we arrived at 8 and the car park was full. We parked on the back street and walked five minutes. The kids loved it, and there are plenty of food carts.",
+  "ليلة العائلة في النسيم": "Family night in Al-Naseem",
+  "ليلة هادئة": "A quiet evening",
+  "ليلى": "Laila",
+  "م": "PM",
+  "مؤكد": "Confirmed",
+  "ما أنت فيه الآن": "What you're in now",
+  "ما تنضم إليه يظهر أولًا في رئيسيتك": "What you join appears first on your home",
+  "ما زال أمامك وقت للحاق به": "There is still time to make it",
+  "ما فتح حديثًا — وهل يستحق.": "What opened recently — and whether it's worth it.",
+  "ما هو مجدول فعلًا هذه الأيام": "What's actually scheduled these days",
+  "ما يستحق الزيارة هذا الشهر.": "What's worth visiting this month.",
+  "ما يشمله": "What's included",
+  "ما يمكن اللحاق به خلال ساعات": "What you can still catch within hours",
+  "ماذا بعد؟": "What next?",
+  "ماذا تفعل في بقية أيامك في مكة.": "What to do with the rest of your days in Makkah.",
+  "ماذا تمنيت أن تعرف؟": "What did you wish you knew?",
+  "ماذا تمنيت أن تعرفه قبلها؟": "What did you wish you'd known beforehand?",
+  "مارس": "March",
+  "مايو": "May",
+  "مبادرات إفطار وسقيا وخدمة الزوار.": "Iftar, water and visitor-service initiatives.",
+  "مبادرات الأحياء": "Neighbourhood initiatives",
+  "مبادرات الحي وفعالياته.": "The neighbourhood's initiatives and events.",
+  "مبادرات تنظيف وتشجير وخدمة مجتمع الحي.": "Cleaning, planting and neighbourhood service initiatives.",
+  "مبادرات نظافة وتشجير في الأحياء.": "Cleaning and planting initiatives in the neighbourhoods.",
+  "مبادرة أسبوعية": "A weekly initiative",
+  "مبادرة أسبوعية لزيارة كبار السن في الحي بتنسيق مع الأسر.": "A weekly initiative to visit older residents in the district, arranged with their families.",
+  "مبادرة تشجير موسمية في شوارع الحي بمشاركة الأسر.": "A seasonal tree-planting initiative on the district's streets, with families taking part.",
+  "مبادرة تنظيف الحي": "Neighbourhood clean-up",
+  "مبادرة تنظيف الحي: الأدوات صارت متوفرة من الجمعية، ما عاد يحتاج أحد يجيب معه شي.": "Neighbourhood clean-up: the association now provides the tools, so nobody needs to bring anything.",
+  "مبادرة تنظيف وتشجير ينظّمها سكان الحي. الأدوات متوفرة، والمشاركة مفتوحة للعائلات.": "A clean-up and planting initiative run by residents. Tools are provided and families are welcome.",
+  "مبادرة حي": "Neighbourhood initiative",
+  "مبادرة حيّنا": "Our neighbourhood initiative",
+  "مبادرة موسمية": "A seasonal initiative",
+  "مبتدئ": "Beginner",
+  "مبتدئ فأعلى": "Beginner and up",
+  "مبتدئ — لا تحتاج خبرة": "Beginner — no experience needed",
+  "متاح": "Available",
+  "متاح قبل الشراء": "Available before buying",
+  "متحف": "Museum",
+  "متحف المدينة في قصر الزاهر، يعرض تاريخ مكة وعمارتها وحياتها الاجتماعية عبر مقتنيات ونماذج.": "The city museum in Al-Zahir Palace, showing Makkah's history, architecture and social life through objects and models.",
+  "متحف برج الساعة": "Clock Tower Museum",
+  "متحف داخل برج الساعة يعرض تاريخ قياس الوقت وعلم الفلك، مع مستوى إطلالة على محيط الحرم.": "A museum inside the Clock Tower covering the history of timekeeping and astronomy, with a viewing level over the area around the Haram.",
+  "متحف مدينة يعرض تاريخ مكة وحضارتها في قصر الزاهر.": "A city museum presenting Makkah's history and heritage at Al-Zahir Palace.",
+  "متحف مكة المكرمة للتراث والحضارة": "Makkah Museum of Heritage and Civilisation",
+  "مترجم مرافق": "Accompanying interpreter",
+  "متطوع في خدمة الزوار": "Volunteer in visitor services",
+  "متنزه العوالي": "Al-Awali Gardens",
+  "متنزه بمسار مضاء وجلسات عائلية، مناسب لنزهة قصيرة بعد العشاء.": "A park with a lit path and family seating — good for a short walk after dinner.",
+  "متوسط الطلب": "Moderate demand",
+  "متوسط — يحتاج لياقة أساسية": "Moderate — needs basic fitness",
+  "متوقف": "Paused",
+  "متوقف مؤقتًا": "Paused",
+  "متوقف مؤقتًا حتى إشعار المنظّم": "Paused until the organiser says otherwise",
+  "متى يفتح التسجيل في الأندية الطلابية هالفصل؟": "When does registration open for student clubs this term?",
+  "مثال: هل المكان مناسب مع كبار السن؟ وكم يحتاج وقت؟": "For example: is it suitable with older people? And how long does it take?",
+  "مثال: ورشة تذهيب للمبتدئين": "Example: gilding workshop for beginners",
+  "مثال: ٤ م — ١١ م": "Example: 4 PM – 11 PM",
+  "مجاني": "Free",
+  "مجاني — المقاعد محدودة": "Free — seats are limited",
+  "مجانًا": "Free",
+  "مجتمع": "Community",
+  "مجتمع الرصيفة": "Rusayfah community",
+  "مجتمع الششة": "Shisha district community",
+  "مجتمع الشوقية": "Shawqiyyah community",
+  "مجتمع العزيزية": "Aziziyah community",
+  "مجتمع العوالي": "Awali community",
+  "مجتمع الكعكية": "Kaakiyah community",
+  "مجتمع المسفلة": "Misfalah community",
+  "مجتمع النسيم": "Naseem community",
+  "مجتمع الهجرة": "Hijrah community",
+  "مجتمع تتابعه": "A community you follow",
+  "مجتمع جرول": "Jarwal community",
+  "مجتمع للزوار الناطقين بالأردية.": "A community for Urdu-speaking visitors.",
+  "مجتمع للزوار الناطقين بالإندونيسية.": "A community for Indonesian-speaking visitors.",
+  "مجتمع مكة الرقمي — للسكان والزوار": "Makkah's digital community — for residents and visitors",
+  "مجتمع واحد": "1 community",
+  "مجتمعات": "communities",
+  "مجتمعات الأحياء — ما يحدث فعلًا قرب بيتك.": "Neighbourhood communities — what's actually happening near you.",
+  "مجتمعاتك": "Your communities",
+  "مجتمعاتي": "My communities",
+  "مجتمعان": "2 communities",
+  "مجلس أسبوعي مفتوح في مسجد الحي بعد صلاة المغرب.": "An open weekly gathering at the district mosque after the sunset prayer.",
+  "مجلس القرآن الأسبوعي": "Weekly Qur'an gathering",
+  "مجمع الملك عبدالعزيز لكسوة الكعبة المشرفة": "King Abdulaziz Complex for the Kaaba Kiswah",
+  "مجمع كسوة الكعبة المشرفة": "Kiswah of the Ka'bah Complex",
+  "مجمع يُصنع فيه كسوة الكعبة، ويضم مسارًا تعريفيًا بمراحل النسيج والتطريز والخط.": "The complex where the Kiswah is made, with a guided route through the weaving, embroidery and calligraphy stages.",
+  "مجموعات صغيرة": "Small groups",
+  "مجموعات وأندية": "Groups and clubs",
+  "مجموعة المذاكرة بأم القرى تحجز مقاعدها بسرعة في موسم الاختبارات. سجّل من بداية الأسبوع.": "The Umm Al-Qura study group fills its seats fast in exam season. Register at the start of the week.",
+  "مجموعة المشي النسائية — هل القائمة معلنة للمشاركات؟": "The women's walking group — is the list of participants public?",
+  "مجموعة صغيرة": "Small group",
+  "مجموعة صغيرة · لا تحتاج خبرة": "Small group · no experience needed",
+  "مجموعة متكررة": "Recurring group",
+  "مجموعة متوقفة مؤقتًا، تُعرض كسجل ولا تُرشَّح.": "A paused group, shown as a record and not recommended.",
+  "مجموعة مذاكرة — أم القرى": "Study group — Umm Al-Qura",
+  "مجموعة مشي أسبوعية في مسارات المدينة.": "A weekly walking group on the city's trails.",
+  "مجموعة مشي نسائية أسبوعية في مسار مضاء داخل الحي، بوتيرة هادئة تناسب المبتدئات.": "A weekly women's walking group on a lit route inside the district, at a gentle pace that suits beginners.",
+  "محاضرة أُقيمت قبل أيام عن تاريخ أسواق مكة. النقاش استمر بعدها في المجتمع.": "A talk held a few days ago on the history of Makkah's markets. The discussion continued afterwards in the community.",
+  "محاضرة عن مسارات الحج القديمة مع عرض خرائط تاريخية.": "A talk on the old Hajj routes, with historical maps.",
+  "محاضرة مفتوحة مع نقاش": "An open lecture with discussion",
+  "محاضرة: تاريخ الأسواق": "Talk: the history of the markets",
+  "محاضرة: مسارات الحج القديمة": "Talk: the old Hajj routes",
+  "محتواي": "My content",
+  "محتوى مسيء": "Abusive content",
+  "محتوى مكرر": "Duplicate content",
+  "محدود": "Limited",
+  "محطات": "stops",
+  "محطة": "Stop",
+  "محطة محددة قرب محيط الحرم": "A set stop near the Haram area",
+  "محطة واحدة": "1 stop",
+  "محطتان": "2 stops",
+  "محفوظ": "Saved",
+  "محفوظ فقط — بلا التزام": "Saved only — no commitment",
+  "محفوظ لديك": "Saved by you",
+  "محفوظ لوقت لاحق": "Saved for later",
+  "محل التمور والمكسرات": "Dates and nuts shop",
+  "محل حلويات قديم في الحي، الكنافة والمعمول أشهر ما يُطلب بعد العشاء.": "An old sweet shop in the district; kunafa and ma'moul are what people order after dinner.",
+  "محل سمك مقلي، أغلب الطلبات سفري ولا توجد جلسات داخلية.": "A fried fish shop; most orders are takeaway and there is no indoor seating.",
+  "محل سندويشات سريع قرب مرافق الحي، مناسب لوجبة خفيفة بعد نشاط مسائي.": "A quick sandwich shop near the district's facilities — good for a light meal after an evening out.",
+  "محل صغير مشهور بالكبدة والسندويشات، يفتح بعد العصر ويستمر حتى وقت متأخر.": "A small place known for liver sandwiches. It opens in the afternoon and runs late.",
+  "محل يخدم احتياجات الحي اليومية، قريب ومفتوح معظم اليوم.": "A shop serving the district's daily needs — close by and open most of the day.",
+  "محلات صياغة قديمة": "Old goldsmiths' shops",
+  "محمصة مكة": "Makkah Roastery",
+  "محيط الحرم": "Around the Haram",
+  "مخالفة": "Violation",
+  "مختار لك": "Picked for you",
+  "مختارة لزيارتك": "Chosen for your visit",
+  "مخصص للنساء": "Women only",
+  "مدة الزيارة": "Visit duration",
+  "مدخل رئيسي بدون درج": "Step-free main entrance",
+  "مدخل ضيق وعتبة مرتفعة": "Narrow entrance with a high threshold",
+  "مدخل مستقل": "Separate entrance",
+  "مرافق رياضية وحياة سكنية.": "Sports facilities and residential life.",
+  "مرتبط بـ": "Linked to",
+  "مرتفع بعد الثامنة": "Busy after eight",
+  "مرتفع بعد المغرب في موسم الاختبارات": "Busy after Maghrib during exam season",
+  "مرتفع في نهاية الأسبوع": "Busy at the weekend",
+  "مرسم الخط": "Calligraphy studio",
+  "مرشد": "Guide",
+  "مرشد سياحي محلي، جولات تاريخية بالعربية والإنجليزية.": "A local tour guide running historic tours in Arabic and English.",
+  "مرشد محلي": "Local guide",
+  "مرشد محلي ينظّم جولات تاريخية في المدينة. يعرض ترخيصه ومجال عمله بوضوح قبل الحجز.": "A local guide running historical tours in the city. He shows his licence and his scope of work clearly before you book.",
+  "مرشدة": "Guide",
+  "مرشدة محلية متخصصة في الجولات العائلية والمجموعات النسائية داخل المدينة.": "A local guide specialising in family tours and women's groups within the city.",
+  "مرشّحات": "Filters",
+  "مركبات مجهّزة عند الطلب المسبق": "Adapted vehicles on advance request",
+  "مركز تسوق الكعكية": "Al-Kakiyah shopping centre",
+  "مركز تسوق فيه محلات ومطاعم وركن ألعاب، خيار عملي في الأيام الحارة.": "A shopping centre with shops, restaurants and a play area — a practical choice on hot days.",
+  "مريم": "Maryam",
+  "مزوّد الخدمة": "Service provider",
+  "مزوّد خدمة": "Service provider",
+  "مساء الخير": "Good evening",
+  "مساحة خضراء ومسار مشي": "Green space and a walking path",
+  "مساحة لعب قريبة": "A place to play nearby",
+  "مساحة لعب للأطفال داخل الحي، أنشط بعد المغرب.": "A play area for children inside the district, busiest after sunset.",
+  "مساحة محدودة — أغلب الطلبات سفري": "Limited space — most orders are takeaway",
+  "مساحة مذاكرة للطلاب": "A study space for students",
+  "مساحة معرفة دائمة": "A lasting knowledge space",
+  "مسار آمن ومضاء": "A safe, well-lit route",
+  "مسار الأكل المكي": "The Makkan food trail",
+  "مسار المشي — بطحاء قريش": "Walking track — Bat-ha Quraish",
+  "مسار بدون درج حسب تفضيلك": "A step-free route, as you prefer",
+  "مسار بدون درج داخل المعرض": "A step-free route inside the exhibition",
+  "مسار جبلي شاق — غير مناسب لمن لديه صعوبة في الحركة": "A demanding mountain route — not suitable if you have mobility difficulties",
+  "مسار عين زبيدة التراثي": "Ain Zubaydah heritage trail",
+  "مسار قصير وآمن": "A short, safe route",
+  "مسار متوسط مع مجموعة": "A moderate trail with a group",
+  "مسار مشي جبلي متوسط الصعوبة مع مجموعة النادي، ينطلق قبل الشروق وينتهي بفطور بسيط.": "A moderate mountain trail with the club group, setting off before sunrise and ending with a simple breakfast.",
+  "مسار مشي قصير حول أثر عين زبيدة مع شرح تاريخي عن كيف وصل الماء إلى المدينة.": "A short walk around the Ain Zubaydah remains with a historical account of how water reached the city.",
+  "مسار مشي مضاء بطول ٣ كم مع نقاط مياه على الطريق.": "A lit 3 km walking track with water points along the way.",
+  "مسار مناسب للكراسي المتحركة": "A wheelchair-friendly route",
+  "مسار يروي قصة الهجرة": "A route that tells the story of the migration",
+  "مسارات مكة": "Makkah routes",
+  "مسارات، أندية، ومجموعات أسبوعية.": "Trails, clubs and weekly groups.",
+  "مساهمات": "contributions",
+  "مساهمات مفيدة": "Helpful contributions",
+  "مساهماتك": "Your contributions",
+  "مساهماتي": "My contributions",
+  "مساهمة": "contribution",
+  "مساهمة واحدة": "1 contribution",
+  "مساهمتان": "2 contributions",
+  "مسبح مغلق ومدربة": "An enclosed pool and a female coach",
+  "مسبق قبل ٣ ساعات": "In advance, 3 hours ahead",
+  "مسبق ومحدود بعدد صغير": "In advance, limited to a small number",
+  "مسبق — الأماكن محدودة": "In advance — places are limited",
+  "مستمر حتى نهاية الأسبوع": "Running until the end of the week",
+  "مسجَّل": "Registered",
+  "مسجَّل لدى المنظّم": "Registered with the organiser",
+  "مسح": "Clear",
+  "مسرح الأطفال": "Children's theatre",
+  "مشاركة تتكرر — لا زيارة واحدة": "Repeated participation — not a single visit",
+  "مشاركة تتكرر، لا زيارة واحدة": "Repeated participation, not a single visit",
+  "مشاركة متكررة وليست زيارة واحدة": "Repeated participation, not a one-off visit",
+  "مشاهدة": "View",
+  "مشاوي بطحاء قريش": "Bat-ha Quraish Grills",
+  "مشاوي في الهواء الطلق": "Grills in the open air",
+  "مشاوي وحساء": "Grills and soup",
+  "مشروبان بسعر واحد": "Two drinks for the price of one",
+  "مشغل تجارب": "Experience operator",
+  "مشغّل الأنشطة": "Activity operator",
+  "مشغّل الجولة": "Tour operator",
+  "مشمولة": "Included",
+  "مشمولة في الرسوم": "Included in the fee",
+  "مشي": "Walking",
+  "مشي جبلي عند الشروق": "Sunrise hike",
+  "مشي قصير لكنه صاعد": "A short walk, but uphill",
+  "مشي مسائي — مجموعة نسائية": "Evening walk — women's group",
+  "مشي هادئ ← قهوة لوحدك": "Quiet walk → coffee on your own",
+  "مشي وتذوق بين المحلات": "Walking and tasting between the shops",
+  "مشي وشرح عن ماء مكة": "A walk, and the story of Makkah's water",
+  "مشي، قراءة، تصوير، شطرنج.": "Walking, reading, photography, chess.",
+  "مشية مكة القديمة": "Old Makkah walk",
+  "مصادر": "sources",
+  "مصاعد ومنحدرات": "Lifts and ramps",
+  "مصاعد — بدون درج": "Lifts — step-free",
+  "مصدر": "source",
+  "مصدر واحد": "1 source",
+  "مصدران": "2 sources",
+  "مصدران معتبران يذكران معلومتين مختلفتين. لا نختار نيابة عنك — نعرض الاثنين بتاريخيهما.": "Two credible sources give different details. We don't choose for you — we show both with their dates.",
+  "مصدران يذكران معلومتين مختلفتين عن الوقت. نعرض الاثنين بدل أن نختار لك.": "Two sources give different times. We show both rather than choosing for you.",
+  "مصعد ومدخل بدون درج": "Lift and step-free entrance",
+  "مصنع كسوة الكعبة ومركز تعريفي بالحرفة.": "The Kaaba Kiswah factory and a centre introducing the craft.",
+  "مصوّر للمناسبات العائلية": "Photographer for family occasions",
+  "مصوّر محلي للمناسبات والجلسات العائلية القصيرة.": "A local photographer for occasions and short family sessions.",
+  "مضيف مكي": "Makkawi host",
+  "مضيفة مكية": "Makkawi host",
+  "مضيفة — مقدّمة التجربة": "Host — the experience provider",
+  "مطاعم الحي، خدماته، ومبادراته.": "The neighbourhood's restaurants, services and initiatives.",
+  "مطاعم العائلات": "Family restaurants",
+  "مطاعم وأكل": "Restaurants & food",
+  "مطبخ الأسرة": "Family Kitchen",
+  "مطبخ الحجاز — العوالي": "Hijaz Kitchen — Al-Awali",
+  "مطبخ العائلة — جلسة الأطفال": "Family kitchen — children's session",
+  "مطبخ تركي بقائمة مشاوٍ وحساء، جلسات داخلية مريحة.": "A Turkish kitchen with grills and soup, and comfortable indoor seating.",
+  "مطبخ تركي — العزيزية": "Turkish kitchen — Al-Aziziyah",
+  "مطبخ حجازي عائلي": "Home-style Hijazi cooking",
+  "مطبخ صغير يقدّم أطباقًا بيتية يومية، الطلب الخارجي أسرع من الجلوس.": "A small kitchen serving daily home-style dishes; takeaway is faster than dining in.",
+  "مطبخ متخصص بالطلبات العائلية الكبيرة، يحتاج طلبًا مسبقًا.": "A kitchen specialising in large family orders; order in advance.",
+  "مطبخ مكي — درس عملي": "Makkan kitchen — a hands-on class",
+  "مطبخ نباتي — الششة": "Vegetarian Kitchen — Al-Shishah",
+  "مطبخ هندي محلي عريق في الحي، حصص كبيرة وأسعار مناسبة.": "A long-standing local Indian kitchen — large portions at fair prices.",
+  "مطبخ هندي نباتي بأسعار مناسبة وحصص كبيرة.": "An Indian vegetarian kitchen with fair prices and generous portions.",
+  "مطبخ يومي لأهل الحي": "A daily kitchen for the neighbourhood",
+  "مطعم": "Restaurant",
+  "مطعم أسماك بطابع حجازي، الطلب على الصيد اليومي والسيّادية.": "A fish restaurant with a Hijazi character; the daily catch and sayadiyah are what people order.",
+  "مطعم الركن": "Corner Restaurant",
+  "مطعم العائلة بالعوالي فيه ركن ألعاب داخلي — ينفع لو الجو حار.": "The family restaurant in Awali has an indoor play corner — good when it's hot.",
+  "مطعم العائلة — العوالي": "Family Restaurant — Al-Awali",
+  "مطعم الليل — العزيزية": "Night Restaurant — Al-Aziziyah",
+  "مطعم برجر محلي بخيارات للأطفال وجلسات خارجية.": "A local burger restaurant with children's options and outdoor seating.",
+  "مطعم بقاعة عائلية واسعة ومساحة للأطفال، مناسب للمجموعات الكبيرة.": "A restaurant with a large family hall and a children's area — good for bigger groups.",
+  "مطعم حجازي عائلي — نموذج أولي ضمن هذا التصور.": "A Hijazi family restaurant — a prototype within this concept.",
+  "مطعم حي يخدم السكان يوميًا بقائمة بسيطة وأسعار معقولة.": "A neighbourhood restaurant serving residents daily with a simple menu at fair prices.",
+  "مطعم حي يقدّم أطباقًا حجازية بيتية. الجلسات عائلية والخدمة أسرع قبل العشاء المتأخر.": "A neighbourhood restaurant serving home-style Hijazi dishes. Family seating, and faster service before the late dinner rush.",
+  "مطعم فطور بجلسات هادئة وقائمة حجازية، مناسب للعائلات في الصباح.": "A breakfast restaurant with quiet seating and a Hijazi menu — good for families in the morning.",
+  "مطعم فطور شعبي يفتح من الفجر ويغلق ظهرًا.": "A popular breakfast place that opens at dawn and closes at midday.",
+  "مطعم فطور شعبي يقدّم الفول والمعصوب والشكشوكة. يزدحم بعد الفجر وقبل الدوام.": "A popular breakfast spot for foul, ma'soub and shakshuka. It fills up after dawn and before work.",
+  "مطعم مندي ومظبي في حي الهجرة، الطلبات الكبيرة تحتاج وقتًا فاتصل قبل الحضور.": "A mandi and madhbi restaurant in Al-Hijrah. Large orders take time, so call ahead.",
+  "مطعم يعمل حتى ساعات متأخرة جدًا، يخدم الزوار بعد الصلوات المتأخرة.": "A restaurant that runs very late, serving visitors after the late prayers.",
+  "مطعم يقدّم السليق الحجازي بشكل يومي مع تركيز أكبر في نهاية الأسبوع.": "A restaurant serving Hijazi saleeg daily, with more of it at the weekend.",
+  "مطعم يمني معروف في الحي، الفحسة والمندي أكثر ما يُطلب.": "A well-known Yemeni restaurant in the district; fahsa and mandi are what people order.",
+  "مطعم يمني — الششة": "Yemeni restaurant — Al-Shishah",
+  "مطل مكة الشمالي": "North Makkah viewpoint",
+  "مع أطفال": "With kids",
+  "مع العائلة": "With family",
+  "مع خرائط تاريخية": "With historical maps",
+  "مع مجموعة": "With a group",
+  "مع ولي الأمر": "With a guardian",
+  "معرض الحرف السابق": "The previous crafts exhibition",
+  "معرض الحرف الموسمي": "Seasonal crafts exhibition",
+  "معرض الكتاب المصاحب": "The accompanying book fair",
+  "معرض الوحي": "The Revelation Exhibition",
+  "معرض تفاعلي يقدّم سيرة الوحي وسياقها في مكة، بمسار عرض منظّم يستغرق نحو ساعة.": "An interactive exhibition on the story of the revelation and its setting in Makkah, along a structured route of about an hour.",
+  "معرض حرفي أُقيم الأسبوع الماضي. يظهر هنا كسجل، ولم يعد ضمن ما هو متاح الآن.": "A crafts exhibition held last week. It appears here as a record and is no longer part of what is available now.",
+  "معرض صغير يعرض أعمال فنانين من مكة، يتغير محتواه كل شهرين تقريبًا.": "A small gallery showing work by artists from Makkah, changing roughly every two months.",
+  "معرض عمارة الحرمين الشريفين": "Exhibition of the Two Holy Mosques' Architecture",
+  "معرض فني — الزاهر": "Art gallery — Al-Zahir",
+  "معرض كتاب مصاحب لبرنامج ثقافي، يضم دور نشر محلية وجلسات توقيع.": "A book fair alongside a cultural programme, with local publishers and signing sessions.",
+  "معرض موسمي للحرف مع ورش حية للزوار خلال ثلاثة أيام.": "A seasonal crafts exhibition with live workshops for visitors over three days.",
+  "معرض يعرض مقتنيات ونماذج من عمارة المسجد الحرام والمسجد النبوي عبر العصور.": "An exhibition of objects and models from the architecture of the Grand Mosque and the Prophet's Mosque across the centuries.",
+  "معرض ← مشية قصيرة ← أكل قريب": "Exhibition → short walk → food nearby",
+  "معرفة محلية حديثة من الناس، لا من التطبيق": "Recent local knowledge from people, not from the app",
+  "معرفة محلية، لا نصوص عامة": "Local knowledge, not generic text",
+  "معرفتك قد تختصر على أحدهم وقتًا طويلًا": "What you know could save someone a lot of time",
+  "معلومة تشغيلية لحظية": "A live operational detail",
+  "معلومة تشغيلية معتادة": "A routine operational detail",
+  "معلومة حديثة": "Recent detail",
+  "معلومة رسمية": "Official detail",
+  "معلومة غير صحيحة": "Incorrect detail",
+  "معلومة في خطتك تحتاج مراجعة": "A detail in your plan needs checking",
+  "معلومة قصيرة الأجل": "A short-lived detail",
+  "معلومة وصفية مستقرة": "A stable descriptive detail",
+  "مغسلة الحي": "District laundry",
+  "مغلق الآن": "Closed now",
+  "مفتوح الآن": "Open now",
+  "مفتوح حتى الفجر": "Open until dawn",
+  "مقاعد وطاولات ومقابس": "Seats, tables and power sockets",
+  "مقاهٍ": "Cafés",
+  "مقدّم التجربة": "Experience provider",
+  "مقدّم الخدمة": "Service provider",
+  "مقعدان بسعر واحد": "Two seats for the price of one",
+  "مقهى": "Café",
+  "مقهى الحلويات — العزيزية": "Dessert Café — Al-Aziziyah",
+  "مقهى الدراسة بالششة من ٨ الصباح، وفيه مقابس كثيرة. بس بعد المغرب يزدحم بالطلاب.": "The study café in Shisha opens at 8 AM and has plenty of sockets. After Maghrib it fills with students.",
+  "مقهى الدراسة — الششة": "Study Café — Al-Shishah",
+  "مقهى الزاوية": "Corner Café",
+  "مقهى السطح — أجياد": "Rooftop Café — Ajyad",
+  "مقهى العائلة — النسيم": "Family Café — Al-Naseem",
+  "مقهى الكتاب — الششة": "Book Café — Al-Shishah",
+  "مقهى الليل بأجياد يفتح لين متأخر — مفيد بين الصلوات.": "The night café in Ajyad stays open late — handy between prayers.",
+  "مقهى الليل — أجياد": "Night Café — Ajyad",
+  "مقهى الممشى": "Walkway Café",
+  "مقهى بجلسات خارجية عائلية قرب حديقة الحي، مناسب بعد نشاط مسائي.": "A café with outdoor family seating next to the district park — good after an evening activity.",
+  "مقهى بقسم مخصص للنساء وجلسات هادئة، يستضيف لقاءات صغيرة.": "A café with a dedicated women's section and quiet seating that hosts small gatherings.",
+  "مقهى بمساحات دراسة هادئة، يمتلئ في فترات الاختبارات.": "A café with quiet study areas. It fills up during exam season.",
+  "مقهى حلويات يعمل حتى وقت متأخر، مناسب بعد العشاء.": "A dessert café that runs late — good after dinner.",
+  "مقهى حي صغير — نموذج أولي ضمن هذا التصور.": "A small neighbourhood café — a prototype within this concept.",
+  "مقهى صغير بجلسات بسيطة، يعرف زبائنه بالاسم. مناسب لقهوة هادئة أو لقاء قصير.": "A small café with simple seating whose owner knows his regulars by name. Good for a quiet coffee or a short meeting.",
+  "مقهى صغير في قلب الحي": "A small café in the middle of the district",
+  "مقهى صغير قريب من السكن، مناسب لقهوة سريعة أو جلسة قصيرة.": "A small café close to home — good for a quick coffee or a short sit.",
+  "مقهى صغير مع رفوف كتب للتبادل، يستضيف لقاءات قرائية أحيانًا.": "A small café with book-swap shelves that sometimes hosts reading meet-ups.",
+  "مقهى قريب من محيط الحرم يعمل حتى وقت متأخر، مناسب بين الصلوات.": "A café near the Haram that stays open late — useful between prayers.",
+  "مقهى مختص بتحميص محلي وخيارات تقطير، هادئ في فترة ما بعد الظهر.": "A specialty café with its own roast and pour-over options — quiet in the early afternoon.",
+  "مقهى مخصص للنساء — العوالي": "Women's café — Al-Awali",
+  "مقيم": "Resident",
+  "مكان": "Place",
+  "مكان إقامة قريب من الحرم بالمسافة، لكن الطريق صاعد في جزء منه. المسافة على الخريطة لا تصف الجهد الفعلي.": "A stay that is close to the Haram by distance, but part of the way is uphill. The distance on the map does not describe the actual effort.",
+  "مكان مغلق": "Place closed",
+  "مكان، تجربة، مجتمع، أو سؤال": "A place, an experience, a community, or a question",
+  "مكة": "Makkah",
+  "مكة القديمة": "Old Makkah",
+  "مكة القديمة، المعالم، والحكايات.": "Old Makkah, its landmarks and its stories.",
+  "مكة اليوم": "Makkah today",
+  "مكتبة عامة": "Public library",
+  "مكتبة عامة وبرامج قرائية وثقافية.": "A public library with reading and cultural programmes.",
+  "مكتبة عامة وبرامج قرائية وجلسات ثقافية، مساحة هادئة قريبة من مركز المدينة.": "A public library with reading programmes and cultural sessions — a quiet space close to the centre of the city.",
+  "مكتبة مكة المكرمة": "Makkah Public Library",
+  "مكتمل": "Full",
+  "ملاصق للحرم، إقامة وخدمات وحركة زوار كثيفة.": "Right beside the Haram: accommodation, services and heavy visitor traffic.",
+  "ملاعب وحصص مسائية": "Courts and evening classes",
+  "ملتقى أمهات الحي": "District mothers' circle",
+  "ملتقى الأندية الطلابية": "Student clubs fair",
+  "ملتقى تعريفي بأندية الجامعة وبرامجها، مع تسجيل مباشر في الأندية.": "An introductory fair for the university's clubs and programmes, with sign-up on the spot.",
+  "ملتقى للأمهات لتبادل الخبرات وتنظيم أنشطة للأطفال.": "A circle where mothers share experience and organise activities for the children.",
+  "ملعب الحي": "District playground",
+  "ملغى": "Cancelled",
+  "مما شاركه الناس مؤخرًا": "From what people shared recently",
+  "ممتاز": "Excellent",
+  "ممشى المستشفى بالتنعيم ممهّد بالكامل ومظلل، أنسب خيار مشي مع كبار السن عندنا.": "The hospital walkway in Tan'eem is fully paved and shaded — our best walking option with older people.",
+  "ممشى المستشفى — التنعيم": "Hospital walkway — Al-Tan'eem",
+  "ممشى قصير مظلل مناسب لكبار السن ولمن يبحث عن مسار قريب وسهل.": "A short shaded walkway that suits older walkers and anyone wanting something close and easy.",
+  "ممشى قصير ومظلل": "A short, shaded walkway",
+  "ممهّدة بالكامل": "Fully paved",
+  "من أهل المسفلة": "From Misfalah",
+  "من أهل جرول": "From Jarwal",
+  "من السكان": "From residents",
+  "من المجتمع": "From the community",
+  "من النقاش إلى المشاركة": "From discussion to taking part",
+  "من جولة التصوير المسائية الأسبوع الماضي — الضوء قبل المغرب بعشر دقائق هو الأفضل.": "From last week's evening photo walk — the light ten minutes before Maghrib is the best.",
+  "من ساعتين إلى أربع ذهابًا وإيابًا": "Two to four hours there and back",
+  "من سكان الرصيفة": "A Rusayfah resident",
+  "من سكان الششة": "A Shisha district resident",
+  "من سكان العزيزية": "An Aziziyah resident",
+  "من سكان العوالي": "An Awali resident",
+  "من سكان النسيم": "A Naseem resident",
+  "من مجتمعك": "From your communities",
+  "من مساهمات الناس": "From people's contributions",
+  "من مطابخ الأحياء إلى الأكل المكي القديم": "From neighbourhood kitchens to old Makkawi food",
+  "من مقدم الخدمة": "From the provider",
+  "من ١٠ م حتى الإغلاق": "From 10 PM until closing",
+  "من ٧ إلى ١٢ سنة": "From 7 to 12 years",
+  "مناسب لأول زيارة": "Good for a first visit",
+  "مناسب للأطفال": "Good for kids",
+  "مناسب للأطفال؟": "Good for kids?",
+  "مناسب للحضور منفردًا": "Comfortable to go alone",
+  "مناسب للحضور منفردًا؟": "Comfortable to go alone?",
+  "مناسب للطلاب": "Good for students",
+  "مناسب للعائلات": "Good for families",
+  "مناسب للعائلات؟": "Good for families?",
+  "مناسب للمبتدئين": "Good for beginners",
+  "مناسب للمساء": "Good for evenings",
+  "منتهٍ": "Ended",
+  "منحدر صاعد في جزء من المسار — مرهق للكراسي المتحركة": "An uphill stretch on part of the route — tiring for wheelchairs",
+  "مندي الهجرة": "Mandi Al-Hijrah",
+  "مندي ولحم على الحطب": "Mandi and wood-fired meat",
+  "منشور حديثًا من مقدّم التجربة عبر أدوات النشر.": "Recently posted by the experience provider through the publishing tools.",
+  "منصة التذاكر": "Ticketing platform",
+  "منصة التسجيل": "Registration platform",
+  "منصة التطوع": "Volunteering platform",
+  "منصة الحجز": "Booking platform",
+  "منطقتك": "your area",
+  "مهتم": "Interested",
+  "مهتم به": "Interested",
+  "مهرجان الحي — الهجرة": "District festival — Al-Hijrah",
+  "مهرجان حي على مدى يومين: ألعاب، عربات طعام، وفقرات للأطفال.": "A two-day district festival: games, food trucks and children's shows.",
+  "مواقف الحديقة تمتلئ مبكرًا": "The park's parking fills early",
+  "مواقف واسعة ونقل داخلي بين المرافق": "Ample parking and internal transport between facilities",
+  "موقع تاريخي غرب مكة": "A historic site west of Makkah",
+  "موقع تاريخي يقع غرب مكة على طريق جدة، يزوره كثيرون ضمن مسار تاريخي أوسع.": "A historic site west of Makkah on the Jeddah road, usually visited as part of a wider historical route.",
+  "موقع مفتوح يضم تركيزًا لافتًا من النقوش الإسلامية المبكرة. يحتاج مرافقة مختص ووسيلة مناسبة للوصول.": "An open site with a remarkable concentration of early Islamic inscriptions. It needs a specialist guide and a suitable vehicle to reach.",
+  "میں کیسے یقینی بناؤں کہ گائیڈ لائسنس یافتہ ہے؟ مجھے نامعلوم اکاؤنٹس سے پیشکشیں آ رہی ہیں۔": "How do I check a guide is licensed? I'm getting offers from accounts I don't know.",
+  "نادرًا ما تتغير.": "Rarely changes.",
+  "نادي الجري": "Running club",
+  "نادي الجري — بطحاء قريش": "Running club — Bat-ha Quraish",
+  "نادي الدراجات": "Cycling club",
+  "نادي الدراجات — الشوقية": "Cycling club — Al-Shawqiyah",
+  "نادي المسرح": "Theatre club",
+  "نادي المسرح — متوقف": "Theatre club — paused",
+  "نادي المسرح — متوقف مؤقتًا": "Theatre club — paused",
+  "نادي تصوير مكة": "Makkah Photography Club",
+  "نادي تصوير ينظّم جولة أسبوعية ومراجعة شهرية للأعمال. يقبل المبتدئين.": "A photography club with a weekly walk and a monthly review of members' work. Beginners welcome.",
+  "نادي جري أسبوعي بمستويات مختلفة وقائد لكل مجموعة.": "A weekly running club with different levels and a leader for each group.",
+  "نادي دراجات توقّف نشاطه منذ أشهر. يظهر هنا كسجل، ولا يُرشَّح كمجموعة نشطة.": "A cycling club that stopped meeting months ago. It appears here as a record and is not recommended as an active group.",
+  "نادي قراءة الزاهر": "Al-Zahir Reading Club",
+  "نادي قراءة شهري يناقش كتابًا واحدًا. الحضور مفتوح، والكتاب يُعلن قبل أسبوعين.": "A monthly reading club discussing one book. Open attendance, and the book is announced two weeks ahead.",
+  "نادي مسرح أوقف لقاءاته مؤقتًا حتى بداية الموسم القادم.": "A theatre club that has paused its meetings until the next season begins.",
+  "نادي مشي أسبوعي يغيّر مساره كل أسبوع داخل المدينة. مفتوح للمبتدئين، ولا يحتاج تسجيل مسبق.": "A weekly walking club that changes its route around the city each week. Open to beginners, no advance sign-up.",
+  "نادي مشي مكة": "Makkah Walking Club",
+  "نادي مشي مكة: المسار يتغير كل أسبوع وهذا أحلى شي فيه. ما تحس بالملل.": "Makkah Walking Club: the route changes every week, which is the best part. You never get bored.",
+  "نادي هواية": "Hobby club",
+  "نباتي هندي — الرصيفة": "Indian vegetarian — Al-Rusayfah",
+  "نبدأ بما يناسب أول زيارة، ونشرح أكثر بدل أن نفترض معرفة سابقة.": "We start with what suits a first visit and explain more instead of assuming prior knowledge.",
+  "نتائج": "Results",
+  "نتائج العوالي — فعّل الموقع لنتائج أدق": "Showing Al-Awali — turn on location for sharper results",
+  "نتيجة": "result",
+  "نتيجة واحدة": "1 result",
+  "نتيجتان": "2 results",
+  "نحتفظ بسياق العنصر في خطتك حتى تعود، فلا تبدأ البحث من جديد.": "We keep the item's context in your plan until you return, so you don't start over.",
+  "نحو ساعة": "About an hour",
+  "نحو ١٫٥ كم": "About 1.5 km",
+  "نحو ٢ كم مشيًا": "About 2 km on foot",
+  "نحو ٣ ساعات": "About 3 hours",
+  "نحو ٣ كم في مسار مضاء": "About 3 km on a lit route",
+  "نحو ٤٠٠ م إلى أقرب باب": "About 400 m to the nearest gate",
+  "نحو ٧٠ دقيقة": "About 70 minutes",
+  "نرسل إشعارًا فقط حين يكون مفيدًا: ردّ على سؤالك، تغيّر في خطتك، أو عرض حفظته على وشك الانتهاء.": "We only notify you when it's useful: a reply to your question, a change in your plan, or a saved offer about to end.",
+  "نركّب لك مسارًا من أماكن قريبة بعضها من بعض": "We assemble a route from places that sit close together",
+  "نزل اقتصادي في حي قديم، قريب من مطاعم محلية وأسواق يومية.": "A budget lodge in an old district, close to local restaurants and daily markets.",
+  "نزل المسفلة": "Al-Misfalah lodge",
+  "نشاط": "Activity",
+  "نشاط جديد": "New activity",
+  "نشاط سجّلت اهتمامك به بدأ التسجيل له": "Registration opened for an activity you were interested in",
+  "نشاط للأطفال ← عشاء عائلي": "Kids' activity → family dinner",
+  "نشاط مخصص للنساء": "Women-only activity",
+  "نشاط نقل مرخّص": "Licensed transport service",
+  "نشر محتوى جديد": "Posted new content",
+  "نشط": "Active",
+  "نصف شهري": "Twice monthly",
+  "نصوصهم كما كتبوها": "Their words as they wrote them",
+  "نصيحة": "Tip",
+  "نعتذر عن التأخير — كان لدينا ضغط في نهاية الأسبوع، وزدنا الطاقم منذ ذلك الوقت.": "We're sorry about the delay — we were under pressure at the weekend and have added staff since.",
+  "نعرض العرض ما دام ساريًا فقط": "We show an offer only while it is still valid",
+  "نعرضه هنا كسجل، ولا يظهر ضمن ما هو متاح الآن.": "We show it here as a record; it doesn't appear among what's available now.",
+  "نعم": "Yes",
+  "نعم تمامًا": "Yes, exactly",
+  "نعم، من سن ٦ فأكثر": "Yes, from age 6 and up",
+  "نفس المجتمع بلغة أخرى، والمحتوى مترجم في الاتجاهين.": "The same community in another language, with content translated both ways.",
+  "نقاش": "Discussion",
+  "نقاش المجموعة": "Group discussion",
+  "نقاش دائم ومعرفة محلية": "Ongoing discussion and local knowledge",
+  "نقاط المياه": "Water points",
+  "نقدًا وبطاقات لدى أغلب المحلات": "Cash and cards at most shops",
+  "نقطة إطلالة مرتفعة تُظهر امتداد المدينة. أفضل وقت قبل الغروب بنصف ساعة.": "A high viewpoint showing the city stretching out. Best half an hour before sunset.",
+  "نقطة الانطلاق": "Starting point",
+  "نقطة اللقاء": "Meeting point",
+  "نقل مرخّص داخل مكة": "Licensed transport in Makkah",
+  "نقل مكة المرخّص": "Licensed Makkah transport",
+  "نقوش إسلامية مبكرة في وادٍ مفتوح": "Early Islamic inscriptions in an open valley",
+  "نموذج أولي — محتوى توضيحي": "Prototype — illustrative content",
+  "نهارك سعيد": "Have a good day",
+  "نهاية الشهر": "End of the month",
+  "نورة": "Noura",
+  "نورة — مرشدة محلية": "Noura — local guide",
+  "نوفمبر": "November",
+  "نُشر ردّك داخل النقاش": "Your reply was posted in the discussion",
+  "نُشر سؤالك في المجتمع": "Your question was posted to the community",
+  "نُشر — يظهر الآن في الاكتشاف وفي المجتمعات المرتبطة": "Published — it now appears in Discover and in the linked communities",
+  "نُشرت إجابتك": "Your answer was posted",
+  "نُقل إلى الأرشيف ولن يُعرض كنشط": "Moved to the archive and won't show as active",
+  "هادئ": "Quiet",
+  "هدى": "Huda",
+  "هدى — من أهل جرول": "Huda — from Jarwal",
+  "هذا الأسبوع": "This week",
+  "هذا المجتمع غير متاح": "This community isn't available",
+  "هذا المحتوى لم يعد ساريًا": "This content is no longer valid",
+  "هذا المساء في العوالي": "This evening in Al-Awali",
+  "هذا النادي غير متاح": "This club isn't available",
+  "هذا نموذج أولي. القيم التشغيلية والعروض والمساهمات توضيحية، ولا تمثل معلومات حيّة.": "This is a prototype. Operating details, offers and contributions are illustrative and do not represent live information.",
+  "هذه أول زيارة لي لمكة": "This is my first visit to Makkah",
+  "هذه معلومة تشغيلية تديرها الجهة المختصة. ننقلك إلى مصدرها الرسمي بدل أن نعيد إنتاجها هنا.": "This is an operational detail managed by the relevant authority. We send you to its official source rather than reproducing it here.",
+  "هل أحتاج حجز مسبق للمتاحف في نهاية الأسبوع؟": "Do I need to book museums in advance at the weekend?",
+  "هل مسار مشية مكة القديمة مناسب لوالدتي الكبيرة؟": "Is the Old Makkah walk suitable for my elderly mother?",
+  "هل ورشة السدو متاحة بالإنجليزية؟": "Is the Sadu workshop available in English?",
+  "وادي العسيلة": "Wadi Al-Usaylah",
+  "وادي العسيلة — بس لا تروح لحالك. خذ مرشد ومركبة مناسبة، والصباح الباكر أفضل بكثير.": "Wadi Al-Usaylah — but don't go alone. Take a guide and a suitable vehicle, and early morning is much better.",
+  "وافدون جدد لمكة": "Newcomers to Makkah",
+  "وبعدها؟": "And after?",
+  "وجبات سريعة للعائلات": "Quick meals for families",
+  "وجهة ثقافية تجمع معرض الوحي ومرافق ثقافية ومطاعم ومساحات مفتوحة عند سفح جبل النور. تناسب زيارة مسائية كاملة أكثر من مرور سريع.": "A cultural destination that gathers the Revelation Exhibition, cultural venues, restaurants and open space at the foot of Jabal al-Nour. It suits a full evening visit rather than a quick stop.",
+  "وجهة ثقافية تضم معرض الوحي ومرافق ثقافية ومطاعم.": "A cultural destination with the Revelation Exhibition, cultural facilities and restaurants.",
+  "وجهة ثقافية متكاملة عند جبل النور": "A complete cultural destination at the foot of Jabal al-Nour",
+  "وردية تطوعية لتوزيع الماء والوجبات على الزوار ضمن تنظيم الجهة المشرفة.": "A volunteer shift handing out water and meals to visitors, organised by the supervising body.",
+  "وردية سقيا وإفطار": "Water and meals shift",
+  "ورش خط عربي وتذهيب لجميع المستويات.": "Arabic calligraphy and gilding workshops for all levels.",
+  "ورش قصيرة ودورات عملية.": "Short workshops and hands-on courses.",
+  "ورش، أندية، ودراسة.": "Workshops, clubs and study.",
+  "ورش، مسارات، وضيافة محلية": "Workshops, trails and local hospitality",
+  "ورشة": "Workshop",
+  "ورشة الخط للمبتدئين: رحت لحالي وما حسيت بحرج. المجموعة صغيرة والمدرب يبدأ من الصفر. طلعت بكلمة كاملة بخط النسخ.": "Beginners' calligraphy workshop: I went alone and never felt awkward. Small group, and the teacher starts from zero. I left with a full word in Naskh.",
+  "ورشة الخط — الجمعة": "Calligraphy workshop — Friday",
+  "ورشة السدو للمبتدئين": "Sadu weaving for beginners",
+  "ورشة العلوم للأطفال بسيطة ومنظّمة، بنت أختي ٩ سنوات استفادت منها كثير.": "The kids' science workshop is simple and well-run; my 9-year-old niece got a lot out of it.",
+  "ورشة الفخار تستاهل، بس انتبهوا: القطعة تُستلم بعد أسبوع مو نفس اليوم.": "The pottery workshop is worth it, but note: you collect the piece a week later, not the same day.",
+  "ورشة جلود تقليدية": "Traditional leather workshop",
+  "ورشة جلود يدوية تنتج فيها قطعة صغيرة بنفسك، بإشراف حرفي.": "A hand-leather workshop where you make a small piece yourself, guided by an artisan.",
+  "ورشة حرفية": "Craft workshop",
+  "ورشة خط عربي تبدأ من مسك القلم حتى كتابة كلمة كاملة بخط النسخ. مجموعة صغيرة ومناسبة للحضور منفردًا.": "A calligraphy workshop that starts with how you hold the pen and ends with a full word in Naskh. Small group, and comfortable to attend on your own.",
+  "ورشة خط عربي للمبتدئين": "Arabic calligraphy for beginners",
+  "ورشة خط للمبتدئين — الجمعة": "Calligraphy for beginners — Friday",
+  "ورشة صيانة سريعة": "Quick repair workshop",
+  "ورشة صيانة منزلية": "Home maintenance service",
+  "ورشة علمية قصيرة للأطفال بتجارب آمنة وبسيطة، بحضور ولي الأمر.": "A short science workshop for children with safe, simple experiments, with a parent present.",
+  "ورشة علوم للأطفال": "Science workshop for children",
+  "ورشة عملية لنسيج السدو: تتعلم الأساسيات وتخرج بقطعة صغيرة من صنعك. لا تحتاج خبرة.": "A hands-on Sadu weaving workshop: you learn the basics and leave with a small piece you made. No experience needed.",
+  "ورشة فخار عملية تبدأ من تشكيل الطين حتى قطعة جاهزة للحرق.": "A hands-on pottery workshop from shaping the clay to a piece ready for firing.",
+  "ورشة فخار — أول قطعة": "Pottery workshop — your first piece",
+  "ورشة نسيج السدو والحرف اليدوية للمبتدئين.": "Sadu weaving and handicraft workshop for beginners.",
+  "وش أطلب في مطعم حجازي أول مرة؟ القائمة كبيرة وما أعرف من وين أبدأ.": "What should I order at a Hijazi restaurant for the first time? The menu is huge and I don't know where to start.",
+  "وش تسوي الليلة؟": "What's on tonight?",
+  "وصل تحديث من المصدر — حُدّثت الحالة في كل مكان": "An update arrived from the source — the status was refreshed everywhere",
+  "وصل تصحيحك — يُراجع قبل أن يغيّر معلومة رسمية": "Your correction arrived — it's reviewed before it changes an official detail",
+  "وصلتك إجابة على سؤالك": "You got an answer to your question",
+  "وصلنا بلاغك — سيراجعه فريق الإشراف": "We received your report — the moderation team will review it",
+  "وصلنا تأكيد أو أكّدته بنفسك": "We received a confirmation, or you confirmed it yourself",
+  "وصول أسهل": "Easier access",
+  "وفق الاشتراطات الصحية المعلنة": "Per the published health requirements",
+  "وفق تعليمات الموقع": "Per the site's instructions",
+  "وقوف طويل": "Long standing",
+  "ومسار عين زبيدة. قصير بس القصة اللي وراه تغيّر نظرتك للمدينة.": "and the Ain Zubaidah trail. Short, but the story behind it changes how you see the city.",
+  "ويكيميديا كومنز — المسجد الحرام": "Wikimedia Commons — the Grand Mosque",
+  "ويكيميديا كومنز — برج الساعة وأبراج البيت": "Wikimedia Commons — the Clock Tower and Abraj Al Bait",
+  "وين ألقى تمور محلية بأسعار معقولة مو للسياح؟": "Where do I find local dates at fair prices, not tourist prices?",
+  "يؤثر في الترتيب ويعرض معلومات الوصول أولًا. لا نستنتج أي معلومة صحية.": "It affects ranking and shows access details first. We don't infer any health information.",
+  "يبدأ قريبًا": "Starting soon",
+  "يتغير دوريًا": "Changes periodically",
+  "يتكرر كثيرًا": "Happens often",
+  "يرفع ترتيب الأنشطة التي يعلن منظّموها أنها مخصصة للنساء.": "Ranks activities higher when their organisers state they're women-only.",
+  "يطابق ما تبحث عنه الآن": "Matches what you're looking for now",
+  "يعتمد على وقت الوصول والزحام. الأفضل ترتاح أولًا وتبدأ بعد الفجر أو بعد العشاء — أهدأ.": "It depends on your arrival time and the crowds. Better to rest first and start after Fajr or after Isha — quieter.",
+  "يعود بعد الموسم": "Returning after the season",
+  "يفضّل الاتصال قبل ساعة": "Best to call an hour ahead",
+  "يفضّل بعد المغرب لتفادي الحر": "Best after Maghrib to avoid the heat",
+  "يفضّل بمرافقة مرشد ومركبة مناسبة": "Best with a guide and a suitable vehicle",
+  "يفضّل ضمن جولة مصحوبة بشرح": "Best as part of a guided tour",
+  "يمكنك تفعيل الموقع لنتائج أدق": "Turn on location for sharper results",
+  "يناسب الوقت المتاح لديك": "Fits the time you have",
+  "يناسب هذا الوقت من اليوم": "Suits this time of day",
+  "يناسب وقتًا قصيرًا": "Fits a short window",
+  "يناير": "January",
+  "ينتهي": "Ends",
+  "ينتهي الليلة": "Ends tonight",
+  "ينتهي قريبًا": "Ending soon",
+  "يوليو": "July",
+  "يوم تطوعي: خدمة الزوار": "Volunteer day: serving visitors",
+  "يومان من الأنشطة": "Two days of activities",
+  "يومي أو أسبوعي": "Daily or weekly",
+  "يوميًا قبل ١٠ ص": "Daily before 10 AM",
+  "يونيو": "June",
+  "يُستخدم للمسافات و«قريب منك» فقط. لا يُنشر موقعك لأحد، ولا يظهر لأعضاء المجتمع.": "Used only for distances and “near you”. Your location is never published or shown to community members.",
+  "يُعلن قبل أسبوع": "Announced a week ahead",
+  "٠": "0",
+  "١": "1",
+  "١ ظهرًا — ١٢ ص": "1 PM – 12 AM",
+  "١ ظهرًا — ٢ ص": "1 PM – 2 AM",
+  "١ ظهرًا — ٣ ص": "1 PM – 3 AM",
+  "١٠ ص — ١١ م": "10 AM – 11 PM",
+  "١١ ص — ١ ص": "11 AM – 1 AM",
+  "١١ ص — ١١ م": "11 AM – 11 PM",
+  "١١ ص — ١٢ ص": "11 AM – 12 AM",
+  "١٢ ظهرًا — ١ ص": "12 PM – 1 AM",
+  "١٢ ظهرًا — ١ صباحًا": "12 PM – 1 AM",
+  "١٢ ظهرًا — ١١ م": "12 PM – 11 PM",
+  "١٢ ظهرًا — ١٢ ص": "12 PM – 12 AM",
+  "١٢ ظهرًا — ٤ ص": "12 PM – 4 AM",
+  "١٢ مقعدًا": "12 seats",
+  "١٨ سنة فأكثر": "18 years and over",
+  "٢": "2",
+  "٣": "3",
+  "٣ ساعات": "3 hours",
+  "٣ كم": "3 km",
+  "٣ كم مضاءة": "3 km, lit",
+  "٣ م — ١ ص": "3 PM – 1 AM",
+  "٣ — ١٠ سنوات": "3 – 10 years",
+  "٣٥ مقعدًا": "35 seats",
+  "٤": "4",
+  "٤ ساعات": "4 hours",
+  "٤ ص — ١٢ ظهرًا": "4 AM – 12 PM",
+  "٤ م — ١٢ ص": "4 PM – 12 AM",
+  "٤ م — ٢ ص": "4 PM – 2 AM",
+  "٤ — ٩ سنوات": "4 – 9 years",
+  "٥": "5",
+  "٥ ص — ١٢ ظهرًا": "5 AM – 12 PM",
+  "٥ كم في مسار مغلق": "5 km on a closed course",
+  "٥ كم — مبتدئ ومتقدم": "5 km — beginner and advanced",
+  "٥ م — ١ ص": "5 PM – 1 AM",
+  "٥ — ٧ م": "5 – 7 PM",
+  "٥٠ — ٧٠ ريال للفرد": "SAR 50 – 70 per person",
+  "٦": "6",
+  "٦ ص — ١ ظهرًا": "6 AM – 1 PM",
+  "٦ ص — ١٢ ص": "6 AM – 12 AM",
+  "٦ م — ٥ ص": "6 PM – 5 AM",
+  "٦ — ١٢ سنة": "6 – 12 years",
+  "٧": "7",
+  "٧ ص — ١ ص": "7 AM – 1 AM",
+  "٨": "8",
+  "٨ ص — ٢ ص": "8 AM – 2 AM",
+  "٨ ص — ٨ م": "8 AM – 8 PM",
+  "٩": "9",
+  "٩ ص — ١١ م": "9 AM – 11 PM",
+  "٩ ص — ٩ م": "9 AM – 9 PM",
+  "پہلا عمرہ — پہنچنے اور شروع کرنے کے درمیان کتنا وقت درکار ہے؟": "First Umrah — how much time is needed between arriving and starting?",
+  "— فعّل الموقع لنتائج أدق": "— turn on location for sharper results",
+};
+const D = (v) => (isEn() && typeof v === "string" && EN_TXT[v] ? EN_TXT[v] : v);
+const Dj = (parts, sep = " — ") => parts.filter(Boolean).map(D).join(sep);
+
+/* A map whose values follow the active language. Call sites stay unchanged:
+   SUIT[x] and TYPE_LABEL[x] simply return the right language. */
+const bilingual = (arMap, enMap) => new Proxy(arMap, {
+  get: (t, k) => (isEn() && enMap && Object.prototype.hasOwnProperty.call(enMap, k) ? enMap[k] : t[k]),
+});
+/* Attach language-aware getters to a record that carries English fields in `en`. */
+function bilingualRecord(obj, fields) {
+  fields.forEach((f) => {
+    const arValue = obj[f];
+    Object.defineProperty(obj, f, {
+      enumerable: true, configurable: true,
+      get() { const e = this.en && this.en[f]; return isEn() && e ? e : arValue; },
+    });
+  });
+  return obj;
+}
+
+/* The whole product is Arabic-first. English is a full viewing language, not a
+   partial veneer: formatting helpers, numerals and direction all follow it. */
+let LANG = "ar";
+const setLang = (l) => { LANG = l; };
+const isEn = () => LANG === "en";
+const ar = (v) => (isEn() ? String(v) : String(v).replace(/[0-9]/g, (d) => AR_DIGITS[+d]));
+/* pick between an Arabic and an English literal at a call site */
+const tx = (a, e) => (isEn() ? e : a);
 const clamp = (n, a, b) => Math.max(a, Math.min(b, n));
 const uniq = (a) => Array.from(new Set(a));
 const byId = (list) => { const m = {}; for (const x of list) m[x.id] = x; return m; };
@@ -144,49 +1836,69 @@ const mkDayStart = (d) => { const l = mk(d); return Date.UTC(l.getUTCFullYear(),
 
 const AR_DAYS = ["الأحد", "الاثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة", "السبت"];
 const AR_MONTHS = ["يناير", "فبراير", "مارس", "أبريل", "مايو", "يونيو", "يوليو", "أغسطس", "سبتمبر", "أكتوبر", "نوفمبر", "ديسمبر"];
+const EN_DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+const EN_MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 
 function clockAr(d) {
   const l = mk(d);
   const h = l.getUTCHours(), m = l.getUTCMinutes();
-  const suffix = h < 12 ? "ص" : "م";
   const hh = h % 12 === 0 ? 12 : h % 12;
-  return `${ar(hh)}${m ? ":" + ar(String(m).padStart(2, "0")) : ""} ${suffix}`;
+  if (isEn()) return `${hh}${m ? ":" + String(m).padStart(2, "0") : ""} ${h < 12 ? "AM" : "PM"}`;
+  return `${ar(hh)}${m ? ":" + ar(String(m).padStart(2, "0")) : ""} ${h < 12 ? "ص" : "م"}`;
 }
 function dayLabelAr(d) {
   const l = mk(d);
   const diff = Math.round((mkDayStart(d) - mkDayStart(NOW)) / DAY);
-  if (diff === 0) return "اليوم";
-  if (diff === 1) return "غدًا";
-  if (diff === -1) return "أمس";
-  if (diff > 1 && diff < 7) return AR_DAYS[l.getUTCDay()];
-  if (diff < -1 && diff > -7) return `${AR_DAYS[l.getUTCDay()]} الماضي`;
-  return `${ar(l.getUTCDate())} ${AR_MONTHS[l.getUTCMonth()]}`;
+  const en = isEn();
+  if (diff === 0) return en ? "Today" : "اليوم";
+  if (diff === 1) return en ? "Tomorrow" : "غدًا";
+  if (diff === -1) return en ? "Yesterday" : "أمس";
+  if (diff > 1 && diff < 7) return en ? EN_DAYS[l.getUTCDay()] : AR_DAYS[l.getUTCDay()];
+  if (diff < -1 && diff > -7) return en ? `last ${EN_DAYS[l.getUTCDay()]}` : `${AR_DAYS[l.getUTCDay()]} الماضي`;
+  return en ? `${EN_MONTHS[l.getUTCMonth()]} ${l.getUTCDate()}` : `${ar(l.getUTCDate())} ${AR_MONTHS[l.getUTCMonth()]}`;
 }
 function whenAr(d) { return `${dayLabelAr(d)} — ${clockAr(d)}`; }
+const plural = (n, w) => `${n} ${w}${n === 1 ? "" : "s"}`;
 function agoAr(d) {
   const diff = t0 - new Date(d).getTime();
-  if (diff < HOUR) return `قبل ${ar(Math.max(1, Math.round(diff / MIN)))} دقيقة`;
-  if (diff < DAY) return `قبل ${ar(Math.round(diff / HOUR))} ساعة`;
+  const en = isEn();
+  if (diff < HOUR) { const n = Math.max(1, Math.round(diff / MIN)); return en ? `${plural(n, "minute")} ago` : `قبل ${ar(n)} دقيقة`; }
+  if (diff < DAY) { const n = Math.round(diff / HOUR); return en ? `${plural(n, "hour")} ago` : `قبل ${ar(n)} ساعة`; }
   const dd = Math.round(diff / DAY);
-  if (dd < 30) return `قبل ${ar(dd)} يوم`;
-  if (dd < 365) return `قبل ${ar(Math.round(dd / 30))} شهر`;
-  return `قبل ${ar(Math.round(dd / 365))} سنة`;
+  if (dd < 30) return en ? `${plural(dd, "day")} ago` : `قبل ${ar(dd)} يوم`;
+  if (dd < 365) { const n = Math.round(dd / 30); return en ? `${plural(n, "month")} ago` : `قبل ${ar(n)} شهر`; }
+  const n = Math.round(dd / 365);
+  return en ? `${plural(n, "year")} ago` : `قبل ${ar(n)} سنة`;
 }
 function inAr(d) {
   const diff = new Date(d).getTime() - t0;
-  if (diff <= 0) return "الآن";
-  if (diff < HOUR) return `بعد ${ar(Math.max(1, Math.round(diff / MIN)))} دقيقة`;
-  if (diff < DAY) return `بعد ${ar(Math.round(diff / HOUR))} ساعة`;
+  const en = isEn();
+  if (diff <= 0) return en ? "now" : "الآن";
+  if (diff < HOUR) { const n = Math.max(1, Math.round(diff / MIN)); return en ? `in ${plural(n, "minute")}` : `بعد ${ar(n)} دقيقة`; }
+  if (diff < DAY) { const n = Math.round(diff / HOUR); return en ? `in ${plural(n, "hour")}` : `بعد ${ar(n)} ساعة`; }
   return dayLabelAr(new Date(d));
 }
-const riyal = (n) => (n === 0 ? "مجانًا" : `${ar(n)} ريال`);
-const minutesAr = (n) => `${ar(n)} دقيقة`;
+const riyal = (n) => (n === 0 ? tx("مجانًا", "Free") : tx(`${ar(n)} ريال`, `SAR ${n}`));
+const minutesAr = (n) => tx(`${ar(n)} دقيقة`, `${n} min`);
 /* Arabic counts: 1 and 2 have their own forms, 3–10 take the plural */
-function countAr(n, one, two, many, singular) {
+function countAr(n, one, two, many, singular, en) {
+  if (isEn()) {
+    const noun = EN_NOUN[singular || one] || EN_NOUN[one] || (singular || one);
+    return `${n} ${n === 1 ? noun : (EN_PLURAL[noun] || noun + "s")}`;
+  }
   if (n === 1) return one;
   if (n === 2) return two;
   return `${ar(n)} ${n >= 3 && n <= 10 ? many : (singular || one)}`;
 }
+/* singular Arabic noun → English noun, and its plural */
+const EN_NOUN = {
+  "نتيجة": "result", "عنصر": "item", "مجتمع": "community", "إجابة": "answer", "محطة": "stop",
+  "مساهمة": "contribution", "بلاغ": "report", "حساب": "account", "تصحيح": "correction", "مصدر": "source",
+  "نتيجة واحدة": "result", "عنصر واحد": "item", "مجتمع واحد": "community", "إجابة واحدة": "answer",
+  "محطة واحدة": "stop", "مساهمة واحدة": "contribution", "بلاغ واحد": "report", "حساب واحد": "account",
+  "تصحيح واحد": "correction", "مصدر واحد": "source",
+};
+const EN_PLURAL = { community: "communities" };
 
 /* ───────────────────────── 3. EDITORIAL IMAGE LAYER ─────────────────────────
    Photography carries the hierarchy in EyeMakkah. Two layers exist:
@@ -211,7 +1923,6 @@ const REAL_PHOTOS = {
     credit: "ويكيميديا كومنز — برج الساعة وأبراج البيت",
   },
 };
-
 const MOODS = {
   dawn:  { sky: ["#F8E9D2", "#EFCDA4", "#D8A384"], gnd: ["#D5C0A0", "#B2946F"], dark: false, warm: "#FFF0CE", haze: "#F3D9B8" },
   day:   { sky: ["#EDF1F3", "#DCE3E7", "#C3CCD2"], gnd: ["#D8CCB2", "#B6A88A"], dark: false, warm: "#FFF8E6", haze: "#E4E6E2" },
@@ -825,6 +2536,10 @@ const NEIGHBORHOODS = [
   { id: "tanim", name: "التنعيم", blurb: "شمال غرب مكة، ميقات ومحيط خدمي.", x: 0.30, y: 0.16 },
   { id: "haram-area", name: "محيط الحرم", blurb: "المركز — الحرم وما حوله من ساحات وخدمات.", x: 0.50, y: 0.52 },
 ];
+NEIGHBORHOODS.forEach((n) => { const nm = n.name, bl = n.blurb;
+  Object.defineProperty(n, "name", { enumerable: true, get: () => D(nm) });
+  Object.defineProperty(n, "blurb", { enumerable: true, get: () => D(bl) });
+});
 const NB = byId(NEIGHBORHOODS);
 
 /* ───────── 4.2 Categories & intents ───────── */
@@ -845,10 +2560,11 @@ const CATEGORIES = [
   { id: "services", name: "خدمات", icon: Wrench, tone: "#6B6B6B" },
   { id: "stay", name: "إقامة", icon: Building2, tone: "#54697E" },
 ];
+CATEGORIES.forEach((c) => { const nm = c.name; Object.defineProperty(c, "name", { enumerable: true, get: () => D(nm) }); });
 const CAT = byId(CATEGORIES);
 
 /* Suitability vocabulary — never inferred, always declared by the object. */
-const SUIT = {
+const SUIT_AR = {
   family: "مناسب للعائلات",
   kids: "مناسب للأطفال",
   solo: "مناسب للحضور منفردًا",
@@ -870,6 +2586,15 @@ const SUIT = {
   noexp: "لا تحتاج خبرة سابقة",
   heat: "يفضّل بعد المغرب لتفادي الحر",
 };
+const SUIT_EN = {
+  family: "Good for families", kids: "Good for children", solo: "Comfortable on your own",
+  beginners: "Beginner friendly", small: "Small group", women: "Women only", students: "Good for students",
+  accessible: "Wheelchair-friendly route", stepfree: "Step-free", quiet: "Quiet", evening: "Best in the evening",
+  outdoor: "Outdoors", indoor: "Indoors", seated: "Comfortable seating", short: "Fits a short window",
+  arabic: "Language: Arabic", bilingual: "Arabic and English", firsttime: "Good for a first visit",
+  noexp: "No experience needed", heat: "Better after sunset — avoids the heat",
+};
+const SUIT = bilingual(SUIT_AR, SUIT_EN);
 
 /* ───────── 4.3 Providers & hosts ───────── */
 
@@ -895,6 +2620,11 @@ const PROVIDERS = [
   { id: "eat-qahwa", name: "قهوة الحارة", kind: "مقهى", real: false, blurb: "مقهى حي صغير — نموذج أولي ضمن هذا التصور." },
   { id: "svc-transport", name: "نقل مكة المرخّص", kind: "مزوّد خدمة", real: false, blurb: "خدمة نقل مرخّصة — نموذج أولي." },
 ];
+PROVIDERS.forEach((p) => { const nm = p.name, kd = p.kind, bl = p.blurb;
+  Object.defineProperty(p, "name", { enumerable: true, get: () => D(nm) });
+  Object.defineProperty(p, "kind", { enumerable: true, get: () => D(kd) });
+  Object.defineProperty(p, "blurb", { enumerable: true, get: () => D(bl) });
+});
 const PROV = byId(PROVIDERS);
 
 /* ───────── 4.4 Inventory objects ─────────
@@ -1550,21 +3280,30 @@ function inferType(id, fallback) {
   return TYPE_BY_PREFIX[head] || "place";
 }
 
-const TYPE_LABEL = {
+const TYPE_LABEL = bilingual({
   place: "مكان", restaurant: "مطعم", experience: "تجربة", event: "فعالية",
   activity: "نشاط", recurring: "مجموعة متكررة", offer: "عرض", service: "خدمة", community: "مجتمع", contribution: "مساهمة",
-};
+}, {
+  place: "Place", restaurant: "Restaurant", experience: "Experience", event: "Event",
+  activity: "Activity", recurring: "Recurring group", offer: "Offer", service: "Service", community: "Community", contribution: "Contribution",
+});
 
-const AL_TYPE = {
+const AL_TYPE = bilingual({
   place: "المكان", restaurant: "المطعم", experience: "التجربة", event: "الفعالية",
   activity: "النشاط", recurring: "المجموعة", offer: "العرض", service: "الخدمة",
-};
+}, {
+  place: "this place", restaurant: "this restaurant", experience: "this experience", event: "this event",
+  activity: "this activity", recurring: "this group", offer: "this offer", service: "this service",
+});
 const alType = (o) => AL_TYPE[o.type] || "العنصر";
 
-const ACTION_LABEL = {
+const ACTION_LABEL = bilingual({
   go: "الاتجاهات", book: "احجز", register: "سجّل", join: "انضم", redeem: "استخدم العرض",
   contact: "تواصل", official: "افتح المصدر الرسمي",
-};
+}, {
+  go: "Directions", book: "Book", register: "Register", join: "Join", redeem: "Use offer",
+  contact: "Contact", official: "Open the official source",
+});
 
 function expand(raw, forcedType) {
   const type = inferType(raw.id, forcedType);
@@ -1579,10 +3318,9 @@ function expand(raw, forcedType) {
     claims.push({ id: `${raw.id}:f${i}`, obj: raw.id, field: label, cls, value, at: daysAgo(ageDays), fresh: fresh || "F3" });
   });
 
-  return {
+  const built = {
     ...raw,
     type,
-    typeLabel: TYPE_LABEL[type],
     name: raw.n,
     tagline: raw.t || "",
     about: raw.ab || "",
@@ -1615,6 +3353,15 @@ function expand(raw, forcedType) {
       return { x: clamp(nb.x + (r() - 0.5) * 0.11, 0.04, 0.96), y: clamp(nb.y + (r() - 0.5) * 0.11, 0.05, 0.95) };
     })(),
   };
+  /* language-aware reads: the same object serves both languages */
+  Object.defineProperty(built, "typeLabel", { enumerable: true, get() { return TYPE_LABEL[this.type]; } });
+  ["name", "tagline", "about"].forEach((f) => {
+    const v = built[f];
+    Object.defineProperty(built, f, { enumerable: true, get: () => D(v) });
+  });
+  built.facts = built.facts.map((f) => ({ ...f, get label() { return D(f.label); }, get value() { return D(f.value); } }));
+  built.claims = built.claims.map((c) => ({ ...c, get field() { return D(c.field); }, get value() { return D(c.value); } }));
+  return built;
 }
 
 const INVENTORY = [
@@ -1768,6 +3515,20 @@ COMMUNITIES.filter((c) => c.kind === "family").forEach((f) => {
   f.members = COMMUNITIES.filter((c) => c.family === f.id && c.kind !== "family").reduce((a, c) => a + c.members, 0);
 });
 
+COMMUNITIES.forEach((c) => { const nm = c.name, bl = c.blurb, rules = c.rules, mods = c.moderators;
+  Object.defineProperty(c, "name", { enumerable: true, get: () => D(nm) });
+  Object.defineProperty(c, "blurb", { enumerable: true, get: () => D(bl) });
+  Object.defineProperty(c, "rules", { enumerable: true, get: () => rules.map(D) });
+  Object.defineProperty(c, "moderators", { enumerable: true, get: () => mods.map(D) });
+});
+FAMILIES.forEach((f) => { const nm = f.name, bl = f.blurb;
+  Object.defineProperty(f, "name", { enumerable: true, get: () => D(nm) });
+  Object.defineProperty(f, "blurb", { enumerable: true, get: () => D(bl) });
+});
+CLUBS.forEach((c) => { const nm = c.name, cd = c.cadence;
+  Object.defineProperty(c, "name", { enumerable: true, get: () => D(nm) });
+  Object.defineProperty(c, "cadence", { enumerable: true, get: () => D(cd) });
+});
 const COM = byId(COMMUNITIES);
 const subCommunities = (familyId) => COMMUNITIES.filter((c) => c.family === familyId && c.kind !== "family");
 
@@ -1942,6 +3703,15 @@ const CONTRIBUTIONS = [
 CONTRIBUTIONS.forEach((k) => {
   if (k.parent) { const p = CONTRIBUTIONS.find((x) => x.id === k.parent); if (p) p.answers = (p.answers || 0) + 1; }
 });
+CONTRIBUTIONS.forEach((k) => {
+  const body = k.body, fields = k.fields, reply = k.providerReply, flagged = k.flagged;
+  Object.defineProperty(k, "body", { enumerable: true, get: () => D(body) });
+  if (fields) Object.defineProperty(k, "fields", { enumerable: true, get: () => Object.fromEntries(Object.entries(fields).map(([q, a]) => [D(q), D(a)])) });
+  if (reply) Object.defineProperty(k, "providerReply", { enumerable: true, get: () => ({ ...reply, by: D(reply.by), text: D(reply.text) }) });
+  if (flagged) Object.defineProperty(k, "flagged", { enumerable: true, get: () => ({ ...flagged, reason: D(flagged.reason), note: D(flagged.note) }) });
+  const a = k.author;
+  k.author = { ...a, get name() { return D(a.name); }, get role() { return D(a.role); } };
+});
 const KB = byId(CONTRIBUTIONS);
 const visible = (k, state) => (!k.flagged || k.flagged.state !== "held") && !(state?.blocked || []).includes(k.author?.name);
 /* the community always reads the user's own contributions alongside the seeded ones */
@@ -1950,10 +3720,13 @@ const contributionsFor = (objId, state) => allContributions(state).filter((k) =>
 const answersFor = (kid, state) => allContributions(state).filter((k) => k.parent === kid);
 const contributionsIn = (comId, state) => allContributions(state).filter((k) => k.communities.includes(comId));
 const findContribution = (id, state) => KB[id] || (state?.contributions || []).find((k) => k.id === id) || null;
-const CONTRIB_LABEL = {
+const CONTRIB_LABEL = bilingual({
   question: "سؤال", answer: "إجابة", experience_report: "تجربة", recommendation: "توصية",
   update: "تحديث معلومة", correction: "تصحيح", tip: "نصيحة", photo: "صورة", post_story: "حكاية",
-};
+}, {
+  question: "Question", answer: "Answer", experience_report: "Experience", recommendation: "Recommendation",
+  update: "Update", correction: "Correction", tip: "Tip", photo: "Photo", post_story: "Story",
+});
 
 /* ═══════════════════════════════════════════════════════════════════════════
    GROUP 4 FOUNDATION — FRESHNESS, SOURCE CLAIMS, LIFECYCLE, CONFLICT
@@ -2097,10 +3870,13 @@ function lifecycleOf(o) {
   return "active";
 }
 
-const LIFECYCLE_LABEL = {
+const LIFECYCLE_LABEL = bilingual({
   upcoming: "قادم", soon: "يبدأ قريبًا", live: "جارٍ الآن", ended: "انتهى", archived: "في الأرشيف",
   active: "متاح", ending: "ينتهي قريبًا", expired: "منتهٍ", paused: "متوقف مؤقتًا", dormant: "غير نشط",
-};
+}, {
+  upcoming: "Upcoming", soon: "Starting soon", live: "Happening now", ended: "Ended", archived: "Archived",
+  active: "Available", ending: "Ending soon", expired: "Expired", paused: "Paused", dormant: "Inactive",
+});
 
 /* Should this object be promoted in active discovery? Expired and ended content
    must stop contaminating the feed. */
@@ -2138,7 +3914,7 @@ function timingLabel(o) {
   if (!tm) return null;
   if (tm.kind === "hours") {
     const open = isOpenNow(o);
-    return open === null ? null : open ? "مفتوح الآن" : "مغلق الآن";
+    return open === null ? null : open ? tx("مفتوح الآن", "Open now") : tx("مغلق الآن", "Closed now");
   }
   const next = nextOccurrence(o);
   if (!next) return LIFECYCLE_LABEL[lifecycleOf(o)];
@@ -2195,10 +3971,10 @@ function scoreObject(o, ctx) {
     if (km < 1.2) add(16, "قريب منك الآن");
     else if (km < 3) add(9, null);
     else if (km > 8) add(-10, null);
-  } else if (ctx.nb && o.neighborhood === ctx.nb) add(12, `في ${NB[ctx.nb]?.name || "منطقتك"}`);
+  } else if (ctx.nb && o.neighborhood === ctx.nb) add(12, `${tx("في", "In")} ${NB[ctx.nb]?.name || tx("منطقتك", "your area")}`);
 
   /* explicit preferences */
-  if (ctx.interests?.includes(o.category)) add(20, `اخترت «${CAT[o.category]?.name}» ضمن اهتماماتك`);
+  if (ctx.interests?.includes(o.category)) add(20, tx(`اخترت «${CAT[o.category]?.name}» ضمن اهتماماتك`, `You picked \u201c${CAT[o.category]?.name}\u201d as an interest`));
   if (ctx.firstTime && o.suit.includes("firsttime")) add(16, "بداية مناسبة لأول زيارة");
   if (ctx.timeAvailable && o.duration != null) {
     if (o.duration <= ctx.timeAvailable * 0.75) add(10, `يناسب ${minutesAr(ctx.timeAvailable)} المتاحة لديك`);
@@ -2208,7 +3984,7 @@ function scoreObject(o, ctx) {
   /* recent high-confidence behaviour */
   const aff = ctx.affinity || {};
   const catAff = aff[o.category] || 0;
-  if (catAff > 0) add(Math.min(18, catAff * 6), catAff >= 2 ? `تتفاعل كثيرًا مع ${CAT[o.category]?.name}` : null);
+  if (catAff > 0) add(Math.min(18, catAff * 6), catAff >= 2 ? tx(`تتفاعل كثيرًا مع ${CAT[o.category]?.name}`, `You engage a lot with ${CAT[o.category]?.name}`) : null);
   if (catAff < 0) add(Math.max(-18, catAff * 7), null);
   const nbAff = aff["nb:" + o.neighborhood] || 0;
   if (nbAff > 0) add(Math.min(12, nbAff * 5), nbAff >= 2 ? `تهتم بما يحدث في ${NB[o.neighborhood]?.name}` : null);
@@ -2216,7 +3992,7 @@ function scoreObject(o, ctx) {
   /* communities */
   if (o.communities?.some((c) => ctx.joinedCommunities?.includes(c))) {
     const c = o.communities.find((x) => ctx.joinedCommunities?.includes(x));
-    add(15, `من ${COM[c]?.name || "مجتمع تتابعه"}`);
+    add(15, `${tx("من", "From")} ${COM[c]?.name || tx("مجتمع تتابعه", "a community you follow")}`);
   }
 
   /* trust & freshness affect ranking, never silently hide the object */
@@ -2551,7 +4327,7 @@ function buildNotifications(state) {
     const o = getObj(id);
     if (o?.type === "offer" && lifecycleOf(o) === "ending") {
       add({ key: "offer-" + id, kind: "offer", obj: id, at: new Date(t0 - 20 * MIN),
-        title: "العرض الذي حفظته ينتهي الليلة", body: `${o.name} — تأكد من الشروط قبل الذهاب.` });
+        title: "العرض الذي حفظته ينتهي الليلة", body: `${o.name} — ${tx("تأكد من الشروط قبل الذهاب.", "check the terms before you go.")}` });
     }
   });
 
@@ -2571,7 +4347,7 @@ function buildNotifications(state) {
     const tr = objectTrust(o, state.resolved);
     if (tr.state === "conflicting") {
       add({ key: "trust-" + p.obj, kind: "trust", obj: p.obj, at: new Date(t0 - 40 * MIN),
-        title: "معلومة في خطتك تحتاج مراجعة", body: `${o.name} — مصدران يذكران وقتين مختلفين.` });
+        title: "معلومة في خطتك تحتاج مراجعة", body: `${o.name} — ${tx("مصدران يذكران وقتين مختلفين.", "two sources give different times.")}` });
     }
   });
 
@@ -2651,6 +4427,52 @@ function deriveContext(state, extra = {}) {
 
 const App = createContext(null);
 const useApp = () => useContext(App);
+
+/* Translates the rendered tree when the app is being read in English. Strings
+   that are not in the dictionary stay exactly as their author wrote them. */
+const TR_PROPS = ["placeholder", "aria-label", "title", "alt", "label", "sub", "action", "body", "msg", "note"];
+/* Function components render their own subtree long after the parent element
+   was created, so walking the element tree alone never reaches the strings
+   inside them. Each component type is therefore swapped once for a stable
+   wrapper that localizes whatever that component returns. The wrapper is
+   cached per type, so React keeps seeing the same component identity and no
+   state is lost between renders. */
+const TR_WRAP = new WeakMap();
+function trType(type) {
+  if (typeof type !== "function" || type.__tr) return type;
+  let w = TR_WRAP.get(type);
+  if (!w) {
+    w = (props) => trNode(type(props));
+    w.__tr = true;
+    try { Object.defineProperty(w, "name", { value: type.name || "Tr" }); } catch { /* name is read-only in some engines */ }
+    TR_WRAP.set(type, w);
+  }
+  return w;
+}
+function trNode(node) {
+  if (typeof node === "string") return D(node);
+  if (Array.isArray(node)) return node.map(trNode);
+  if (!React.isValidElement(node)) return node;
+  const props = node.props || {};
+  const patch = {};
+  let changed = false;
+  for (const k of TR_PROPS) {
+    const v = props[k];
+    if (typeof v === "string" && EN_TXT[v]) { patch[k] = EN_TXT[v]; changed = true; }
+  }
+  if (props.children !== undefined) {
+    const kids = trNode(props.children);
+    if (kids !== props.children) { patch.children = kids; changed = true; }
+  }
+  const wrapped = trType(node.type);
+  if (wrapped !== node.type) {
+    return React.createElement(wrapped, { ...props, ...patch, key: node.key, ref: node.ref });
+  }
+  return changed ? React.cloneElement(node, patch) : node;
+}
+function Localize({ children }) {
+  return isEn() ? trNode(children) : children;
+}
 
 function Pill({ children, tone = T.muted, bg, icon: Icon, size = 11, strong }) {
   return (
@@ -2821,9 +4643,9 @@ function MetaLine({ o, showDistance }) {
   if (NB[o.neighborhood]) bits.push(NB[o.neighborhood].name);
   const tl = timingLabel(o);
   if (tl) bits.push(tl);
-  if (showDistance && state.profile.locationGranted) bits.push(`${ar(distanceKm(o))} كم`);
+  if (showDistance && state.profile.locationGranted) bits.push(tx(`${ar(distanceKm(o))} كم`, `${distanceKm(o)} km`));
   if (o.price != null) bits.push(riyal(o.price));
-  return <div className="clamp1" style={{ fontSize: 11.5, color: T.muted, fontWeight: 600 }}>{bits.join(" — ")}</div>;
+  return <div className="clamp1" style={{ fontSize: 11.5, color: T.muted, fontWeight: 600 }}>{Dj(bits)}</div>;
 }
 
 /* ───────── Object presentations ─────────
@@ -2865,7 +4687,7 @@ function HeroCard({ x, kicker }) {
           {kicker && <div style={{ fontSize: 10.5, fontWeight: 800, letterSpacing: ".1em", color: T.brassSoft, marginBottom: 6 }}>{kicker}</div>}
           <div className="clamp2" style={{ fontSize: 22, fontWeight: 800, color: "#FFF8EA", lineHeight: 1.35, letterSpacing: "-.01em" }}>{o.name}</div>
           <div className="clamp1" style={{ fontSize: 13, color: "rgba(255,247,230,.82)", marginTop: 5, fontWeight: 600 }}>
-            {[NB[o.neighborhood]?.name, timingLabel(o), o.price != null ? riyal(o.price) : null].filter(Boolean).join(" — ")}
+            {Dj([NB[o.neighborhood]?.name, timingLabel(o), o.price != null ? riyal(o.price) : null])}
           </div>
         </div>
         <div style={{ position: "absolute", insetInlineStart: 12, top: 12, display: "flex", gap: 6, flexWrap: "wrap", maxWidth: "70%" }}>
@@ -3050,7 +4872,7 @@ function OutingSheet({ outing, open, onClose }) {
           <button className="lift" onClick={() => { onClose(); go({ s: "object", id: o.id }); }} style={{ flex: 1, textAlign: "start", minWidth: 0 }}>
             <div className="clamp1" style={{ fontSize: 14.5, fontWeight: 800 }}>{o.name}</div>
             <div style={{ fontSize: 12, color: T.muted, marginTop: 3 }}>
-              {[NB[o.neighborhood]?.name, o.duration ? minutesAr(o.duration) : null, o.price != null ? riyal(o.price) : null].filter(Boolean).join(" — ")}
+              {Dj([NB[o.neighborhood]?.name, o.duration ? minutesAr(o.duration) : null, o.price != null ? riyal(o.price) : null])}
             </div>
           </button>
           <div style={{ width: 56, flex: "0 0 56px" }}>
@@ -3090,7 +4912,7 @@ function OutingCard({ outing, onOpen }) {
 /* Participation context — stated by the organiser, never inferred. */
 function ParticipationContext({ o, compact }) {
   const bits = [];
-  if (o.capacity != null) bits.push({ icon: Users, text: `${ar(o.joinedCount)} من ${ar(o.capacity)} مشاركًا — بيانات نموذج أولي` });
+  if (o.capacity != null) bits.push({ icon: Users, text: tx(`${ar(o.joinedCount)} من ${ar(o.capacity)} مشاركًا — بيانات نموذج أولي`, `${o.joinedCount} of ${o.capacity} joined — prototype data`) });
   const next = nextOccurrence(o);
   if (next) bits.push({ icon: Clock, text: whenAr(next) });
   if (o.duration) bits.push({ icon: Clock, text: minutesAr(o.duration) });
@@ -3166,10 +4988,12 @@ function CompletionSheet({ o, open, onClose }) {
    Modules are chosen, not all rendered.
    ═══════════════════════════════════════════════════════════════════════════ */
 
-function greeting(profile) {
+function greeting() {
   const h = Math.floor(mkHour());
-  const time = h < 5 ? "ليلة هادئة" : h < 11 ? "صباح الخير" : h < 15 ? "نهارك سعيد" : h < 19 ? "مساء الخير" : "مساء الخير";
-  return time;
+  if (h < 5) return tx("ليلة هادئة", "A quiet night");
+  if (h < 11) return tx("صباح الخير", "Good morning");
+  if (h < 15) return tx("نهارك سعيد", "Good afternoon");
+  return tx("مساء الخير", "Good evening");
 }
 
 function buildHome(state, ctx) {
@@ -3201,7 +5025,7 @@ function buildHome(state, ctx) {
   const nearby = rank(pool.filter((o) => (ctx.locationGranted ? distanceKm(o, ctx.from) < 4 : o.neighborhood === ctx.nb)), ctx, { limit: 8, maxPerCategory: 2 });
   if (nearby.length) modules.push({
     id: "near", kind: "rows",
-    title: ctx.locationGranted ? "قريب منك الآن" : `هذا المساء في ${areaName}`,
+    title: ctx.locationGranted ? "قريب منك الآن" : `${tx("هذا المساء في", "This evening in")} ${areaName}`,
     sub: ctx.locationGranted ? "حسب موقعك الحالي" : "يمكنك تفعيل الموقع لنتائج أدق", items: take(nearby, 4),
   });
 
@@ -3261,14 +5085,14 @@ function CommunitySnippet({ k, compact }) {
     <div style={{ padding: "12px 0", borderBottom: `1px solid ${T.lineSoft}` }}>
       <div className="row" style={{ gap: 8, marginBottom: 7 }}>
         <div style={{ width: 28, height: 28, borderRadius: R.pill, background: T.sand, display: "grid", placeItems: "center", fontSize: 12, fontWeight: 800, color: T.green }}>
-          {k.author.name.slice(0, 1)}
+          {D(k.author.name).slice(0, 1)}
         </div>
         <div style={{ minWidth: 0, flex: 1 }}>
           <div className="row" style={{ gap: 6 }}>
             <span style={{ fontSize: 12.5, fontWeight: 800 }}>{k.author.name}</span>
             {k.author.kind === "provider" && <Pill tone="#54697E" size={10}>مقدّم الخدمة</Pill>}
           </div>
-          <div style={{ fontSize: 11, color: T.muted }}>{k.author.role} — {agoAr(k.at)}</div>
+          <div style={{ fontSize: 11, color: T.muted }}>{D(k.author.role)} — {agoAr(k.at)}</div>
         </div>
         {com && <button className="press" onClick={() => go({ s: "community", id: com.id })} style={{ fontSize: 11, fontWeight: 800, color: T.green }}>{com.name}</button>}
       </div>
@@ -3279,7 +5103,7 @@ function CommunitySnippet({ k, compact }) {
       </button>
       {k.original && (
         <button className="press row" onClick={() => dispatch({ type: "translate", k: k.id })} style={{ gap: 5, marginTop: 6, fontSize: 11.5, color: T.muted, fontWeight: 700 }}>
-          <Languages size={12} />{translated ? "عرض الترجمة" : `النص الأصلي — ${({ en: "English", ur: "اردو", id: "Bahasa" })[k.original.lang]}`}
+          <Languages size={12} />{translated ? "عرض الترجمة" : `${tx("النص الأصلي", "Original text")} — ${({ en: "English", ur: tx("اردو", "Urdu"), id: "Bahasa" })[k.original.lang]}`}
         </button>
       )}
       <div className="row" style={{ gap: 10, marginTop: 9, flexWrap: "wrap" }}>
@@ -3330,10 +5154,10 @@ function ScreenHome() {
       <div style={{ padding: "14px 16px 12px", paddingTop: "calc(14px + var(--safe-top))" }}>
         <div className="row" style={{ justifyContent: "space-between", gap: 10 }}>
           <div style={{ minWidth: 0 }}>
-            <div style={{ fontSize: 12, color: T.muted, fontWeight: 700 }}>{greeting(p)}</div>
+            <div style={{ fontSize: 12, color: T.muted, fontWeight: 700 }}>{greeting()}</div>
             <div className="row" style={{ gap: 6, marginTop: 2 }}>
               <div style={{ fontSize: 21, fontWeight: 800, letterSpacing: "-.02em" }}>
-                {p.mode === "visitor" ? "مكة اليوم" : `مكة اليوم — ${NB[p.nb]?.name || ""}`}
+                {p.mode === "visitor" ? tx("مكة اليوم", "Makkah today") : `${tx("مكة اليوم", "Makkah today")} — ${NB[p.nb]?.name || ""}`}
               </div>
             </div>
           </div>
@@ -3345,7 +5169,7 @@ function ScreenHome() {
             </button>
             <button className="press" onClick={() => go({ s: "profile" })} aria-label="حسابي"
               style={{ width: 36, height: 36, borderRadius: R.pill, background: T.deep, color: "#F6EFE0", display: "grid", placeItems: "center", fontSize: 13, fontWeight: 800 }}>
-              {p.mode === "visitor" ? "ز" : "م"}
+              {p.mode === "visitor" ? tx("ز", "V") : tx("م", "R")}
             </button>
           </div>
         </div>
@@ -3362,7 +5186,7 @@ function ScreenHome() {
         <button className="press row" onClick={() => dispatch({ type: "profile", patch: { locationGranted: true } })}
           style={{ width: "calc(100% - 32px)", margin: "0 16px 16px", padding: "10px 12px", background: T.sand, borderRadius: R.pill, gap: 8, textAlign: "start", minHeight: 44 }}>
           <MapPin size={15} color={T.green} />
-          <span className="clamp1" style={{ flex: 1, fontSize: 12.5, fontWeight: 700 }}>نتائج {NB[p.nb]?.name} — فعّل الموقع لنتائج أدق</span>
+          <span className="clamp1" style={{ flex: 1, fontSize: 12.5, fontWeight: 700 }}>{tx("نتائج", "Showing")} {NB[p.nb]?.name} {D("— فعّل الموقع لنتائج أدق")}</span>
           <ChevronLeft size={15} color={T.green} />
         </button>
       )}
@@ -3613,7 +5437,7 @@ function ScreenDiscover({ params }) {
         <div style={{ padding: "12px 16px 0" }}>
           <div className="row" style={{ justifyContent: "space-between", marginBottom: 6 }}>
             <div style={{ fontSize: 13, color: T.muted, fontWeight: 700 }}>
-              {countAr(results.length, "نتيجة واحدة", "نتيجتان", "نتائج", "نتيجة")}{nb ? ` في ${NB[nb].name}` : ""}{cat ? ` — ${CAT[cat].name}` : ""}
+              {countAr(results.length, "نتيجة واحدة", "نتيجتان", "نتائج", "نتيجة")}{nb ? tx(` في ${NB[nb].name}`, ` in ${NB[nb].name}`) : ""}{cat ? ` — ${CAT[cat].name}` : ""}
             </div>
             <button className="press" onClick={() => { setCat(null); setNb(null); setIntent(null); }} style={{ fontSize: 12.5, fontWeight: 800, color: T.green }}>مسح المرشّحات</button>
           </div>
@@ -3666,7 +5490,9 @@ function ScreenDiscover({ params }) {
             <button className="press" onClick={() => setShowArchive(true)}
               style={{ width: "100%", padding: "12px", borderRadius: R.ctl, border: `1px solid ${T.line}`, background: T.paper, fontWeight: 800, fontSize: 13, color: T.muted }}>
               <Layers size={14} style={{ verticalAlign: "-2px", marginInlineEnd: 6 }} />
-              الأرشيف — {countAr(archive.length, "عنصر واحد", "عنصران", "عناصر", "عنصر")} انتهت أو خرجت عن الصلاحية
+              {isEn()
+                ? `Archive — ${archive.length} item${archive.length === 1 ? "" : "s"} that ended or expired`
+                : <>الأرشيف — {countAr(archive.length, "عنصر واحد", "عنصران", "عناصر", "عنصر")} انتهت أو خرجت عن الصلاحية</>}
             </button>
           </div>
         </div>
@@ -3806,7 +5632,7 @@ function ScreenSearch() {
       {typing && q.trim() ? <div style={{ paddingTop: 12 }}><Loading lines={2} /></div> : null}
 
       {empty && (
-        <EmptyState icon={Search} title={`لا نتائج لـ «${q}»`}
+        <EmptyState icon={Search} title={isEn() ? `No results for \u201c${q}\u201d` : `لا نتائج لـ «${q}»`}
           body="قد تكون الكلمة غير مستخدمة في مكة بهذا الشكل. جرّب كلمة أقرب للمعنى، أو تصفّح حسب الحي أو الفئة."
           action="تصفّح اكتشف" onAction={() => go({ s: "discover" })} />
       )}
@@ -3856,7 +5682,7 @@ function CommunityRow({ c }) {
           {c.state !== "active" && <Pill tone={T.muted} size={10}>غير نشط</Pill>}
         </div>
         <div className="clamp2" style={{ fontSize: 12.5, color: T.muted, marginTop: 3, lineHeight: 1.6 }}>{c.blurb}</div>
-        <div style={{ fontSize: 11.5, color: T.muted, marginTop: 4, fontWeight: 600 }}>{ar(c.members.toLocaleString("en-US"))} عضو</div>
+        <div style={{ fontSize: 11.5, color: T.muted, marginTop: 4, fontWeight: 600 }}>{tx(`${ar(c.members.toLocaleString("en-US"))} عضو`, `${c.members.toLocaleString("en-US")} members`)}</div>
       </div>
     </button>
   );
@@ -3916,7 +5742,7 @@ function ScreenObject({ id }) {
           </div>
           <div style={{ fontSize: 25, fontWeight: 800, color: "#FFF8EA", lineHeight: 1.32, letterSpacing: "-.02em" }}>{o.name}</div>
           <div style={{ fontSize: 13.5, color: "rgba(255,247,230,.85)", marginTop: 6, fontWeight: 600 }}>
-            {[NB[o.neighborhood]?.name, next ? whenAr(next) : timingLabel(o), o.duration ? minutesAr(o.duration) : null, o.price != null ? riyal(o.price) : null].filter(Boolean).join(" — ")}
+            {Dj([NB[o.neighborhood]?.name, next ? whenAr(next) : timingLabel(o), o.duration ? minutesAr(o.duration) : null, o.price != null ? riyal(o.price) : null])}
           </div>
         </div>
       </div>
@@ -3998,10 +5824,10 @@ function ScreenObject({ id }) {
             return <FactRow key={f.label} label={f.label} value={ft.primary?.value || f.value} trustState={shown} onSource={() => setSourceField(f.label)} />;
           })}
           {o.capacity != null && (
-            <FactRow label="المشاركون" value={`${ar(o.joinedCount)} من ${ar(o.capacity)} — بيانات نموذج أولي`} trustState="provider" />
+            <FactRow label="المشاركون" value={tx(`${ar(o.joinedCount)} من ${ar(o.capacity)} — بيانات نموذج أولي`, `${o.joinedCount} of ${o.capacity} — prototype data`)} trustState="provider" />
           )}
           {provider && (
-            <FactRow label="مقدّم التجربة" value={`${provider.name} — ${provider.kind}`} trustState={provider.real ? "official" : "provider"} onSource={() => setSourceField("identity")} />
+            <FactRow label="مقدّم التجربة" value={Dj([provider.name, provider.kind])} trustState={provider.real ? "official" : "provider"} onSource={() => setSourceField("identity")} />
           )}
         </div>
       )}
@@ -4042,7 +5868,7 @@ function ScreenObject({ id }) {
           <div style={{ flex: 1 }}>
             <div style={{ fontSize: 13.5, fontWeight: 800 }}>المصدر والسياق</div>
             <div style={{ fontSize: 12, color: T.muted, marginTop: 3 }}>
-              {countAr(uniq(o.claims.map((c) => c.cls)).length, "مصدر واحد", "مصدران", "مصادر", "مصدر")} — آخر تحديث {agoAr(o.claims.slice().sort((a, b) => new Date(b.at) - new Date(a.at))[0].at)}
+              {countAr(uniq(o.claims.map((c) => c.cls)).length, "مصدر واحد", "مصدران", "مصادر", "مصدر")} — {tx("آخر تحديث", "last updated")} {agoAr(o.claims.slice().sort((a, b) => new Date(b.at) - new Date(a.at))[0].at)}
             </div>
           </div>
           <TrustChip state={trust.state} small />
@@ -4051,7 +5877,7 @@ function ScreenObject({ id }) {
 
       {/* G — what next */}
       <div style={{ padding: "24px 0 0" }}>
-        <SectionTitle title="وبعدها؟" sub={`خطوات قريبة من ${NB[o.neighborhood]?.name || "الموقع"}`} />
+        <SectionTitle title="وبعدها؟" sub={`${tx("خطوات قريبة من", "Nearby steps from")} ${NB[o.neighborhood]?.name || tx("الموقع", "the location")}`} />
         <div className="rail scroll">{whatNext.map((x) => <TileCard key={x.o.id} x={x} w={176} />)}</div>
       </div>
 
@@ -4502,7 +6328,7 @@ function ContributionCard({ k, onOpen }) {
     <div style={{ padding: "13px 13px", borderRadius: R.box, background: T.paper, border: `1px solid ${T.line}`, marginBottom: 10 }}>
       <div className="row" style={{ gap: 8, marginBottom: 8 }}>
         <div style={{ width: 30, height: 30, borderRadius: R.pill, background: T.sand, display: "grid", placeItems: "center", fontSize: 12.5, fontWeight: 800, color: T.green }}>
-          {k.author.name.slice(0, 1)}
+          {D(k.author.name).slice(0, 1)}
         </div>
         <div style={{ minWidth: 0, flex: 1 }}>
           <div className="row" style={{ gap: 6, flexWrap: "wrap" }}>
@@ -4510,7 +6336,7 @@ function ContributionCard({ k, onOpen }) {
             <Pill tone={T.clay} size={10}>{CONTRIB_LABEL[k.type] || "مساهمة"}</Pill>
             {k.author.kind === "provider" && <Pill tone="#54697E" size={10}>مقدّم الخدمة</Pill>}
           </div>
-          <div style={{ fontSize: 11, color: T.muted, marginTop: 1 }}>{k.author.role} — {agoAr(k.at)}</div>
+          <div style={{ fontSize: 11, color: T.muted, marginTop: 1 }}>{D(k.author.role)} — {agoAr(k.at)}</div>
         </div>
         {com && <button className="press" onClick={() => go({ s: "community", id: com.id })}
           style={{ fontSize: 11, fontWeight: 800, color: T.green, whiteSpace: "nowrap", minHeight: 32, paddingInline: 3 }}>{com.name}</button>}
@@ -4541,7 +6367,7 @@ function ContributionCard({ k, onOpen }) {
       )}
       {k.original && (
         <button className="press row" onClick={() => dispatch({ type: "translate", k: k.id })} style={{ gap: 5, marginTop: 8, fontSize: 11.5, color: T.muted, fontWeight: 700 }}>
-          <Languages size={12} />{translated ? "عرض الترجمة" : `النص الأصلي — ${({ en: "English", ur: "اردو", id: "Bahasa" })[k.original.lang]}`}
+          <Languages size={12} />{translated ? "عرض الترجمة" : `${tx("النص الأصلي", "Original text")} — ${({ en: "English", ur: tx("اردو", "Urdu"), id: "Bahasa" })[k.original.lang]}`}
         </button>
       )}
       <div className="row" style={{ gap: 12, marginTop: 10, flexWrap: "wrap" }}>
@@ -4602,7 +6428,7 @@ function ScreenCommunity() {
         <div className="row" style={{ justifyContent: "space-between" }}>
           <div>
             <div style={{ fontSize: 21, fontWeight: 800, letterSpacing: "-.02em" }}>المجتمع</div>
-            <div style={{ fontSize: 12.5, color: T.muted, marginTop: 3 }}>من المجتمع، إلى المجتمع</div>
+            <div style={{ fontSize: 12.5, color: T.muted, marginTop: 3 }}>{tx("من المجتمع، إلى المجتمع", "From the community, to the community")}</div>
           </div>
           <button className="press" onClick={() => setComposer(true)}
             style={{ height: 38, padding: "0 14px", borderRadius: R.pill, background: T.deep, color: "#F6EFE0", fontWeight: 800, fontSize: 13 }}>
@@ -4786,7 +6612,7 @@ function ClubTile({ cl }) {
       <Photo kind={act?.scene || "garden"} seed={"club" + cl.id} ratio="4 / 3" radius={R.media} scrim="strong">
         <div style={{ position: "absolute", insetInlineStart: 10, bottom: 9, insetInlineEnd: 10 }}>
           <div className="clamp1" style={{ fontSize: 14, fontWeight: 800, color: "#FFF8EA" }}>{cl.name}</div>
-          <div style={{ fontSize: 11, color: "rgba(255,247,230,.85)", marginTop: 3 }}>{cl.cadence} — {ar(cl.members)} عضو</div>
+          <div style={{ fontSize: 11, color: "rgba(255,247,230,.85)", marginTop: 3 }}>{D(cl.cadence)} — {tx(`${ar(cl.members)} عضو`, `${cl.members} members`)}</div>
         </div>
       </Photo>
       {next && <div style={{ fontSize: 11.5, color: T.ok, fontWeight: 700, marginTop: 6 }}>اللقاء القادم {inAr(next)}</div>}
@@ -4813,7 +6639,7 @@ function ScreenClub({ id }) {
         <div style={{ position: "absolute", insetInlineStart: 16, bottom: 14, insetInlineEnd: 16 }}>
           <Pill tone="#FFF8EA" bg="rgba(20,16,12,.45)" strong>نادٍ — مشاركة متكررة</Pill>
           <div style={{ fontSize: 23, fontWeight: 800, color: "#FFF8EA", marginTop: 8 }}>{cl.name}</div>
-          <div style={{ fontSize: 12.5, color: "rgba(255,247,230,.85)", marginTop: 4 }}>{cl.cadence} — {ar(cl.members)} عضو</div>
+          <div style={{ fontSize: 12.5, color: "rgba(255,247,230,.85)", marginTop: 4 }}>{D(cl.cadence)} — {tx(`${ar(cl.members)} عضو`, `${cl.members} members`)}</div>
         </div>
       </div>
 
@@ -4861,7 +6687,7 @@ function ScreenClub({ id }) {
 
       {threads.length > 0 && (
         <div style={{ marginTop: 22 }}>
-          <SectionTitle title="نقاش المجموعة" sub={`من ${com?.name}`} />
+          <SectionTitle title="نقاش المجموعة" sub={`${tx("من", "From")} ${com?.name}`} />
           <div style={{ padding: "0 16px" }}>{threads.map((k) => <ContributionCard key={k.id} k={k} />)}</div>
         </div>
       )}
@@ -4914,7 +6740,7 @@ function ScreenCommunityDetail({ id }) {
         <button className="press" onClick={() => go({ back: true })} style={{ position: "absolute", insetInlineStart: 14, top: "calc(14px + var(--safe-top))", width: 40, height: 40, borderRadius: R.pill, background: "rgba(20,16,12,.46)", color: "#FFF8EA", display: "grid", placeItems: "center", backdropFilter: "blur(6px)" }}><ChevronRight size={20} /></button>
         <div style={{ position: "absolute", insetInlineStart: 16, bottom: 14, insetInlineEnd: 16 }}>
           <div style={{ fontSize: 22, fontWeight: 800, color: "#FFF8EA" }}>{c.name}</div>
-          <div style={{ fontSize: 12.5, color: "rgba(255,247,230,.85)", marginTop: 4 }}>{ar(c.members.toLocaleString("en-US"))} عضو — {c.state === "active" ? "نشط" : "غير نشط"}</div>
+          <div style={{ fontSize: 12.5, color: "rgba(255,247,230,.85)", marginTop: 4 }}>{tx(`${ar(c.members.toLocaleString("en-US"))} عضو`, `${c.members.toLocaleString("en-US")} members`)} — {c.state === "active" ? tx("نشط", "active") : tx("غير نشط", "inactive")}</div>
         </div>
       </div>
 
@@ -4954,7 +6780,7 @@ function ScreenCommunityDetail({ id }) {
                       <span style={{ fontSize: 14.5, fontWeight: 800 }}>{cl.name}</span>
                       {cl.state !== "active" && <Pill tone={T.muted} size={10}>{cl.state === "paused" ? "متوقف مؤقتًا" : "غير نشط"}</Pill>}
                     </div>
-                    <div style={{ fontSize: 12, color: T.muted, marginTop: 3 }}>{cl.cadence} — {ar(cl.members)} عضو</div>
+                    <div style={{ fontSize: 12, color: T.muted, marginTop: 3 }}>{D(cl.cadence)} — {tx(`${ar(cl.members)} عضو`, `${cl.members} members`)}</div>
                   </div>
                   <ChevronLeft size={16} color={T.muted} style={{ alignSelf: "center" }} />
                 </button>
@@ -5066,7 +6892,7 @@ function ScreenThread({ id }) {
                 <div style={{ margin: "-4px 0 14px", padding: "11px 12px", borderRadius: R.box, background: T.sand }}>
                   <div className="row" style={{ gap: 7, marginBottom: 5 }}>
                     <Store size={13} color="#54697E" /><span style={{ fontSize: 12, fontWeight: 800 }}>{k.providerReply.by}</span>
-                    <span style={{ fontSize: 11, color: T.muted }}>— {ar(k.providerReply.days)} يوم</span>
+                    <span style={{ fontSize: 11, color: T.muted }}>— {tx(`${ar(k.providerReply.days)} يوم`, `${k.providerReply.days} days`)}</span>
                   </div>
                   <div style={{ fontSize: 13, lineHeight: 1.8 }}>{k.providerReply.text}</div>
                 </div>
@@ -5256,13 +7082,13 @@ function PlanRow({ p, onComplete }) {
           </div>
           <div className="clamp2" style={{ fontSize: 15, fontWeight: 800, lineHeight: 1.45 }}>{o.name}</div>
           <div style={{ fontSize: 12, color: T.muted, marginTop: 4 }}>
-            {[
-              p.state === "completed" ? `اكتمل ${agoAr(p.completedAt || p.at)}`
-                : p.state === "active" ? "بدأ للتو"
+            {Dj([
+              p.state === "completed" ? tx(`اكتمل ${agoAr(p.completedAt || p.at)}`, `Completed ${agoAr(p.completedAt || p.at)}`)
+                : p.state === "active" ? tx("بدأ للتو", "Just started")
                 : next ? whenAr(next) : timingLabel(o),
               NB[o.neighborhood]?.name,
               p.state === "completed" ? null : o.duration ? minutesAr(o.duration) : null,
-            ].filter(Boolean).join(" — ")}
+            ])}
           </div>
         </button>
         <div className="row" style={{ gap: 8, marginTop: 9, flexWrap: "wrap" }}>
@@ -5336,6 +7162,18 @@ function ScreenProfile() {
           {[["resident", "مقيم"], ["visitor", "زائر"]].map(([m, l]) => (
             <Chip key={m} active={p.mode === m} onClick={() => { dispatch({ type: "profile", patch: { mode: m, nb: m === "visitor" ? "ajyad" : "awali" } }); toast(`حُدّثت الرئيسية لتناسب وضع ${l}`); }}>{l}</Chip>
           ))}
+        </div>
+
+        <div style={{ fontSize: 13.5, fontWeight: 800, margin: "18px 0 8px" }}>لغة العرض</div>
+        <div className="row" style={{ gap: 8 }}>
+          {[["ar", "العربية"], ["en", "English"]].map(([l, label]) => (
+            <Chip key={l} active={p.lang === l} icon={Languages} onClick={() => { dispatch({ type: "profile", patch: { lang: l } }); toast(l === "en" ? "Reading in English — community voices keep their original wording" : "عدنا إلى العربية"); }}>
+              {label}
+            </Chip>
+          ))}
+        </div>
+        <div style={{ fontSize: 11.5, color: T.muted, marginTop: 8, lineHeight: 1.75 }}>
+          الترجمة طبقة عرض: نص كل مساهمة الأصلي وكاتبها يبقيان ظاهرين.
         </div>
 
         <div style={{ fontSize: 13.5, fontWeight: 800, margin: "18px 0 8px" }}>حيّك أو منطقتك الحالية</div>
@@ -5515,7 +7353,7 @@ function ScreenProvider() {
           <button className="press tap" onClick={() => go({ back: true })} aria-label="رجوع" style={{ width: 36, height: 36, display: "grid", placeItems: "center", marginInlineStart: -6 }}><ChevronRight size={23} /></button>
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ fontSize: 20, fontWeight: 800 }}>أدوات مقدّم التجربة</div>
-            <div className="clamp1" style={{ fontSize: 12, color: T.muted, marginTop: 2 }}>{prov?.name} — {prov?.kind}</div>
+            <div className="clamp1" style={{ fontSize: 12, color: T.muted, marginTop: 2 }}>{D(prov?.name)} — {D(prov?.kind)}</div>
           </div>
         </div>
         <div className="row" style={{ gap: 14, marginTop: 14 }}>
@@ -5557,7 +7395,7 @@ function ProviderContent({ mine }) {
               </div>
               <div className="clamp1" style={{ fontSize: 14.5, fontWeight: 800 }}>{o.name}</div>
               <div style={{ fontSize: 11.5, color: T.muted, marginTop: 3 }}>
-                آخر تحديث {agoAr(o.claims.slice().sort((a, b) => new Date(b.at) - new Date(a.at))[0].at)}
+                {tx("آخر تحديث", "Last updated")} {agoAr(o.claims.slice().sort((a, b) => new Date(b.at) - new Date(a.at))[0].at)}
               </div>
             </button>
           </div>
@@ -5854,6 +7692,152 @@ function ScreenNotifications() {
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
+   ENTRY — Cover → Language → the transformed EyeMakkah
+   Carried forward from the original EyeMakkah entry sequence: the full-screen
+   Makkah hero, the wordmark, the entry animation and the ابدأ call to action,
+   then language choice with its direction transition. Portal selection is gone
+   for good: after the language, you are in the resident/visitor product.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+function Wordmark({ size = 38, light = true }) {
+  const c = light ? "#F8F2E4" : T.deep;
+  return (
+    <div style={{ textAlign: "center" }} dir="ltr">
+      <div style={{ fontFamily: T.en, fontSize: size, fontWeight: 300, letterSpacing: ".01em", lineHeight: 1.1, color: c }}>
+        Eye<span style={{ fontWeight: 700, color: T.brassSoft }}>Makkah</span>
+      </div>
+      <div style={{ width: size * 1.5, height: 1.5, background: `linear-gradient(90deg,transparent,${T.brassSoft},transparent)`, margin: `${size * 0.26}px auto 0` }} />
+    </div>
+  );
+}
+
+/* the city waking up: warm motes rising over the hero, settling into stillness */
+function EntryMotes({ count = 42, seed = 7 }) {
+  const motes = useMemo(() => {
+    const r = rng("motes" + seed);
+    return Array.from({ length: count }, (_, i) => ({
+      i, x: r() * 100, y: 62 + r() * 38, s: 1 + r() * 2.4,
+      d: 2600 + r() * 2600, delay: r() * 1800, o: 0.18 + r() * 0.5,
+    }));
+  }, [count, seed]);
+  return (
+    <div aria-hidden="true" style={{ position: "absolute", inset: 0, overflow: "hidden", pointerEvents: "none" }}>
+      {motes.map((m) => (
+        <span key={m.i} style={{
+          position: "absolute", left: `${m.x}%`, top: `${m.y}%`, width: m.s, height: m.s, borderRadius: 99,
+          background: m.i % 5 === 0 ? "#8FE0C4" : T.brassSoft, opacity: m.o,
+          animation: `emRise ${m.d}ms ${m.delay}ms cubic-bezier(.35,0,.25,1) infinite`,
+        }} />
+      ))}
+    </div>
+  );
+}
+
+function ScreenLanding({ onEnter, lang }) {
+  const en = lang === "en";
+  return (
+    <div onClick={onEnter} className="fade" style={{ position: "absolute", inset: 0, overflow: "hidden", cursor: "pointer", background: T.deep }}>
+      <div style={{ position: "absolute", inset: 0 }}>
+        <Photo kind="haram" seed="cover" photo="cover" ratio="auto" radius={0} scrim="none"
+          style={{ position: "absolute", inset: 0, aspectRatio: "auto", height: "100%" }} />
+      </div>
+      <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, rgba(8,32,26,.62) 0%, rgba(8,32,26,.18) 34%, rgba(8,32,26,.7) 70%, rgba(6,24,19,.95) 100%)" }} />
+      <EntryMotes />
+
+      <div className="up" style={{ position: "absolute", top: "15%", insetInline: 0, textAlign: "center", padding: "0 34px" }}>
+        <Wordmark size={40} />
+        <div style={{ fontSize: 14, color: "rgba(248,242,228,.88)", lineHeight: 1.8, marginTop: 20, fontWeight: 500 }}>
+          {en ? "The living digital community of Makkah" : "مجتمع مكة الرقمي — للسكان والزوار"}
+        </div>
+        <div style={{ fontSize: 12, color: "rgba(248,242,228,.6)", lineHeight: 1.8, marginTop: 8 }}>
+          {en ? "Discover · take part · build your plan" : "اكتشف · شارك · ابنِ خطتك"}
+        </div>
+      </div>
+
+      <div className="up" style={{ position: "absolute", insetInline: 0, bottom: "calc(54px + var(--safe-bottom))", padding: "0 30px", animationDelay: "160ms" }}>
+        <button onClick={(e) => { e.stopPropagation(); onEnter(); }}
+          style={{
+            width: "100%", padding: "17px 20px", borderRadius: R.pill, border: "none", minHeight: 56,
+            background: `linear-gradient(120deg, ${T.brassSoft}, ${T.brass})`, color: "#1A2F26",
+            fontSize: 15.5, fontWeight: 800, boxShadow: "0 16px 38px -12px rgba(184,148,74,.6)",
+            display: "flex", alignItems: "center", justifyContent: "center", gap: 9,
+          }}>
+          {en ? "Enter EyeMakkah" : "ابدأ"}
+          <ChevronLeft size={18} style={{ transform: en ? "rotate(180deg)" : "none" }} />
+        </button>
+        <div style={{ textAlign: "center", fontSize: 11, color: "rgba(248,242,228,.5)", marginTop: 14, lineHeight: 1.7 }}>
+          {en ? "Prototype — illustrative content" : "نموذج أولي — محتوى توضيحي"}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ScreenLanguage({ onPick }) {
+  const [flow, setFlow] = useState(null);
+  const pick = (id) => { setFlow(id); setTimeout(() => onPick(id), 700); };
+  return (
+    <div className="fade" style={{ position: "absolute", inset: 0, overflow: "hidden", background: T.deep, display: "flex", flexDirection: "column", justifyContent: "center", padding: "0 28px" }}>
+      <div style={{ position: "absolute", inset: 0, filter: "blur(3px)", transform: "scale(1.06)" }}>
+        <Photo kind="haram" seed="cover" photo="cover" ratio="auto" radius={0} scrim="none"
+          style={{ position: "absolute", inset: 0, aspectRatio: "auto", height: "100%" }} />
+      </div>
+      <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, rgba(8,32,26,.72) 0%, rgba(8,32,26,.82) 45%, rgba(6,24,19,.92) 100%)" }} />
+
+      {/* the system turns to face the chosen direction */}
+      {flow && (
+        <svg viewBox="0 0 390 844" preserveAspectRatio="none" aria-hidden="true"
+          style={{ position: "absolute", inset: 0, width: "100%", height: "100%", pointerEvents: "none", zIndex: 3 }}>
+          {[150, 230, 310, 390, 470, 550, 630, 710].map((y, i) => {
+            const rtl = flow === "ar";
+            const from = rtl ? 390 : 0, to = rtl ? 0 : 390;
+            return (
+              <g key={i}>
+                <line x1={from} y1={y} x2={to} y2={y} stroke={T.brassSoft} strokeWidth="1" opacity=".18" />
+                <line x1={from} y1={y} x2={to} y2={y} stroke={i % 3 === 1 ? "#8FE0C4" : T.brassSoft} strokeWidth="1.8"
+                  strokeDasharray="72 390" strokeDashoffset={rtl ? -462 : 462} strokeLinecap="round"
+                  style={{ animation: `emLangFlow${rtl ? "R" : "L"} .66s ${i * 0.045}s cubic-bezier(.3,0,.2,1) forwards` }} />
+              </g>
+            );
+          })}
+        </svg>
+      )}
+
+      <div className="up" style={{ position: "relative", zIndex: 4 }}>
+        <Wordmark size={28} />
+        <div style={{ textAlign: "center", fontSize: 13, color: "rgba(248,242,228,.74)", margin: "32px 0 30px", lineHeight: 1.8 }}>
+          اختر لغتك <span style={{ opacity: .45 }}>—</span> <span className="lat">Choose your language</span>
+        </div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+          {[
+            { id: "ar", t: "العربية", sub: "التجربة الكاملة بالعربية", f: T.ar, dir: "rtl" },
+            { id: "en", t: "English", sub: "The same product, read in English", f: T.en, dir: "ltr" },
+          ].map((x) => (
+            <button key={x.id} data-lang={x.id} className="press" onClick={() => pick(x.id)}
+              style={{
+                width: "100%", padding: "16px 18px", borderRadius: 18, minHeight: 68,
+                background: flow === x.id ? "rgba(184,148,74,.22)" : "rgba(255,255,255,.07)",
+                border: `1.4px solid ${flow === x.id ? T.brassSoft : "rgba(216,190,134,.34)"}`,
+                direction: x.dir, fontFamily: x.f, display: "flex", alignItems: "center", gap: 13, textAlign: "start",
+              }}>
+              <Languages size={21} color={T.brassSoft} style={{ flexShrink: 0 }} />
+              <span style={{ flex: 1 }}>
+                <span style={{ display: "block", fontSize: 19, fontWeight: 700, color: "#F8F2E4" }}>{x.t}</span>
+                <span style={{ display: "block", fontSize: 11.5, color: "rgba(248,242,228,.6)", marginTop: 3 }}>{x.sub}</span>
+              </span>
+              <ChevronLeft size={18} color="rgba(248,242,228,.55)" style={{ transform: x.id === "en" ? "rotate(180deg)" : "none", flexShrink: 0 }} />
+            </button>
+          ))}
+        </div>
+        <div style={{ textAlign: "center", fontSize: 11.5, color: "rgba(248,242,228,.5)", marginTop: 26, lineHeight: 1.8 }}>
+          يمكنك تغيير اللغة لاحقًا من «حسابي» <span className="lat">· You can change this later in your profile</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
    SHELL — four jobs in the bottom nav: الرئيسية · اكتشف · المجتمع · خطتي
    Profile lives behind the avatar. No AI tab: AI is horizontal.
    ═══════════════════════════════════════════════════════════════════════════ */
@@ -5939,6 +7923,7 @@ class ErrorBoundary extends React.Component {
 export default function EyeMakkahApp() {
   const [state, dispatch] = useReducer(reducer, undefined, () => initialState());
   const [stack, setStack] = useState([{ s: "home" }]);
+  const [entry, setEntry] = useState("landing");        // landing → language → app
   const [toastMsg, setToastMsg] = useState(null);
   const scrollRef = useRef(null);
   const view = stack[stack.length - 1];
@@ -5961,7 +7946,9 @@ export default function EyeMakkahApp() {
   const hideNav = ["search", "thread", "object"].includes(view.s);
   const ts = state.profile.textScale || 1;
   const device = useDeviceViewport();
-  const dir = "rtl";
+  const lang = state.profile.lang || "ar";
+  setLang(lang);                                        // formatting helpers follow the language
+  const dir = lang === "ar" ? "rtl" : "ltr";
   const safeBottom = "env(safe-area-inset-bottom, 0px)";
   const depth = stack.length;
   const prevDepth = useRef(depth);
@@ -6012,7 +7999,7 @@ export default function EyeMakkahApp() {
             {/* text size works the way a device setting does: content reflows to a
                 narrower box and is scaled up, so nothing is clipped. */}
             <div ref={scrollRef} className="scroll" key={view.s + (view.id || "")}
-              data-screen
+              data-screen aria-hidden={entry !== "app" ? "true" : undefined}
               style={{
                 position: "absolute", inset: 0, overflowY: "auto", overflowX: "clip",
                 paddingBottom: hideNav ? 0 : `calc(66px + ${safeBottom})`,
@@ -6022,13 +8009,24 @@ export default function EyeMakkahApp() {
               }}>
               <ErrorBoundary viewKey={view.s + (view.id || "")} onReset={() => setStack([{ s: "home" }])}>
                 <div className={anim} style={{ "--push": dir === "rtl" ? "-18px" : "18px" }}>
-                  {render()}
+                  <Localize>{render()}</Localize>
                 </div>
               </ErrorBoundary>
             </div>
-            {!hideNav && <BottomNav tab={tab} onTab={setTab} planCount={planCount} safeBottom={safeBottom} />}
-            <DismissSheet o={dismissTarget} onClose={() => setDismissTarget(null)} />
-            <Toast msg={toastMsg} onDone={() => setToastMsg(null)} />
+            <Localize>
+              {entry === "app" && !hideNav && <BottomNav tab={tab} onTab={setTab} planCount={planCount} safeBottom={safeBottom} />}
+              <DismissSheet o={dismissTarget} onClose={() => setDismissTarget(null)} />
+              <Toast msg={toastMsg} onDone={() => setToastMsg(null)} />
+            </Localize>
+
+            {entry !== "app" && (
+              <div style={{ position: "absolute", inset: 0, zIndex: 120 }}>
+                {entry === "landing" && <ScreenLanding lang={lang} onEnter={() => setEntry("language")} />}
+                {entry === "language" && (
+                  <ScreenLanguage onPick={(l) => { dispatch({ type: "profile", patch: { lang: l } }); setLang(l); setEntry("app"); setStack([{ s: "home" }]); }} />
+                )}
+              </div>
+            )}
           </div>
         </div>
       </div>
