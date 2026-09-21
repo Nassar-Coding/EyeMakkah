@@ -90,6 +90,11 @@ for (const vp of [{ width: 390, height: 844, name: "390" }, { width: 360, height
   const page = await browser.newPage({ viewport: { width: vp.width, height: vp.height }, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
   page.on("pageerror", (e) => findings.push(`${vp.name} pageerror: ${e.message}`));
   await page.goto("http://127.0.0.1:4488/", { waitUntil: "networkidle" });
+  await page.waitForTimeout(600);
+  await page.getByText(/^(ابدأ|Enter EyeMakkah)$/).first().click();
+  await page.waitForTimeout(500);
+  await page.locator('[data-lang="ar"]').click();
+  await page.waitForTimeout(900);
   await page.waitForTimeout(700);
 
   const tab = async (id) => {
