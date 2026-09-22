@@ -51,12 +51,66 @@
     return rows;
   }
   const OPPS=opps();
-  const state={page:PAGES[0][0],period:"آخر 30 يومًا",area:"مكة المكرمة",category:"الكل",audience:"الكل",selectedArea:"العزيزية",campaign:"نكهات مكة"};
+  const state={page:PAGES[0][0],period:"آخر 30 يومًا",area:"مكة المكرمة",category:"الكل",audience:"الكل",selectedArea:"العزيزية",campaign:"نكهات مكة",lang:"ar"};
 
   const esc=s=>String(s==null?"":s).replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]));
   const fmt=v=>{v=Number(v)||0;return Math.abs(v)>=1e6?(v/1e6).toFixed(1)+"M":Math.abs(v)>=1e3?(v/1e3).toFixed(1)+"K":Math.round(v).toLocaleString("en-US")};
   const sum=(a,k)=>a.reduce((s,r)=>s+(Number(r[k])||0),0);
   const days=()=>({"آخر 7 أيام":7,"آخر 30 يومًا":30,"آخر 3 أشهر":90,"آخر 12 شهرًا":365}[state.period]);
+  const clamp=(v,min,max)=>Math.max(min,Math.min(max,v));
+  function periodIntensity(){return ({7:1.10,30:1,90:.95,365:.90}[days()]||1)}
+  function hash01(s){let h=2166136261;s=String(s);for(let i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,16777619)}return (h>>>0)/4294967295}
+  function rowNoise(key){return .92+hash01(key+"|"+state.period+"|"+state.area+"|"+state.category+"|"+state.audience)*.16}
+  function contextScale(){return factor()*(days()/30)*periodIntensity()}
+  function scaledCount(v,key,scale){return Math.max(0,Math.round((Number(v)||0)*(scale==null?contextScale():scale)*rowNoise(key)))}
+  function scaledRate(v,key){
+    const adj=.9+(factor()-1)*.32+(periodIntensity()-1)*.8;
+    return clamp((Number(v)||0)*adj*(.96+hash01(key+"|"+state.area+"|"+state.category+"|"+state.audience)*.08),.01,.95)
+  }
+  function activityRows(){
+    return ACTIVITIES
+      .filter(r=>(state.area==="مكة المكرمة"||r.area===state.area)&&(state.category==="الكل"||r.category===state.category))
+      .map(r=>Object.assign({},r,{
+        views:scaledCount(r.views,r.activity+"v"),saves:scaledCount(r.saves,r.activity+"s"),
+        plans:scaledCount(r.plans,r.activity+"p"),joins:scaledCount(r.joins,r.activity+"j"),
+        actions:scaledCount(r.actions,r.activity+"a"),complete:scaledCount(r.complete,r.activity+"c"),
+        growth:scaledRate(r.growth,r.activity+"g")
+      }))
+  }
+  function communityRows(){
+    const scale=factor()*periodIntensity()*(.9+Math.min(days(),90)/900);
+    return COMM.map(r=>Object.assign({},r,{
+      members:scaledCount(r.members,r.community+"m",scale),
+      engagement:scaledCount(r.engagement,r.community+"e"),
+      growth:scaledRate(r.growth,r.community+"g")
+    }))
+  }
+  function campaignRows(){
+    return CAMPS
+      .filter(r=>(state.category==="الكل"||r.category===state.category)&&(state.audience==="الكل"||r.audience===state.audience||r.audience==="الكل"))
+      .map(r=>Object.assign({},r,{
+        impressions:scaledCount(r.impressions,r.campaign+"i"),views:scaledCount(r.views,r.campaign+"v"),
+        details:scaledCount(r.details,r.campaign+"d"),saves:scaledCount(r.saves,r.campaign+"s"),
+        handoffs:scaledCount(r.handoffs,r.campaign+"h"),growth:scaledRate(r.growth,r.campaign+"g")
+      }))
+  }
+  function termRows(){
+    return TERMS
+      .filter(r=>state.category==="الكل"||r.category===state.category)
+      .map(r=>Object.assign({},r,{
+        index:clamp(Math.round(r.index*(.88+factor()*.12)*periodIntensity()*rowNoise(r.term+"i")),18,100),
+        growth:scaledRate(r.growth,r.term+"g")
+      }))
+  }
+  function scaledOppRows(source){
+    return source.map(r=>{
+      const demand=clamp(Math.round(r.demand_index*(.88+factor()*.12)*periodIntensity()*rowNoise(r.area+r.category+"d")),20,100);
+      const growth=scaledRate(r.growth,r.area+r.category+"g");
+      const supply=clamp(Math.round(r.supply_index*(1.08-(factor()-1)*.08)*(1.02-(periodIntensity()-1)*.3)/rowNoise(r.area+r.category+"s")),10,95);
+      const score=+(0.56*demand+80*Math.max(growth,0)+.35*(100-supply)).toFixed(1);
+      return Object.assign({},r,{demand_index:demand,growth,supply_index:supply,score})
+    })
+  }
 
   function factor(){
     const area=state.area==="مكة المكرمة"?1:AF[state.area];
@@ -73,14 +127,14 @@
     };
   }
   function trend(keys){
-    const d=Math.min(days(),90),f=factor(),out={}; keys.forEach(k=>out[k]=[]);
+    const d=Math.min(days(),90),f=factor()*periodIntensity(),out={}; keys.forEach(k=>out[k]=[]);
     for(let i=0;i<d;i++){
       const wave=1+.12*Math.sin(i/4)+.05*Math.cos(i/9),up=.86+.23*(i/Math.max(1,d-1));
       keys.forEach((k,j)=>{const base={searches:3600,saves:1620,plans:880,actions:330}[k]||1000;out[k].push(Math.round(base*f*wave*up*(1+j*.02)));});
     }
     return out;
   }
-  function delta(seed){return .04+((seed*7)%13)/100}
+  function delta(seed){return .03+((seed*7+days()+Math.round(factor()*100))%16)/100}
 
   function opts(values,current){return values.map(v=>'<option'+(v===current?' selected':'')+'>'+esc(v)+'</option>').join("")}
   function filters(){
@@ -90,7 +144,7 @@
       '<div class="filter"><label>القطاع / الفئة</label><select data-filter="category">'+opts(["الكل"].concat(CATS),state.category)+'</select></div>'+
       '<div class="filter"><label>نوع الجمهور</label><select data-filter="audience">'+opts(["الكل"].concat(AUD),state.audience)+'</select></div></div>';
   }
-  function header(t,s){return '<div class="topbar"><div><div class="eyebrow">EYEMAKKAH BUSINESS INTELLIGENCE</div><h1 class="title">'+esc(t)+'</h1><div class="subtitle">'+esc(s)+'</div></div></div><div class="hero-rule"></div>'}
+  function header(t,s){return '<div class="topbar"><div><div class="eyebrow">EYEMAKKAH BUSINESS ANALYTICS</div><h1 class="title">'+esc(t)+'</h1><div class="subtitle">'+esc(s)+'</div></div></div><div class="hero-rule"></div>'}
   function kpi(l,v,d,n,text){d=d==null?.08:d;return '<div class="kpi-card"><div class="kpi-label">'+esc(l)+'</div><div class="kpi-value'+(text?' text':'')+'">'+esc(v)+'</div><div class="delta '+(d>=0?'up':'down')+'">'+(d>=0?'↑ ':'↓ ')+Math.round(Math.abs(d)*100)+'%</div><div class="kpi-note">'+esc(n||"مقارنة بالفترة السابقة")+'</div></div>'}
   function panel(t,c,b){return '<section class="panel"><div class="panel-title">'+esc(t)+'</div>'+(c?'<div class="panel-copy">'+esc(c)+'</div>':'')+b+'</section>'}
   function insight(t,r){return '<div class="insight"><div class="insight-label">رؤية تحليلية · نموذج توضيحي</div><div class="insight-text">'+t+'</div>'+(r&&r.length?'<div class="insight-reasons"><b>لماذا ظهرت هذه الرؤية؟</b> · '+r.map(esc).join(" · ")+'</div>':'')+'</div>'}
@@ -115,22 +169,24 @@
       rows.map(r=>'<tr>'+cols.map(c=>'<td>'+(c[2]==="pct"?'<div style="direction:ltr">'+Math.round((Number(r[c[0]])||0)*100)+'%</div>':esc(c[2]==="num"?fmt(r[c[0]]):r[c[0]]))+'</td>').join("")+'</tr>').join("")+
       '</tbody></table></div>';
   }
-  function donut(){
-    const by={};COMM.forEach(r=>by[r.type]=(by[r.type]||0)+r.engagement);const rows=Object.keys(by).map(k=>({name:k,value:by[k]})),tot=sum(rows,"value"),cols=[C.green,C.gold,C.clay,"#7A8F83","#B7A98F"];let deg=0,st=[];
-    rows.forEach((r,i)=>{const d=r.value/tot*360;st.push(cols[i%cols.length]+" "+deg+"deg "+(deg+d)+"deg");deg+=d});
-    return '<div class="donut-wrap"><div class="donut" style="background:conic-gradient('+st.join(",")+')"><div class="donut-center">'+fmt(tot)+'</div></div><div class="donut-legend">'+rows.map((r,i)=>'<div><i style="background:'+cols[i%cols.length]+'"></i>'+esc(r.name)+' · '+Math.round(r.value/tot*100)+'%</div>').join("")+'</div></div>';
+  function donut(source){
+    source=source||communityRows();
+    const by={};source.forEach(r=>by[r.type]=(by[r.type]||0)+r.engagement);
+    const items=Object.keys(by).map(k=>({name:k,value:by[k]})),tot=sum(items,"value"),cols=[C.green,C.gold,C.clay,"#7A8F83","#B7A98F"];let deg=0,st=[];
+    items.forEach((r,i)=>{const d=r.value/tot*360;st.push(cols[i%cols.length]+" "+deg+"deg "+(deg+d)+"deg");deg+=d});
+    return '<div class="donut-wrap"><div class="donut" style="background:conic-gradient('+st.join(",")+')"><div class="donut-center">'+fmt(tot)+'</div></div><div class="donut-legend">'+items.map((r,i)=>'<div><i style="background:'+cols[i%cols.length]+'"></i>'+esc(r.name)+' · '+Math.round(r.value/tot*100)+'%</div>').join("")+'</div></div>';
   }
 
   function dashboard(){
-    const m=metrics(),tr=trend(["searches","saves","plans"]),cats=CATS.map((c,i)=>({name:c,value:Math.round(m.interactions*CF[c]/CATS.reduce((s,x)=>s+CF[x],0))})).sort((a,b)=>b.value-a.value),ag=AREAS.map(a=>({area:a,growth:.04+(AF[a]-.68)*.18})).sort((a,b)=>b.growth-a.growth),top=OPPS.slice().sort((a,b)=>b.score-a.score)[0];
+    const m=metrics(),tr=trend(["searches","saves","plans"]),catSet=state.category==="الكل"?CATS:[state.category],areaSet=state.area==="مكة المكرمة"?AREAS:[state.area],cats=catSet.map(c=>({name:c,value:Math.round(m.interactions*CF[c]/catSet.reduce((s,x)=>s+CF[x],0)*rowNoise(c+"dash"))})).sort((a,b)=>b.value-a.value),ag=areaSet.map(a=>({area:a,growth:scaledRate(.04+(AF[a]-.68)*.18,a+"dash")})).sort((a,b)=>b.growth-a.growth),top=scaledOppRows(OPPS.filter(r=>(state.area==="مكة المكرمة"||r.area===state.area)&&(state.category==="الكل"||r.category===state.category))).sort((a,b)=>b.score-a.score)[0],comm=communityRows();
     return header("لوحة المعلومات","لقطة تنفيذية لما يحدث عبر تجربة EyeMakkah، من الاهتمام والاكتشاف إلى التخطيط والانتقال للإجراء.")+filters()+
       '<div class="kpi-grid">'+kpi("إجمالي التفاعلات",fmt(m.interactions),delta(1))+kpi("المستخدمون النشطون",fmt(m.active_users),delta(2))+kpi("عمليات البحث",fmt(m.searches),delta(3))+kpi("الإضافات إلى «خطتي»",fmt(m.plans),delta(4))+kpi("الانتقال إلى الإجراء",fmt(m.actions),delta(5))+'</div>'+
       '<div class="grid-2">'+panel("اتجاهات الطلب عبر الزمن","البحث والحفظ والإضافة إلى خطتي.",line([{name:"بحث",color:C.green,values:tr.searches},{name:"حفظ",color:C.gold,values:tr.saves},{name:"إضافة إلى خطتي",color:C.clay,values:tr.plans}]))+panel("أكثر القطاعات جذبًا للاهتمام","حصة التفاعلات حسب الفئة.",bar(cats,"name","value"))+'</div>'+
       insight("يتسارع الاهتمام في <b>"+esc(ag[0].area)+"</b> بالتزامن مع إشارات طلب مرتفعة في <b>"+esc(top.category)+"</b>. الإشارة مناسبة للاستكشاف واتخاذ القرار، وليست توقعًا تجاريًا مضمونًا.",["نمو متوسط "+Math.round(ag[0].growth*100)+"%","ارتفاع البحث والحفظ","مقارنة مستوى العرض بالطلب"])+
-      '<div class="grid-2 equal">'+panel("المناطق الأعلى نموًا في الاهتمام","اتجاه النمو التجريبي.",bar(ag,"area","growth",C.gold,true))+panel("مختصر المجتمعات","الموضوعات التي تجمع نمو النقاش مع نشاط مرتفع.",'<div class="community-list">'+COMM.slice().sort((a,b)=>b.growth-a.growth).slice(0,5).map(r=>'<div class="community-row"><strong>'+esc(r.community)+'</strong><span class="growth">'+Math.round(r.growth*100)+'% ↑</span><p>'+esc(r.themes)+'</p></div>').join("")+'</div>')+'</div>';
+      '<div class="grid-2 equal">'+panel("المناطق الأعلى نموًا في الاهتمام","اتجاه النمو التجريبي.",bar(ag,"area","growth",C.gold,true))+panel("مختصر المجتمعات","الموضوعات التي تجمع نمو النقاش مع نشاط مرتفع.",'<div class="community-list">'+comm.slice().sort((a,b)=>b.growth-a.growth).slice(0,5).map(r=>'<div class="community-row"><strong>'+esc(r.community)+'</strong><span class="growth">'+Math.round(r.growth*100)+'% ↑</span><p>'+esc(r.themes)+'</p></div>').join("")+'</div>')+'</div>';
   }
   function demand(){
-    const m=metrics(),tr=trend(["searches","plans","actions"]),terms=TERMS.filter(r=>state.category==="الكل"||r.category===state.category),fast=terms.slice().sort((a,b)=>b.growth-a.growth).slice(0,7),aud=[{aud:"سكان مكة",searches:m.searches*.58,plans:m.plans*.61,actions:m.actions*.57},{aud:"الزوار",searches:m.searches*.42,plans:m.plans*.39,actions:m.actions*.43}];
+    const m=metrics(),tr=trend(["searches","plans","actions"]),terms=termRows(),fast=terms.slice().sort((a,b)=>b.growth-a.growth).slice(0,7),audAll=[{aud:"سكان مكة",searches:m.searches*.58,plans:m.plans*.61,actions:m.actions*.57},{aud:"الزوار",searches:m.searches*.42,plans:m.plans*.39,actions:m.actions*.43}],aud=state.audience==="الكل"?audAll:audAll.filter(x=>x.aud===state.audience);
     return header("تحليل الطلب","فهم ما يبحث عنه المستخدمون، متى يرتفع الاهتمام، وكيف ينتقل الطلب من البحث إلى الإجراء.")+filters()+
       '<div class="grid-2">'+panel("الطلب عبر الزمن","البحث والخطة والإجراء.",line([{name:"بحث",color:C.green,values:tr.searches},{name:"خطتي",color:C.gold,values:tr.plans},{name:"إجراء",color:C.clay,values:tr.actions}]))+panel("أسرع عمليات البحث نموًا","مؤشر تجريبي مبني على بيانات اصطناعية.",bar(fast,"term","growth",C.gold,true))+'</div>'+
       '<div class="grid-2 equal">'+panel("أكثر مصطلحات البحث","ترتيب نسبي للاهتمام.",table(terms.slice().sort((a,b)=>b.index-a.index),[["term","مصطلح البحث"],["category","الفئة"],["index","مؤشر الطلب"],["growth","النمو","pct"]]))+panel("سكان مكة مقابل الزوار","مقارنة الطلب حسب نوع الجمهور.",bar(aud,"aud","searches",C.green))+'</div>'+
@@ -138,7 +194,7 @@
       insight("جزء مهم من الطلب يتوقف بعد الحفظ وقبل الإضافة إلى «خطتي»؛ هذه نقطة مناسبة لاختبار تحسينات تجربة التخطيط.",["معدل حفظ مرتفع","هبوط بين الحفظ والخطة","تفاوت حسب الفئة"]);
   }
   function areas(){
-    const area=state.selectedArea,oo=OPPS.filter(o=>o.area===area),d=Math.round(sum(oo,"demand_index")/oo.length),g=sum(oo,"growth")/oo.length,top=oo.slice().sort((a,b)=>b.demand_index-a.demand_index)[0],best=oo.slice().sort((a,b)=>b.score-a.score)[0],rows=oo.slice().sort((a,b)=>b.demand_index-a.demand_index);
+    const area=state.selectedArea,oo=scaledOppRows(OPPS.filter(o=>o.area===area&&(state.category==="الكل"||o.category===state.category))),d=Math.round(sum(oo,"demand_index")/oo.length),g=sum(oo,"growth")/oo.length,top=oo.slice().sort((a,b)=>b.demand_index-a.demand_index)[0],best=oo.slice().sort((a,b)=>b.score-a.score)[0],rows=oo.slice().sort((a,b)=>b.demand_index-a.demand_index);
     return header("تحليل المناطق","قراءة جغرافية مبسطة للاهتمام والطلب والفرص على مستوى أحياء ومناطق مكة.")+filters()+
       '<div class="area-selector"><label>المنطقة قيد التحليل</label><select id="area-detail">'+opts(AREAS,area)+'</select></div>'+
       '<div class="kpi-grid" style="grid-template-columns:repeat(4,1fr)">'+kpi("مستوى الاهتمام",d+"/100",g)+kpi("نمو الطلب",Math.round(g*100)+"%",g)+kpi("الفئة الأبرز",top.category,CG[top.category],"ضمن النموذج",true)+kpi("وقت الذروة",["العوالي","العزيزية","الشوقية"].includes(area)?"المساء 7–10 م":"العصر 4–7 م",.06,"ضمن النموذج",true)+'</div>'+
@@ -146,7 +202,7 @@
       insight("شهدت <b>"+esc(area)+"</b> نموًا في الاهتمام بـ <b>"+esc(best.category)+"</b>، بينما يظل مؤشر العرض التجريبي أقل من مؤشر الطلب. هذه إشارة لدراسة الاحتياج، وليست ضمانًا لفرصة تجارية.",["مؤشر طلب "+best.demand_index+"/100","نمو "+Math.round(best.growth*100)+"%","مؤشر عرض "+best.supply_index+"/100"]);
   }
   function activities(){
-    const a=ACTIVITIES.filter(r=>(state.area==="مكة المكرمة"||r.area===state.area)&&(state.category==="الكل"||r.category===state.category));
+    const a=activityRows();
     if(!a.length)return header("الأنشطة والتجارب","تحليل سلوك المشاركة مع الحفاظ على الفرق بين العرض والحفظ والتخطيط والانضمام والإجراء والإكمال.")+filters()+'<div class="notice">لا توجد أنشطة تجريبية مطابقة لهذه الفلاتر.</div>';
     const max=k=>a.slice().sort((x,y)=>y[k]-x[k])[0];
     return header("الأنشطة والتجارب","تحليل سلوك المشاركة مع الحفاظ على الفرق بين العرض والحفظ والتخطيط والانضمام والإجراء والإكمال.")+filters()+
@@ -155,31 +211,58 @@
       panel("أداء الأنشطة","ترتيب تفاعلي للأنشطة مع مؤشرات كل مرحلة.",table(a.slice().sort((x,y)=>y.plans-x.plans),[["activity","النشاط"],["category","الفئة"],["area","المنطقة"],["views","عرض","num"],["saves","حفظ","num"],["plans","خطتي","num"],["joins","انضمام","num"],["actions","إجراء","num"],["complete","إكمال","num"],["growth","النمو","pct"]]));
   }
   function communities(){
-    const topics=[["أنشطة الأطفال","+34%","أسئلة وتوصيات نهاية الأسبوع"],["تجارب المساء","+29%","اقتراحات لأنشطة اجتماعية"],["الورش الإبداعية","+27%","بحث عن تجارب قصيرة"],["أماكن قريبة","+18%","طلب خيارات حسب الحي"]];
+    const comm=communityRows(),topics=[
+      ["أنشطة الأطفال",scaledRate(.34,"topic1"),"أسئلة وتوصيات نهاية الأسبوع"],
+      ["تجارب المساء",scaledRate(.29,"topic2"),"اقتراحات لأنشطة اجتماعية"],
+      ["الورش الإبداعية",scaledRate(.27,"topic3"),"بحث عن تجارب قصيرة"],
+      ["أماكن قريبة",scaledRate(.18,"topic4"),"طلب خيارات حسب الحي"]
+    ];
     return header("المجتمعات والاهتمامات","ذكاء مجتمعي يركز على أنماط الموضوعات والمشاركة، دون ملفات نفسية أو تعرّف على الأفراد.")+filters()+
-      '<div class="grid-2">'+panel("المجتمعات الأكثر نشاطًا","حجم التفاعل ونمو النقاش.",bar(COMM.slice().sort((a,b)=>b.engagement-a.engagement),"community","engagement"))+panel("أنماط المساهمة","نوع المساهمة الأكثر ظهورًا في كل مجتمع.",donut())+'</div>'+
-      panel("موضوعات تكتسب زخمًا","ملخص نوعي للنقاشات التجريبية.",'<div class="grid-4" style="margin-top:0">'+topics.map(x=>'<div class="kpi-card"><div class="kpi-label">'+esc(x[2])+'</div><div class="kpi-value text">'+esc(x[0])+'</div><div class="delta up">↑ '+esc(x[1])+'</div></div>').join("")+'</div>')+
+      '<div class="grid-2">'+panel("المجتمعات الأكثر نشاطًا","حجم التفاعل ونمو النقاش.",bar(comm.slice().sort((a,b)=>b.engagement-a.engagement),"community","engagement"))+panel("أنماط المساهمة","نوع المساهمة الأكثر ظهورًا في كل مجتمع.",donut(comm))+'</div>'+
+      panel("موضوعات تكتسب زخمًا","ملخص نوعي للنقاشات التجريبية.",'<div class="grid-4" style="margin-top:0">'+topics.map(x=>'<div class="kpi-card"><div class="kpi-label">'+esc(x[2])+'</div><div class="kpi-value text">'+esc(x[0])+'</div><div class="delta up">↑ '+Math.round(x[1]*100)+'%</div></div>').join("")+'</div>')+
       insight("أعلى نمو للنقاش التجريبي يظهر حول الأنشطة المناسبة للعائلة والخيارات المسائية، مع تكرار أسئلة «ما القريب مني؟» و«ماذا يمكن أن نفعل هذا الأسبوع؟».",["نمو الأسئلة","زيادة التوصيات","ارتفاع الحفظ المرتبط بالموضوع"]);
   }
   function campaigns(){
-    let rows=CAMPS.filter(r=>(state.category==="الكل"||r.category===state.category)&&(state.audience==="الكل"||r.audience===state.audience||r.audience==="الكل"));
+    let rows=campaignRows();
     if(!rows.length)return header("الحملات والعروض","قراءة أداء حملات تجريبية للشركاء والعلامات التجارية.")+filters()+'<div class="notice">لا توجد حملات تجريبية مطابقة للفلاتر المحددة.</div>';
-    if(!rows.some(r=>r.campaign===state.campaign))state.campaign=rows[0].campaign;const r=rows.find(x=>x.campaign===state.campaign);
-    const geo=AREAS.map((a,i)=>({area:a,value:[1.18,1.02,.94,.82,.78,.69,.63][i]*r.handoffs/6}));
+    if(!rows.some(r=>r.campaign===state.campaign))state.campaign=rows[0].campaign;
+    const r=rows.find(x=>x.campaign===state.campaign);
+    const areaSet=state.area==="مكة المكرمة"?AREAS:[state.area];
+    const geo=areaSet.map(a=>({area:a,value:scaledCount(r.handoffs/Math.max(1,areaSet.length),r.campaign+a+"geo",AF[a]*periodIntensity())}));
     return header("الحملات والعروض","قراءة أداء حملات تجريبية للشركاء والعلامات التجارية من الظهور حتى الانتقال إلى العرض أو الإجراء.")+filters()+
       '<div class="campaign-selector"><label>اختر حملة</label><select id="campaign-select">'+opts(rows.map(x=>x.campaign),state.campaign)+'</select></div>'+
-      '<div class="kpi-grid">'+kpi("الظهور",fmt(r.impressions),r.growth)+kpi("المشاهدة",fmt(r.views),.12)+kpi("فتح التفاصيل",fmt(r.details),.09)+kpi("الحفظ",fmt(r.saves),.16)+kpi("الانتقال للعرض",fmt(r.handoffs),.13)+'</div>'+
-      '<div class="grid-2">'+panel("قمع الحملة","أداء «"+r.campaign+"» عبر مراحل التفاعل.",funnel(["ظهور","مشاهدة","فتح التفاصيل","حفظ","إضافة إلى الخطة","انتقال إلى العرض"],[r.impressions,r.views,r.details,r.saves,Math.floor(r.saves*.44),r.handoffs]))+panel("الأداء الجغرافي","توزيع تجريبي للاستجابة حسب المنطقة.",bar(geo,"area","value"))+'</div>';
+      '<div class="kpi-grid">'+kpi("الظهور",fmt(r.impressions),r.growth)+kpi("المشاهدة",fmt(r.views),delta(11))+kpi("فتح التفاصيل",fmt(r.details),delta(12))+kpi("الحفظ",fmt(r.saves),delta(13))+kpi("الانتقال للعرض",fmt(r.handoffs),delta(14))+'</div>'+
+      '<div class="grid-2">'+panel("قمع الحملة","أداء «"+r.campaign+"» عبر مراحل التفاعل.",funnel(["ظهور","مشاهدة","فتح التفاصيل","حفظ","إضافة إلى خطتي","انتقال إلى العرض"],[r.impressions,r.views,r.details,r.saves,Math.floor(r.saves*(.38+.08*periodIntensity())),r.handoffs]))+panel("الأداء الجغرافي","توزيع تجريبي للاستجابة حسب المنطقة.",bar(geo,"area","value"))+'</div>';
   }
   function opportunities(){
-    const o=OPPS.filter(r=>(state.area==="مكة المكرمة"||r.area===state.area)&&(state.category==="الكل"||r.category===state.category)).sort((a,b)=>b.score-a.score),top=o[0];
+    const o=scaledOppRows(OPPS.filter(r=>(state.area==="مكة المكرمة"||r.area===state.area)&&(state.category==="الكل"||r.category===state.category))).sort((a,b)=>b.score-a.score),top=o[0];
     return header("الفرص والفجوات","إشارات دعم قرار تجمع الطلب والنمو ومستوى العرض. لا تمثل هذه الإشارات ضمانًا لجدوى مشروع أو استثمار.")+filters()+
       insight("أقوى إشارة في الفلاتر الحالية تظهر في <b>"+esc(top.area)+"</b> ضمن <b>"+esc(top.category)+"</b>: "+esc(top.reason)+". يوصى باستخدامها كنقطة بداية للتحقق الميداني ودراسة السوق.",["مؤشر طلب "+top.demand_index,"نمو "+Math.round(top.growth*100)+"%","مؤشر عرض "+top.supply_index])+
       '<div class="grid-2">'+panel("الطلب مقابل العرض","أعلى الطلب وأقل العرض يستحق تحققًا أعمق.",bar(o.slice(0,10).map(r=>({name:r.area+" · "+r.category,value:r.score})),"name","value",C.green))+panel("الإشارات الأعلى","ترتيب وفق مؤشر تجريبي مركب.",'<div>'+o.slice(0,6).map(r=>'<div class="signal"><b>'+esc(r.area)+' · '+esc(r.category)+'</b><span class="signal-score">'+r.score.toFixed(0)+'</span><small>'+esc(r.reason)+' · نمو '+Math.round(r.growth*100)+'%</small></div>').join("")+'</div>')+'</div>'+
       panel("جدول الفرص","تفاصيل الإشارات الداعمة للقرار.",table(o,[["area","المنطقة"],["category","الفئة"],["demand_index","مؤشر الطلب"],["growth","اتجاه النمو","pct"],["supply_index","مستوى العرض"],["reason","سبب ظهور الفرصة"],["score","مؤشر الإشارة"]]));
   }
   function reportRows(){
-    const m=metrics(),rows=[];AREAS.forEach((a,ai)=>CATS.forEach((c,ci)=>AUD.forEach((u,ui)=>{const f=AF[a]*CF[c]*(ui?1.02:1.06)/12;rows.push({area:a,category:c,audience:u,interactions:Math.round(m.interactions*f),active_users:Math.round(m.active_users*f),searches:Math.round(m.searches*f),views:Math.round(m.views*f),saves:Math.round(m.saves*f),plans:Math.round(m.plans*f),joins:Math.round(m.joins*f),actions:Math.round(m.actions*f),completes:Math.round(m.completes*f),contributes:Math.round(m.contributes*f)});})));return rows;
+    const m=metrics(),rows=[];
+    const areas=state.area==="مكة المكرمة"?AREAS:[state.area];
+    const cats=state.category==="الكل"?CATS:[state.category];
+    const auds=state.audience==="الكل"?AUD:[state.audience];
+    areas.forEach(a=>cats.forEach(c=>auds.forEach(u=>{
+      const f=AF[a]*CF[c]*(u==="الزوار"?1.02:1.06)/Math.max(4,areas.length*cats.length*.7);
+      rows.push({
+        area:a,category:c,audience:u,
+        interactions:Math.round(m.interactions*f*rowNoise(a+c+u+"ri")),
+        active_users:Math.round(m.active_users*f*rowNoise(a+c+u+"ru")),
+        searches:Math.round(m.searches*f*rowNoise(a+c+u+"rs")),
+        views:Math.round(m.views*f*rowNoise(a+c+u+"rv")),
+        saves:Math.round(m.saves*f*rowNoise(a+c+u+"rsa")),
+        plans:Math.round(m.plans*f*rowNoise(a+c+u+"rp")),
+        joins:Math.round(m.joins*f*rowNoise(a+c+u+"rj")),
+        actions:Math.round(m.actions*f*rowNoise(a+c+u+"ra")),
+        completes:Math.round(m.completes*f*rowNoise(a+c+u+"rc")),
+        contributes:Math.round(m.contributes*f*rowNoise(a+c+u+"rco"))
+      });
+    })));
+    return rows;
   }
   function reports(){
     const rr=[["التقرير الشهري للطلب والاهتمام","ملخص البحث والحفظ والتخطيط واتجاهات الطلب."],["تحليل مناطق مكة","مقارنة المناطق والفئات ومؤشرات النمو."],["تقرير المجتمعات والاهتمامات","أنماط النقاش والمساهمة والموضوعات الصاعدة."],["أداء الحملات والعروض","قمع الحملات والأداء حسب الجمهور والمنطقة."],["تقرير الفرص والفجوات","إشارات الطلب مقابل العرض لدعم التحقق والدراسة."]],rows=reportRows();
@@ -189,23 +272,104 @@
       '<script id="report-data" type="application/json">'+JSON.stringify(rows).replace(/</g,"\\u003c")+'</script>';
   }
 
+
+  const EN_MAP={
+    "لوحة المعلومات":"Dashboard","تحليل الطلب":"Demand Analysis","تحليل المناطق":"Area Analysis","الأنشطة والتجارب":"Activities & Experiences","المجتمعات والاهتمامات":"Communities & Interests","الحملات والعروض":"Campaigns & Offers","الفرص والفجوات":"Opportunities & Gaps","التقارير":"Reports",
+    "الفترة الزمنية":"Time period","المنطقة":"Area","القطاع / الفئة":"Sector / Category","نوع الجمهور":"Audience type",
+    "الكل":"All","مكة المكرمة":"Makkah","العزيزية":"Al Aziziyah","الشوقية":"Ash Shawqiyah","العوالي":"Al Awali","النسيم":"An Naseem","الزاهر":"Az Zahir","الشرائع":"Ash Shara'i","بطحاء قريش":"Batha Quraysh",
+    "المطاعم والمقاهي":"Restaurants & Cafés","التجارب والأنشطة":"Experiences & Activities","التسوق":"Shopping","الترفيه":"Entertainment","الثقافة":"Culture","الخدمات":"Services","المجتمعات":"Communities","الضيافة":"Hospitality","سكان مكة":"Makkah Residents","الزوار":"Visitors",
+    "آخر 7 أيام":"Last 7 days","آخر 30 يومًا":"Last 30 days","آخر 3 أشهر":"Last 3 months","آخر 12 شهرًا":"Last 12 months",
+    "إجمالي التفاعلات":"Total interactions","المستخدمون النشطون":"Active users","عمليات البحث":"Searches","الإضافات إلى «خطتي»":"Added to My Plan","الانتقال إلى الإجراء":"Action handoff","مقارنة بالفترة السابقة":"vs previous period",
+    "اتجاهات الطلب عبر الزمن":"Demand trends over time","أكثر القطاعات جذبًا للاهتمام":"Top categories by interest","المناطق الأعلى نموًا في الاهتمام":"Fastest-growing areas by interest","مختصر المجتمعات":"Community summary",
+    "الطلب عبر الزمن":"Demand over time","أسرع عمليات البحث نموًا":"Fastest-growing searches","أكثر مصطلحات البحث":"Top search terms","سكان مكة مقابل الزوار":"Residents vs Visitors","رحلة الطلب":"Demand journey",
+    "المنطقة قيد التحليل":"Area under analysis","مستوى الاهتمام":"Interest level","نمو الطلب":"Demand growth","الفئة الأبرز":"Top category","وقت الذروة":"Peak time","الفئات الأعلى طلبًا":"Highest-demand categories","ملف المنطقة":"Area profile",
+    "الأكثر مشاهدة":"Most viewed","الأكثر حفظًا":"Most saved","الأكثر إضافة إلى خطتي":"Most added to My Plan","الأعلى في نية الحضور":"Highest attendance intent","الأعلى انتقالًا للإجراء":"Highest action handoff","قمع التفاعل":"Interaction funnel","أعلى الأنشطة نموًا":"Fastest-growing activities","أداء الأنشطة":"Activity performance",
+    "المجتمعات الأكثر نشاطًا":"Most active communities","أنماط المساهمة":"Contribution patterns","موضوعات تكتسب زخمًا":"Topics gaining momentum",
+    "اختر حملة":"Select campaign","الظهور":"Impressions","المشاهدة":"Views","فتح التفاصيل":"Detail opens","الحفظ":"Saves","الانتقال للعرض":"Offer handoff","قمع الحملة":"Campaign funnel","الأداء الجغرافي":"Geographic performance",
+    "الطلب مقابل العرض":"Demand vs supply","الإشارات الأعلى":"Top signals","جدول الفرص":"Opportunity table",
+    "تصدير ملخص CSV":"Export CSV summary","تصدير CSV":"Export CSV","رؤية تحليلية · نموذج توضيحي":"Analytical insight · illustrative model","لماذا ظهرت هذه الرؤية؟":"Why did this insight appear?","بداية الفترة":"Period start","آخر تحديث":"Latest update",
+    "بحث":"Search","عرض التفاصيل":"View details","إضافة إلى خطتي":"Add to My Plan","خطتي":"My Plan","إجراء":"Action","عرض":"View","انضمام / نية حضور":"Join / attendance intent","إكمال":"Complete","انضمام":"Join",
+    "مصطلح البحث":"Search term","الفئة":"Category","مؤشر الطلب":"Demand index","النمو":"Growth","الطلب":"Demand","العرض":"Supply","الإشارة":"Signal","النشاط":"Activity","الجمهور":"Audience","التفاعلات":"Interactions","الإضافة إلى خطتي":"Added to My Plan","سبب ظهور الفرصة":"Signal reason","اتجاه النمو":"Growth trend","مستوى العرض":"Supply level","مؤشر الإشارة":"Signal index",
+    "جولة ذاكرة مكة":"Makkah Memory Walk","مساء الخط العربي":"Arabic Calligraphy Evening","تجربة القهوة السعودية":"Saudi Coffee Experience","مسار الأسواق القديمة":"Old Markets Trail","مختبر الصغار الإبداعي":"Kids Creative Lab","جلسة تصوير معالم مكة":"Makkah Landmarks Photo Session","ورشة الحرف المحلية":"Local Crafts Workshop","ليلة القصص المكية":"Makkah Stories Night","مشي العوالي المسائي":"Al Awali Evening Walk","تجربة المذاقات الحجازية":"Hijazi Flavours Experience",
+    "الأحياء":"Neighborhoods","زوار مكة":"Makkah Visitors","الحج والعمرة":"Hajj & Umrah","المطاعم والتجارب":"Restaurants & Experiences","الثقافة والتاريخ":"Culture & History","التطوع والمبادرات":"Volunteering & Initiatives","التعليم والهوايات":"Education & Hobbies","الحياة في مكة":"Life in Makkah","توصيات":"Recommendations","أسئلة":"Questions","تحديثات":"Updates","مساهمات":"Contributions",
+    "عطلة نهاية الأسبوع":"Weekend","تجارب المساء":"Evening Experiences","نكهات مكة":"Flavours of Makkah","اكتشف الثقافة":"Discover Culture","قريب منك":"Near You",
+    "مطاعم عائلية":"Family restaurants","قهوة مختصة":"Specialty coffee","أنشطة للأطفال":"Kids activities","فعاليات نهاية الأسبوع":"Weekend events","تجارب ثقافية":"Cultural experiences","أماكن هادئة":"Quiet places","ورش فنية":"Art workshops","أماكن قريبة":"Nearby places","مطاعم بإطلالة":"Restaurants with a view","أنشطة مسائية":"Evening activities","تجارب للعائلة":"Family experiences","متاحف":"Museums",
+    "طلب مرتفع مع عرض محدود":"High demand with limited supply","اهتمام متزايد مع قلة الخيارات":"Growing interest with few options","بحث متكرر مقابل نتائج محدودة":"Repeated searches with limited results","إشارة تستحق المتابعة":"Signal worth monitoring",
+    "منصة EyeMakkah لتحليلات الأعمال":"EyeMakkah Business Analytics Platform","نموذج تحليلات الأعمال":"Business Analytics Prototype",
+    "آخر تحديث للنموذج: 22 سبتمبر 2026":"Prototype updated: 22 September 2026","بيانات اصطناعية لأغراض العرض":"Synthetic data for demonstration","لا تتضمن معلومات شخصية.":"No personal information is included."
+  };
+  const EN_PARTS=[
+    ["لقطة تنفيذية لما يحدث عبر تجربة EyeMakkah، من الاهتمام والاكتشاف إلى التخطيط والانتقال للإجراء.","Executive view of the EyeMakkah journey, from interest and discovery to planning and action handoff."],
+    ["فهم ما يبحث عنه المستخدمون، متى يرتفع الاهتمام، وكيف ينتقل الطلب من البحث إلى الإجراء.","Understand what users search for, when interest rises, and how demand moves from search to action."],
+    ["قراءة جغرافية مبسطة للاهتمام والطلب والفرص على مستوى أحياء ومناطق مكة.","A simplified geographic view of interest, demand, and opportunity signals across Makkah areas."],
+    ["تحليل سلوك المشاركة مع الحفاظ على الفرق بين العرض والحفظ والتخطيط والانضمام والإجراء والإكمال.","Analyze participation behavior while keeping view, save, plan, join, action, and completion distinct."],
+    ["ذكاء مجتمعي يركز على أنماط الموضوعات والمشاركة، دون ملفات نفسية أو تعرّف على الأفراد.","Community analytics focused on topic and participation patterns, without profiling or identifying individuals."],
+    ["قراءة أداء حملات تجريبية للشركاء والعلامات التجارية من الظهور حتى الانتقال إلى العرض أو الإجراء.","Illustrative campaign performance from impression through offer or action handoff."],
+    ["قراءة أداء حملات تجريبية للشركاء والعلامات التجارية.","Illustrative campaign performance for partners and brands."],
+    ["إشارات دعم قرار تجمع الطلب والنمو ومستوى العرض. لا تمثل هذه الإشارات ضمانًا لجدوى مشروع أو استثمار.","Decision-support signals combining demand, growth, and supply. These signals do not guarantee project or investment feasibility."],
+    ["مركز مبسط لعرض التقارير الدورية وتصدير ملخصات البيانات التجريبية.","A simple center for periodic reports and export of illustrative data summaries."],
+    ["البيانات المعروضة في هذا النموذج توضيحية لأغراض تصميم وتجربة المنصة، ولا تمثل بيانات تشغيلية حية أو معلومات عن أفراد.","The data shown in this prototype is illustrative for product design and testing. It is not live operational data and does not represent individuals."],
+    ["كل مرحلة إشارة مستقلة ولا تعني إتمام المرحلة التالية.","Each stage is a separate signal and does not imply completion of the next stage."],
+    ["الحفظ لا يساوي الإضافة إلى خطتي، والإضافة لا تعني حجزًا أو إكمالًا.","Saving is not the same as adding to a plan, and adding to a plan does not mean booking or completion."],
+    ["ضمن بيانات النموذج","Within demo data"],["ضمن النموذج","Within demo"],
+    ["لا توجد أنشطة تجريبية مطابقة لهذه الفلاتر.","No illustrative activities match these filters."],["لا توجد حملات تجريبية مطابقة للفلاتر المحددة.","No illustrative campaigns match the selected filters."],
+    ["ملخص البحث والحفظ والتخطيط واتجاهات الطلب.","Summary of search, saves, planning, and demand trends."],["مقارنة المناطق والفئات ومؤشرات النمو.","Comparison of areas, categories, and growth indicators."],["أنماط النقاش والمساهمة والموضوعات الصاعدة.","Discussion, contribution, and emerging-topic patterns."],["قمع الحملات والأداء حسب الجمهور والمنطقة.","Campaign funnel and performance by audience and area."],["إشارات الطلب مقابل العرض لدعم التحقق والدراسة.","Demand-versus-supply signals for validation and study."],
+    ["التقرير الشهري للطلب والاهتمام","Monthly demand & interest report"],["تحليل مناطق مكة","Makkah area analysis"],["تقرير المجتمعات والاهتمامات","Communities & interests report"],["أداء الحملات والعروض","Campaigns & offers performance"],["تقرير الفرص والفجوات","Opportunities & gaps report"],
+    ["الفترة: ","Period: "],[" · المنطقة: "," · Area: "],[" · الفئة: "," · Category: "],[" · الجمهور: "," · Audience: "],
+    ["نمو ","Growth "],["مؤشر طلب ","Demand index "],["مؤشر عرض ","Supply index "],["داخل ","Within "],[" للفترة الحالية."," for the current period."]
+  ];
+  function enText(s){
+    let out=String(s);
+    if(EN_MAP[out])return EN_MAP[out];
+    EN_PARTS.forEach(p=>{out=out.split(p[0]).join(p[1])});
+    Object.keys(EN_MAP).sort((a,b)=>b.length-a.length).forEach(k=>{if(out.includes(k))out=out.split(k).join(EN_MAP[k])});
+    return out
+  }
+  function localizeDom(){
+    document.documentElement.lang=state.lang;
+    document.documentElement.dir=state.lang==="ar"?"rtl":"ltr";
+    document.body.dir=document.documentElement.dir;
+    if(state.lang!=="en")return;
+    document.querySelectorAll("option").forEach(o=>{
+      const raw=o.textContent;o.value=raw;o.textContent=enText(raw)
+    });
+    const root=document.querySelector(".bi-shell");if(!root)return;
+    const walker=document.createTreeWalker(root,NodeFilter.SHOW_TEXT);let n;const nodes=[];
+    while(n=walker.nextNode())nodes.push(n);
+    nodes.forEach(t=>{
+      const p=t.parentElement;
+      if(!p||p.closest(".lang-switch")||["SCRIPT","STYLE","OPTION"].includes(p.tagName))return;
+      if(/[\u0600-\u06FF]/.test(t.nodeValue))t.nodeValue=enText(t.nodeValue)
+    })
+  }
+
   function page(){switch(state.page){case"لوحة المعلومات":return dashboard();case"تحليل الطلب":return demand();case"تحليل المناطق":return areas();case"الأنشطة والتجارب":return activities();case"المجتمعات والاهتمامات":return communities();case"الحملات والعروض":return campaigns();case"الفرص والفجوات":return opportunities();case"التقارير":return reports();default:return dashboard();}}
   function shell(){
-    return '<div class="bi-shell"><aside class="sidebar"><div class="brand"><div class="brand-main">EyeMakkah</div><div class="brand-sub">منصة ذكاء الأعمال</div><span class="brand-badge">BI PROTOTYPE</span></div><nav class="nav">'+
+    const lang='<div class="lang-switch"><button data-lang="ar" class="'+(state.lang==="ar"?"active":"")+'">العربية</button><button data-lang="en" class="'+(state.lang==="en"?"active":"")+'">English</button></div>';
+    return '<div class="bi-shell"><aside class="sidebar"><div class="brand"><div class="brand-main">EyeMakkah</div><div class="brand-sub">منصة EyeMakkah لتحليلات الأعمال</div><span class="brand-badge">BUSINESS ANALYTICS</span>'+lang+'</div><nav class="nav">'+
       PAGES.map(x=>'<button data-page="'+esc(x[0])+'" class="'+(state.page===x[0]?"active":"")+'"><span class="nav-icon">'+x[1]+'</span><span>'+esc(x[0])+'</span></button>').join("")+
-      '</nav><div class="sidebar-meta">آخر تحديث للنموذج: 21 سبتمبر 2026<br>بيانات اصطناعية لأغراض العرض<br>لا تتضمن معلومات شخصية.</div><a class="back-link" href="/">العودة إلى EyeMakkah ↗</a></aside><main class="main"><div class="mobile-nav"><select id="mobile-page">'+opts(PAGES.map(x=>x[0]),state.page)+'</select></div><div id="page">'+page()+'</div><div class="data-note">البيانات المعروضة في هذا النموذج توضيحية لأغراض تصميم وتجربة المنصة، ولا تمثل بيانات تشغيلية حية أو معلومات عن أفراد.</div><div class="footer-links"><a href="/">EyeMakkah</a> · Business Intelligence Prototype</div></main></div>';
+      '</nav><div class="sidebar-meta">آخر تحديث للنموذج: 22 سبتمبر 2026<br>بيانات اصطناعية لأغراض العرض<br>لا تتضمن معلومات شخصية.</div></aside><main class="main"><div class="mobile-tools"><select id="mobile-page">'+opts(PAGES.map(x=>x[0]),state.page)+'</select>'+lang+'</div><div id="page">'+page()+'</div><div class="data-note">البيانات المعروضة في هذا النموذج توضيحية لأغراض تصميم وتجربة المنصة، ولا تمثل بيانات تشغيلية حية أو معلومات عن أفراد.</div><div class="footer-links">EyeMakkah · نموذج تحليلات الأعمال</div></main></div>';
   }
   function downloadCsv(){
-    const e=document.getElementById("report-data");if(!e)return;const rows=JSON.parse(e.textContent),cols=["area","category","audience","interactions","active_users","searches","views","saves","plans","joins","actions","completes","contributes"],heads=["المنطقة","الفئة","الجمهور","التفاعلات","المستخدمون النشطون","البحث","العرض","الحفظ","الإضافة إلى خطتي","الانضمام","الانتقال للإجراء","الإكمال","المساهمات"],q=v=>'"'+String(v==null?"":v).replace(/"/g,'""')+'"',csv="\uFEFF"+[heads].concat(rows.map(r=>cols.map(c=>r[c]))).map(r=>r.map(q).join(",")).join("\n"),blob=new Blob([csv],{type:"text/csv;charset=utf-8"}),a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="EyeMakkah_BI_demo_summary.csv";document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),500);
+    const e=document.getElementById("report-data");if(!e)return;
+    const rows=JSON.parse(e.textContent),cols=["area","category","audience","interactions","active_users","searches","views","saves","plans","joins","actions","completes","contributes"];
+    const headsAr=["المنطقة","الفئة","الجمهور","التفاعلات","المستخدمون النشطون","البحث","العرض","الحفظ","الإضافة إلى خطتي","الانضمام","الانتقال إلى الإجراء","الإكمال","المساهمات"];
+    const heads=state.lang==="en"?headsAr.map(enText):headsAr;
+    const q=v=>'"'+String(state.lang==="en"?enText(v):(v==null?"":v)).replace(/"/g,'""')+'"';
+    const csv="\uFEFF"+[heads].concat(rows.map(r=>cols.map(c=>r[c]))).map(r=>r.map(q).join(",")).join("\n");
+    const blob=new Blob([csv],{type:"text/csv;charset=utf-8"}),a=document.createElement("a");
+    a.href=URL.createObjectURL(blob);a.download="EyeMakkah_Business_Analytics_demo_summary.csv";
+    document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),500);
   }
   function attach(){
     document.querySelectorAll("[data-page]").forEach(b=>b.onclick=()=>{state.page=b.dataset.page;render();scrollTo({top:0,behavior:"smooth"})});
     const mp=document.getElementById("mobile-page");if(mp)mp.onchange=e=>{state.page=e.target.value;render()};
-    document.querySelectorAll("[data-filter]").forEach(s=>s.onchange=e=>{state[e.target.dataset.filter]=e.target.value;render()});
+    document.querySelectorAll("[data-filter]").forEach(s=>s.onchange=e=>{state[e.target.dataset.filter]=e.target.value;if(e.target.dataset.filter==="area"&&state.area!=="مكة المكرمة")state.selectedArea=state.area;render()});
     const ad=document.getElementById("area-detail");if(ad)ad.onchange=e=>{state.selectedArea=e.target.value;render()};
     const cp=document.getElementById("campaign-select");if(cp)cp.onchange=e=>{state.campaign=e.target.value;render()};
     const dl=document.getElementById("download-csv");if(dl)dl.onclick=downloadCsv;
+    document.querySelectorAll("[data-lang]").forEach(b=>b.onclick=()=>{state.lang=b.dataset.lang;render();scrollTo({top:0,behavior:"smooth"})});
   }
-  function render(){document.getElementById("app").innerHTML=shell();attach()}
+  function render(){document.getElementById("app").innerHTML=shell();attach();localizeDom()}
   render();
 })();

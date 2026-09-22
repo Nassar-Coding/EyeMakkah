@@ -22,3 +22,27 @@
 @media (max-width:1180px){.kpi-grid{grid-template-columns:repeat(3,1fr)}.grid-4{grid-template-columns:repeat(2,1fr)}}
 @media (max-width:860px){.bi-shell{display:block}.sidebar{display:none}.main{padding:18px 14px 34px}.mobile-nav{display:block;margin-bottom:12px}.filters{grid-template-columns:repeat(2,1fr)}.grid-2,.grid-2.equal,.grid-2.reverse{grid-template-columns:1fr}.kpi-grid{grid-template-columns:repeat(2,1fr)}.title{font-size:25px}.topbar{display:block}.donut-wrap{grid-template-columns:1fr}.bar-row{grid-template-columns:minmax(92px,130px) 1fr auto}}
 @media (max-width:520px){.filters{grid-template-columns:1fr 1fr;gap:7px}.filter{padding:7px 9px}.filter label{font-size:10px}.filter select{font-size:12px}.kpi-grid{grid-template-columns:1fr 1fr;gap:8px}.kpi-card{padding:12px;min-height:104px}.kpi-value{font-size:21px}.kpi-value.text{font-size:14px}.grid-4{grid-template-columns:1fr 1fr;gap:8px}.panel{padding:13px}.bar-row{grid-template-columns:100px 1fr auto;gap:6px}.bar-value{font-size:10px}.title{font-size:23px}.subtitle{font-size:13px}.eyebrow{font-size:9px}.chart svg{min-height:220px}.chart{min-height:220px}}
+
+.lang-switch{display:flex;gap:6px;margin-top:12px}
+.lang-switch button{flex:1;border:1px solid rgba(255,255,255,.18);background:transparent;color:#EDE4D5;border-radius:9px;padding:7px 8px;cursor:pointer;font-size:11px;font-weight:800}
+.lang-switch button.active{background:rgba(184,148,74,.2);border-color:rgba(184,148,74,.65);color:#F4D993}
+.mobile-tools{display:none}
+html[dir="ltr"] .bi-shell{direction:ltr}
+html[dir="ltr"] .sidebar{border-left:0;border-right:1px solid rgba(255,255,255,.08)}
+html[dir="ltr"] .brand-main,html[dir="ltr"] .eyebrow{text-align:left}
+html[dir="ltr"] .nav button{text-align:left}
+html[dir="ltr"] .nav button.active{box-shadow:inset 3px 0 var(--gold)}
+html[dir="ltr"] .data-table th,html[dir="ltr"] .data-table td{text-align:left}
+html[dir="ltr"] .insight{border-right:1px solid rgba(23,70,58,.12);border-left:4px solid var(--gold)}
+html[dir="ltr"] .community-row .growth,html[dir="ltr"] .signal-score{float:right}
+@media (max-width:860px){
+  .mobile-tools{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:center;margin-bottom:12px}
+  .mobile-tools>select{width:100%;padding:10px 12px;border-radius:11px;border:1px solid rgba(92,72,40,.14);background:var(--paper);color:var(--deep);font-weight:700}
+  .mobile-tools .lang-switch{margin:0;min-width:150px}
+  .mobile-tools .lang-switch button{color:var(--deep);border-color:rgba(23,70,58,.18);background:var(--paper)}
+  .mobile-tools .lang-switch button.active{background:rgba(184,148,74,.16);border-color:rgba(184,148,74,.55)}
+}
+@media (max-width:520px){
+  .mobile-tools{grid-template-columns:1fr}
+  .mobile-tools .lang-switch{min-width:0}
+}
