@@ -45,8 +45,8 @@ jobs:
           mkdir -p release
           cp -R dist release/EyeMakkah_Vercel_DragDrop
           rm -f release/EyeMakkah_Vercel_DragDrop.zip
-          cd release
-          zip -qr EyeMakkah_Vercel_DragDrop.zip EyeMakkah_Vercel_DragDrop
+          cd release/EyeMakkah_Vercel_DragDrop
+          zip -qr ../EyeMakkah_Vercel_DragDrop.zip .
 
       - name: Upload Vercel ZIP artifact
         uses: actions/upload-artifact@v4
