@@ -1,0 +1,69 @@
+name: Build Vercel package
+
+on:
+  push:
+    branches: [BI-Platform]
+    paths-ignore:
+      - "dist/**"
+      - "release/**"
+
+permissions:
+  contents: write
+
+env:
+  CI: true
+
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: BI-Platform
+          fetch-depth: 0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Validate
+        run: npm run check
+
+      - name: Build
+        run: npm run build
+
+      - name: Package zero-build Vercel ZIP
+        shell: bash
+        run: |
+          rm -rf release/EyeMakkah_Vercel_DragDrop
+          mkdir -p release
+          cp -R dist release/EyeMakkah_Vercel_DragDrop
+          rm -f release/EyeMakkah_Vercel_DragDrop.zip
+          cd release
+          zip -qr EyeMakkah_Vercel_DragDrop.zip EyeMakkah_Vercel_DragDrop
+
+      - name: Upload Vercel ZIP artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: EyeMakkah_Vercel_DragDrop
+          path: release/EyeMakkah_Vercel_DragDrop.zip
+          if-no-files-found: error
+
+      - name: Commit generated deployment package
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add dist release
+          if git diff --cached --quiet; then
+            echo "No generated changes to commit"
+            exit 0
+          fi
+          git commit -m "Build Vercel deployment package [skip ci]"
+          git push origin HEAD:BI-Platform
