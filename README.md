@@ -1,70 +1,90 @@
 # EyeMakkah — مجتمع مكة الرقمي
 
-> **EyeMakkah هو مجتمع رقمي لسكان مكة وزوارها**: مكان واحد لاكتشاف الخدمات والتجارب
-> ذات الصلة، والتفاعل مع المجتمع، وبناء خطة شخصية — وتفاعلات ذات معنى تدعم التحليلات
-> وذكاء الأعمال لاحقًا.
+> **EyeMakkah هو مجتمع رقمي لسكان مكة وزوارها**: مكان واحد لاكتشاف الخدمات والتجارب ذات الصلة، والتفاعل مع المجتمع، وبناء خطة شخصية — وتفاعلات ذات معنى تدعم التحليلات وذكاء الأعمال.
 
-This repository holds the **transformation** of EyeMakkah from the current four-portal
-prototype into one consumer product for Makkah residents and visitors, following the
-meeting direction and the five transformation groups in `docs/handover/`.
+This branch contains two Vercel-ready experiences in one repository:
 
-## Deliverables
+- **Consumer EyeMakkah** at `/`
+- **EyeMakkah Business Intelligence** at `/bi`
 
-| Deliverable | Path |
-|---|---|
-| **Zero-build Vercel drag-and-drop ZIP** | `release/EyeMakkah_Vercel_DragDrop.zip` |
-| **Single JSX file for a Claude artifact** | `EyeMakkah-app.jsx` (default export, imports only `react` + `lucide-react`) |
+The BI experience is a **static browser application**. It has no Python application server, no separate backend requirement, and no server-side dashboard runtime. All demo data is deterministic synthetic data generated in the browser.
 
-## What is here
+## Vercel deployment
+
+### Git-connected deployment
+
+Import the repository in Vercel and select branch `BI-Platform`. The root `vercel.json` runs:
+
+```bash
+npm run build
+```
+
+and publishes `dist/`.
+
+### Drag-and-drop package
+
+The branch also produces a zero-build package at:
+
+```text
+release/EyeMakkah_Vercel_DragDrop.zip
+```
+
+Its contents are prebuilt static files and can be deployed without a Node or Python runtime.
+
+## Business Intelligence platform
+
+Source: `bi/`
+
+The BI prototype is Arabic/RTL and includes:
+
+- Executive dashboard
+- Demand and search analysis
+- Area analysis
+- Activities and experiences with distinct Save / Plan / Join / Action / Complete semantics
+- Communities and interests
+- Campaigns and offers
+- Opportunity/gap decision-support signals
+- Reports and client-side CSV export
+- Shared filters for period, area, category and audience
+- Responsive desktop/mobile layout
+- Deterministic synthetic data only; no PII and no live operational data
+
+The BI source is intentionally dependency-free browser JavaScript so it can be served directly by Vercel as static assets.
+
+## Repository map
 
 | Path | What it is |
 |---|---|
-| `EyeMakkah-app.jsx` | **The product.** One source file — also the Claude artifact deliverable. |
-| `release/` | The packaged drag-and-drop ZIP. |
-| `dist/` | **Zero-build Vercel package** (`index.html` + prebuilt `app.js`), the ZIP's contents. |
-| `src/main.jsx`, `build/build.mjs` | Mount entry + esbuild bundler that produces `dist/app.js`. |
-| `scripts/verify.mjs` | Runtime verification: boots the build in Chromium and walks 23 journeys. |
-| `scripts/crawl.mjs` | QA crawl for blank screens, dead ends and console errors. |
-| `scripts/shots.mjs` | Screenshot sweep of the main surfaces. |
-| `docs/JOURNEYS.md` | The 48 validated Makkah journeys. |
-| `baseline/` | The canonical **current** EyeMakkah (`EyeMakkah-app.current.tsx`, `eyemakkah-vercel.current.zip`) kept for comparison. |
-| `docs/handover/` | Meeting notes, the five group definitions, product rules, visual system, DO-NOT-DO. |
-| `PHOTO_SOURCES.md` | The media layer and what must be replaced before a public release. |
+| `EyeMakkah-app.jsx` | Consumer product source |
+| `src/main.jsx` | Consumer mount entry |
+| `bi/` | Static BI platform source |
+| `build/build.mjs` | Builds consumer bundle and copies BI into `dist/bi` |
+| `dist/` | Vercel output (`/` + `/bi`) |
+| `release/EyeMakkah_Vercel_DragDrop.zip` | Zero-build deployment ZIP |
+| `scripts/` | QA and verification utilities |
+| `docs/` | Product journeys and handover material |
+| `baseline/` | Canonical previous EyeMakkah baseline for comparison |
 
-## Primary navigation
+## Build and validation
 
-**الرئيسية · اكتشف · المجتمع · خطتي** — Profile sits behind the avatar. There is no AI tab:
-AI is horizontal (relevance, trust, journey continuity, translation, community intelligence).
+```bash
+npm ci
+npm run check
+npm run build
+```
+
+`npm run check` validates the React consumer imports and syntax-checks the BI browser application. `npm run build` bundles the consumer app and copies the BI static application to `dist/bi`.
+
+## Primary consumer navigation
+
+**الرئيسية · اكتشف · المجتمع · خطتي** — Profile sits behind the avatar. AI remains horizontal rather than a standalone tab.
 
 ## State semantics that never collapse
 
 > حفظ ≠ أضف إلى خطتي ≠ انضم ≠ سأحضر ≠ حجز ≠ مؤكد ≠ حضرت
 
-Leaving EyeMakkah for an external provider records `انتقلت لإكمال الحجز`. Nothing becomes
-`مؤكد` without a real callback or an explicit confirmation from the user.
-
-## The five transformation groups, cumulative in one app
-
-| Group | What it added | Checkpoint |
-|---|---|---|
-| 1 — Living Makkah | Inventory layer (169 objects, 15 areas, 14 categories), Home compositor, Discover, Search, Map, Decision pages, source claims and freshness classes | `f95bac9` |
-| 2 — Community | 8 families / 50 communities / 10 clubs, one Contribution model, editorial community home, club ≠ community ≠ activity | `0da1de6` |
-| 3 — Participation | The full loop with distinct states, assembled outings, Plan as a continuity timeline, active and completion states | `929399c` |
-| 4 — Trust | Conflict comparison, review queue, archive, visible moderation, safety & privacy centre | `aa63443` |
-| 5 — Personalisation | Dismissal with reasons, selective notifications, provider/host role, interaction signals, full state coverage | `92e8e00` |
-
-## Build
-
-```bash
-npm install
-npm run build             # → dist/app.js
-node scripts/verify.mjs   # 23 runtime journeys in Chromium, fails on any console error
-node scripts/crawl.mjs    # broad QA crawl for dead ends and blank screens
-```
+Leaving EyeMakkah for an external provider records `انتقلت لإكمال الحجز`. Nothing becomes `مؤكد` without a real callback or an explicit confirmation from the user.
 
 ## Prototype honesty
 
-Operational values, offers, participant counts and community contributions are
-illustrative prototype content, not live data. Official and transactional services stay
-with the authorities and providers that own them; EyeMakkah orchestrates the context
-around the decision.
+Operational values, offers, participant counts, BI metrics and community contributions are illustrative prototype content, not live data. Official and transactional services stay with the authorities and providers that own them; EyeMakkah orchestrates the context around the decision.
