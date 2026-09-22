@@ -2,7 +2,7 @@
   "name": "eyemakkah",
   "version": "2.0.0",
   "private": true,
-  "description": "EyeMakkah — مجتمع مكة الرقمي. Single-source React prototype (artifact JSX + zero-build Vercel package).",
+  "description": "EyeMakkah consumer prototype + zero-runtime Business Intelligence platform, packaged for Vercel.",
   "type": "module",
   "scripts": {
     "build": "node build/build.mjs",
