@@ -6,7 +6,7 @@ import { readFile } from "node:fs/promises";
 import { extname, resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 
-const root = resolve(dirname(fileURLToPath(import.meta.url)), "..", "dist");
+const root = process.env.ROOT || resolve(dirname(fileURLToPath(import.meta.url)), "..", "dist");
 const MIME = { ".html": "text/html; charset=utf-8", ".js": "text/javascript; charset=utf-8", ".json": "application/json", ".txt": "text/plain" };
 const shotDir = process.env.SHOT_DIR || "/tmp/claude-0/-home-user-EyeMakkah/bdda0f4a-9b40-5755-97f3-db2bbfc5eb30/scratchpad/shots";
 

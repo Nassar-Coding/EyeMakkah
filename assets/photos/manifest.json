@@ -1,0 +1,290 @@
+{
+  "_note": "Bundled photo library. 'url' entries are downloaded once and cropped by scripts/photos-build.py; 'file' entries are already-built assets. Provenance for every slot is in PHOTO_SOURCES.md.",
+  "coffee_black_cup": {
+    "file": "assets/photos/coffee_black_cup.webp",
+    "size": "card"
+  },
+  "coffee_cup": {
+    "file": "assets/photos/coffee_cup.webp",
+    "size": "card"
+  },
+  "coffee_cup_dark": {
+    "file": "assets/photos/coffee_cup_dark.webp",
+    "size": "card"
+  },
+  "coffee_latte_heart": {
+    "file": "assets/photos/coffee_latte_heart.webp",
+    "size": "card"
+  },
+  "coffee_latte_white": {
+    "file": "assets/photos/coffee_latte_white.webp",
+    "size": "card"
+  },
+  "coffee_small_ornate": {
+    "file": "assets/photos/coffee_small_ornate.webp",
+    "size": "card"
+  },
+  "craft_loom_frame": {
+    "file": "assets/photos/craft_loom_frame.webp",
+    "size": "card"
+  },
+  "craft_loom_hands": {
+    "file": "assets/photos/craft_loom_hands.webp",
+    "size": "hero"
+  },
+  "craft_pottery_bowls": {
+    "file": "assets/photos/craft_pottery_bowls.webp",
+    "size": "card"
+  },
+  "craft_pottery_wheel": {
+    "file": "assets/photos/craft_pottery_wheel.webp",
+    "size": "card"
+  },
+  "craft_pottery_wheel2": {
+    "file": "assets/photos/craft_pottery_wheel2.webp",
+    "size": "card"
+  },
+  "food_bakery_rounds": {
+    "file": "assets/photos/food_bakery_rounds.webp",
+    "size": "card"
+  },
+  "food_bowl": {
+    "file": "assets/photos/food_bowl.webp",
+    "size": "card"
+  },
+  "food_bread_loaf": {
+    "file": "assets/photos/food_bread_loaf.webp",
+    "size": "card"
+  },
+  "food_grill": {
+    "file": "assets/photos/food_grill.webp",
+    "size": "card"
+  },
+  "food_platter_rice": {
+    "file": "assets/photos/food_platter_rice.webp",
+    "size": "card"
+  },
+  "food_platter_sides": {
+    "file": "assets/photos/food_platter_sides.webp",
+    "size": "card"
+  },
+  "food_prep_hands": {
+    "file": "assets/photos/food_prep_hands.webp",
+    "size": "card"
+  },
+  "food_shared_table": {
+    "file": "assets/photos/food_shared_table.webp",
+    "size": "hero"
+  },
+  "food_skewers_grill": {
+    "file": "assets/photos/food_skewers_grill.webp",
+    "size": "card"
+  },
+  "food_skewers_tray": {
+    "file": "assets/photos/food_skewers_tray.webp",
+    "size": "card"
+  },
+  "library_old_books": {
+    "file": "assets/photos/library_old_books.webp",
+    "size": "hero"
+  },
+  "library_reading_room": {
+    "file": "assets/photos/library_reading_room.webp",
+    "size": "card"
+  },
+  "library_shelves": {
+    "file": "assets/photos/library_shelves.webp",
+    "size": "card"
+  },
+  "makkah_city_dusk": {
+    "file": "assets/photos/makkah_city_dusk.webp",
+    "size": "hero"
+  },
+  "makkah_clocktower_day": {
+    "file": "assets/photos/makkah_clocktower_day.webp",
+    "size": "card"
+  },
+  "makkah_clocktower_night": {
+    "file": "assets/photos/makkah_clocktower_night.webp",
+    "size": "hero"
+  },
+  "makkah_haram_courtyard": {
+    "file": "assets/photos/makkah_haram_courtyard.webp",
+    "size": "hero"
+  },
+  "makkah_jabal_nour": {
+    "file": "assets/photos/makkah_jabal_nour.webp",
+    "size": "hero"
+  },
+  "makkah_stay_room": {
+    "file": "assets/photos/makkah_stay_room.webp",
+    "size": "card"
+  },
+  "makkah_tower_night_wide": {
+    "file": "assets/photos/makkah_tower_night_wide.webp",
+    "size": "hero"
+  },
+  "market_dates": {
+    "url": "https://open-images-dataset.s3.amazonaws.com/test/2114f350f99f5b90.jpg",
+    "size": "card",
+    "focal": [
+      0.5,
+      0.5
+    ],
+    "source": "https://www.flickr.com/photos/raucousrage/16226438781",
+    "author": "Laura Hadden",
+    "license": "CC BY 2.0",
+    "title": "IMG_0859.jpg"
+  },
+  "garden_palm_grove": {
+    "url": "https://open-images-dataset.s3.amazonaws.com/validation/7a3a82c259dc7d72.jpg",
+    "size": "card",
+    "focal": [
+      0.5,
+      0.45
+    ],
+    "source": "https://www.flickr.com/photos/masterplaan/3784809202/",
+    "author": "Joonas Plaan",
+    "license": "CC BY 2.0",
+    "title": "Beach"
+  },
+  "outdoor_desert_peak": {
+    "url": "https://open-images-dataset.s3.amazonaws.com/validation/76466b5d007e49db.jpg",
+    "size": "card",
+    "focal": [
+      0.5,
+      0.55
+    ],
+    "source": "https://www.flickr.com/photos/mikewise/491595084",
+    "author": "Mike Seidman",
+    "license": "CC BY 2.0",
+    "title": "IMG_1633.JPG"
+  },
+  "outdoor_desert_peak2": {
+    "url": "https://open-images-dataset.s3.amazonaws.com/test/6b8b527a9b230af2.jpg",
+    "size": "card",
+    "focal": [
+      0.5,
+      0.5
+    ],
+    "source": "https://www.flickr.com/photos/mattkrause/8124916391",
+    "author": "Matt Krause",
+    "license": "CC BY 2.0",
+    "title": "Today's road companion"
+  },
+  "kids_play_frame": {
+    "url": "https://open-images-dataset.s3.amazonaws.com/validation/275a14535ec8b689.jpg",
+    "size": "card",
+    "focal": [
+      0.5,
+      0.45
+    ],
+    "source": "https://www.flickr.com/photos/62030038@N02/8400425275",
+    "author": "Hobbies on a Budget",
+    "license": "CC BY 2.0",
+    "title": "Playground"
+  },
+  "museum_diorama": {
+    "url": "https://open-images-dataset.s3.amazonaws.com/test/12380704ef402ba8.jpg",
+    "size": "card",
+    "focal": [
+      0.5,
+      0.5
+    ],
+    "source": "https://www.flickr.com/photos/dugsong/4168000887",
+    "author": "Dug Song",
+    "license": "CC BY 2.0",
+    "title": "100_4443"
+  },
+  "heritage_lantern": {
+    "url": "https://open-images-dataset.s3.amazonaws.com/test/1f0e7b8d37fec45b.jpg",
+    "size": "card",
+    "focal": [
+      0.35,
+      0.4
+    ],
+    "source": "https://www.flickr.com/photos/kewl/5315696058",
+    "author": "Tristan Schmurr",
+    "license": "CC BY 2.0",
+    "title": "Light"
+  },
+  "sport_bike_tyre": {
+    "url": "https://open-images-dataset.s3.amazonaws.com/validation/65d11302b2f7d6d1.jpg",
+    "size": "card",
+    "focal": [
+      0.5,
+      0.45
+    ],
+    "source": "https://www.flickr.com/photos/sharadaprasad/3668313524",
+    "author": "Sharada Prasad CS",
+    "license": "CC BY 2.0",
+    "title": "Rockrider 5.3"
+  },
+  "sport_pool": {
+    "url": "https://open-images-dataset.s3.amazonaws.com/test/5377c7f4cf087d12.jpg",
+    "size": "card",
+    "focal": [
+      0.6,
+      0.75
+    ],
+    "source": "https://www.flickr.com/photos/noramorgan/11900033975",
+    "author": "Nora Morgan",
+    "license": "CC BY 2.0",
+    "title": "IMG_2211",
+    "box": [
+      452,
+      352,
+      751,
+      576
+    ],
+    "note": "cropped to the pool water only; the source's sea view and resort are left out"
+  },
+  "volunteer_water_caps": {
+    "url": "https://open-images-dataset.s3.amazonaws.com/validation/ee322603860d9c7a.jpg",
+    "size": "card",
+    "focal": [
+      0.5,
+      0.35
+    ],
+    "source": "https://www.flickr.com/photos/smithser/7239957418",
+    "author": "Brian Smithson",
+    "license": "CC BY 2.0",
+    "title": "Water"
+  },
+  "hall_auditorium": {
+    "url": "https://open-images-dataset.s3.amazonaws.com/test/78d3d0b88b2fa091.jpg",
+    "size": "card",
+    "focal": [
+      0.5,
+      0.62
+    ],
+    "source": "https://www.flickr.com/photos/u-suke/2682177354",
+    "author": "Yusuke Kawasaki",
+    "license": "CC BY 2.0",
+    "title": "DSCF3184"
+  },
+  "hall_seats_white": {
+    "url": "https://open-images-dataset.s3.amazonaws.com/test/3c6e2a7df352f53b.jpg",
+    "size": "card",
+    "focal": [
+      0.55,
+      0.55
+    ],
+    "source": "https://www.flickr.com/photos/98360501@N03/14885801152",
+    "author": "cruisedotco",
+    "license": "CC BY 2.0",
+    "title": "Stage on Crystal Serenity - Cruise Ship"
+  },
+  "hall_theatre": {
+    "url": "https://open-images-dataset.s3.amazonaws.com/test/c53e9e5ce002345f.jpg",
+    "size": "card",
+    "focal": [
+      0.5,
+      0.5
+    ],
+    "source": "https://www.flickr.com/photos/cpflcultura/3794861209",
+    "author": "CPFL Cultura",
+    "license": "CC BY 2.0",
+    "title": "Teatro CPFL em Macatuba"
+  }
+}

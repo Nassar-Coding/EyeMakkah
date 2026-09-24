@@ -19,7 +19,7 @@
   "font_fallback_ar": "Tajawal",
   "font_fallback_latin": "Inter",
   "bundled_proprietary_fonts": false,
-  "media": "31 bundled photographs under an accuracy rule: exact photos only of their own subject (المسجد الحرام، متحف برج الساعة، جبل النور), verified Makkah photos as captioned context, generic non-place imagery, otherwise a labelled illustration; no imagery of other cities (see PHOTO_SOURCES.md, docs/MEDIA_AUDIT.md)",
+  "media": "45 bundled photographs; all content imagery is photographic (0 drawn media). Exact photos only of their own subject (المسجد الحرام، متحف برج الساعة، جبل النور، and the landmarks of محيط الحرم and أجياد); verified Makkah photos captioned as context (13 neighbourhoods, city-level content); generic photos of non-place subjects captioned as generic; no imagery of other cities (see PHOTO_SOURCES.md, docs/MEDIA_AUDIT.md, docs/APP_QUALITY_AUDIT.md)",
   "files": [
     "index.html",
     "app.js",

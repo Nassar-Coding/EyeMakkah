@@ -2,7 +2,7 @@ import { chromium } from "playwright";
 import { createServer } from "node:http";
 import { readFile } from "node:fs/promises";
 import { extname, resolve } from "node:path";
-const root = "/tmp/ziptest/EyeMakkah_Vercel_DragDrop";
+const root = process.env.ROOT || "/tmp/ziptest/EyeMakkah_Vercel_DragDrop";
 const MIME = { ".html":"text/html; charset=utf-8", ".js":"text/javascript; charset=utf-8", ".json":"application/json" };
 const server = createServer(async (req,res)=>{ const f=resolve(root, req.url==="/"?"index.html":"."+req.url.split("?")[0]);
   try{const b=await readFile(f);res.writeHead(200,{"Content-Type":MIME[extname(f)]||"text/plain"});res.end(b);}catch{res.writeHead(404);res.end();} });

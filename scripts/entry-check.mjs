@@ -3,7 +3,7 @@ import { chromium } from "playwright";
 import { createServer } from "node:http";
 import { readFile } from "node:fs/promises";
 import { extname, resolve } from "node:path";
-const root = "/home/user/EyeMakkah/dist";
+const root = process.env.ROOT || "/home/user/EyeMakkah/dist";
 const MIME = { ".html": "text/html; charset=utf-8", ".js": "text/javascript; charset=utf-8" };
 const server = createServer(async (req, res) => {
   const f = resolve(root, req.url === "/" ? "index.html" : "." + req.url.split("?")[0]);

@@ -1,6 +1,7 @@
 /* Media-accuracy check: walks the built app in Chromium at 390×844, screenshots the
    main surfaces and several decision pages, reads each decision-page media caption,
-   and fails on any broken image or runtime error. */
+   and reports broken images, drawn (non-photographic) media and runtime errors —
+   all three must be zero. */
 import { chromium } from "playwright";
 import { createServer } from "node:http";
 import { readFile } from "node:fs/promises";
@@ -18,9 +19,10 @@ const browser = await chromium.launch({ executablePath: "/opt/pw-browsers/chromi
 const page = await browser.newPage({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
 page.on("pageerror", (e) => errs.push("pageerror: " + e.message));
 page.on("console", (m) => { if (m.type() === "error" && !/fonts\.g|ERR_|net::|Failed to load resource/.test(m.text())) errs.push("console: " + m.text()); });
-const imgs = () => page.evaluate(() => { const a = [...document.querySelectorAll(".em img")]; return { n: a.length, broken: a.filter((i) => i.complete && i.naturalWidth === 0).length }; });
+const imgs = () => page.evaluate(() => { const a = [...document.querySelectorAll(".em img")]; return { n: a.length, broken: a.filter((i) => i.complete && i.naturalWidth === 0).length, drawn: document.querySelectorAll('.em [data-media="drawn"]').length }; });
+let drawnTotal = 0, brokenTotal = 0;
 const report = [];
-const shot = async (name) => { await page.waitForTimeout(350); const r = await imgs(); report.push(`${name}: imgs=${r.n} broken=${r.broken}`); await page.screenshot({ path: `${out}/${name}.png` }); };
+const shot = async (name) => { await page.waitForTimeout(350); const r = await imgs(); drawnTotal += r.drawn; brokenTotal += r.broken; report.push(`${name}: imgs=${r.n} broken=${r.broken} drawn=${r.drawn}`); await page.screenshot({ path: `${out}/${name}.png` }); };
 const tab = async (id) => {
   for (let i = 0; i < 8; i++) {
     const nav = page.locator(`[data-nav="${id}"]`);
@@ -36,7 +38,7 @@ const open = async (name, label) => {
   const exact = page.getByText(name, { exact: true });
   await (await exact.count() > 1 ? exact.nth(1) : exact.first()).click();
   await page.waitForTimeout(800);
-  const cap = await page.evaluate(() => [...document.querySelectorAll(".em div")].map((d) => d.textContent).find((t) => /^(الصورة:|صورة سياقية:|صورة عامة للتوضيح|رسم توضيحي داخل التطبيق)/.test(t || "")) || "(no caption)");
+  const cap = await page.evaluate(() => [...document.querySelectorAll(".em div")].map((d) => d.textContent).find((t) => /^(الصورة:|صورة سياقية من مكة:|صورة عامة للتوضيح|رسم توضيحي)/.test(t || "")) || "(no caption)");
   report.push(`  ${name} → ${cap}`);
   await shot(label);
 };
@@ -52,7 +54,8 @@ await tab("discover"); await shot("06-discover");
 await page.mouse.move(195, 500); await page.mouse.wheel(0, 1400); await shot("07-discover-scrolled");
 for (const [n, l] of [["المسجد الحرام", "10-haram"], ["متحف برج الساعة", "11-clock-museum"], ["جبل النور", "12-jabal-nour"], ["حي حراء الثقافي", "13-hira"],
   ["مجمع كسوة الكعبة المشرفة", "14-kiswa"], ["سوق الذهب — جرول", "15-gold-souq"], ["سفرة العوالي", "16-restaurant"], ["قهوة الحارة", "17-cafe"],
-  ["ورشة فخار — أول قطعة", "18-workshop"], ["حملة تبرع بالدم", "19-event"], ["حافلة معالم مكة", "20-bus"], ["إقامة أجياد — قريب من الحرم", "21-stay"]]) {
+  ["ورشة فخار — أول قطعة", "18-workshop"], ["حملة تبرع بالدم", "19-event"], ["حافلة معالم مكة", "20-bus"], ["إقامة أجياد — قريب من الحرم", "21-stay"],
+  ["سوق العتيبية", "22-otaibiyah"], ["جبل ثور", "23-thawr"], ["عين زبيدة", "24-zubaydah"], ["معرض عمارة الحرمين الشريفين", "25-haramain-arch"]]) {
   try { await open(n, l); } catch (e) { report.push(`  ${n} → FAILED ${e.message.split("\n")[0]}`); }
 }
 await tab("community"); await shot("30-community");
@@ -63,5 +66,6 @@ await tab("home"); await page.getByLabel("حسابي").click(); await page.waitF
 await page.mouse.move(195, 500); await page.mouse.wheel(0, 1600); await page.waitForTimeout(300);
 await page.getByText("أدوات مقدّم التجربة", { exact: true }).first().click().catch(() => {}); await page.waitForTimeout(700); await shot("50-provider");
 console.log(report.join("\n"));
+console.log("drawn media:", drawnTotal, "· broken images:", brokenTotal, "· illustration captions:", report.filter((l) => l.includes("رسم توضيحي")).length);
 console.log("runtime errors:", errs.length, errs.slice(0, 3));
 await browser.close(); server.close();

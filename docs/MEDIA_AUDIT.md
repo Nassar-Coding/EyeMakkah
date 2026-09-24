@@ -2,6 +2,12 @@
 
 **Branch:** `claude/upbeat-bell-hkmvzy` (the phone app) · **Baseline:** `55482ca`
 **Trigger:** stakeholder report that some images depict Al Madinah or other cities instead of Makkah.
+> **Update — app quality audit (`docs/APP_QUALITY_AUDIT.md`).** The illustration tier below has since been retired:
+> - All content imagery is now photographic: 0 drawn surfaces, 44 photographs.
+> - Places without a verified exact photograph take a verified Makkah photograph as captioned context, or a captioned generic subject photograph.
+>
+> The accuracy rule itself is unchanged. `PHOTO_SOURCES.md` has the current mapping.
+
 **Rule applied:** a photograph is shown as a place only when it is that place. Otherwise the media is generic non-place imagery, a verified Makkah photograph captioned as context, or a labelled illustration.
 
 ## 1. Scope and method

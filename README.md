@@ -29,7 +29,10 @@ meeting direction and the five transformation groups in `docs/handover/`.
 | `docs/JOURNEYS.md` | The 48 validated Makkah journeys. |
 | `baseline/` | The canonical **current** EyeMakkah (`EyeMakkah-app.current.tsx`, `eyemakkah-vercel.current.zip`) kept for comparison. |
 | `docs/handover/` | Meeting notes, the five group definitions, product rules, visual system, DO-NOT-DO. |
-| `PHOTO_SOURCES.md` | The media layer and what must be replaced before a public release. |
+| `PHOTO_SOURCES.md` | Every bundled photograph: its use, tier (exact / Makkah context / generic) and provenance. |
+| `docs/APP_QUALITY_AUDIT.md` | The screen-by-screen visual, responsive, bilingual and media quality audit and its corrections. |
+| `scripts/ui-audit.mjs` | The audit harness: 7 viewports × Arabic/English, geometry checks and screenshots of every state. |
+| `assets/photos/`, `scripts/photos-build.py`, `scripts/photo-sync.mjs` | The photo library, its manifest-driven builder, and the step that inlines it into the app. |
 
 ## Primary navigation
 
@@ -60,6 +63,7 @@ npm install
 npm run build             # → dist/app.js
 node scripts/verify.mjs   # 23 runtime journeys in Chromium, fails on any console error
 node scripts/crawl.mjs    # broad QA crawl for dead ends and blank screens
+node scripts/ui-audit.mjs # screen-by-screen layout/media audit, 7 viewports × AR/EN
 ```
 
 ## Prototype honesty
