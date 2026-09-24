@@ -1,9 +1,14 @@
 {
   "package": "EyeMakkah — مجتمع مكة الرقمي (Groups 1–5, cumulative)",
-  "date": "2026-09-20",
+  "date": "2026-09-24",
   "zero_build": true,
   "deploy": "Vercel drag-and-drop",
-  "navigation": ["الرئيسية", "اكتشف", "المجتمع", "خطتي"],
+  "navigation": [
+    "الرئيسية",
+    "اكتشف",
+    "المجتمع",
+    "خطتي"
+  ],
   "inventory_objects": 169,
   "communities": 50,
   "clubs": 10,
@@ -14,6 +19,14 @@
   "font_fallback_ar": "Tajawal",
   "font_fallback_latin": "Inter",
   "bundled_proprietary_fonts": false,
-  "media": "drawn editorial scenes in-app; real photos only for real named public subjects (see PHOTO_SOURCES.md)",
-  "files": ["index.html", "app.js", "vercel.json", "robots.txt", "README.md", "PHOTO_SOURCES.md", "manifest.json"]
+  "media": "31 bundled photographs under an accuracy rule: exact photos only of their own subject (المسجد الحرام، متحف برج الساعة، جبل النور), verified Makkah photos as captioned context, generic non-place imagery, otherwise a labelled illustration; no imagery of other cities (see PHOTO_SOURCES.md, docs/MEDIA_AUDIT.md)",
+  "files": [
+    "index.html",
+    "app.js",
+    "vercel.json",
+    "robots.txt",
+    "README.md",
+    "PHOTO_SOURCES.md",
+    "manifest.json"
+  ]
 }

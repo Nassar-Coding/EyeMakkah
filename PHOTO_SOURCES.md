@@ -1,115 +1,76 @@
-# EyeMakkah — media layer and photography
+# EyeMakkah — photo sources
 
-Real photography is the **normal** media experience in EyeMakkah. Every media surface —
-Home, Discover, Search, map/decision context, decision pages, restaurants and food,
-activities, experiences, events, communities, neighborhoods, markets, cultural places and
-Plan — renders a real photograph from the bundled library below. The deterministic drawn
-scene engine (`Scene` / `SceneBody`) still exists, but only underneath, as the technical
-fallback that shows if an image fails to decode.
+Every photograph the application can render is listed below — 31 files in
+`assets/photos/`, inlined into `EyeMakkah-app.jsx` as `PHOTO_DATA` by
+`scripts/photo-sync.mjs` so the JSX artifact and the zero-build package need no image
+host. There are no remote image URLs and no CSS background images in the app.
 
-## 1. How a photograph is chosen
+The accuracy audit that produced this library is in `docs/MEDIA_AUDIT.md`.
 
-1. If the object carries its own `photo` key, that exact photograph is used and the
-   decision page credits it by name. This is reserved for a photograph of the actual
-   subject.
-2. Otherwise the object's scene kind resolves to a pool of real photographs
-   (`PHOTO_POOLS`) and a deterministic hash of the object id picks one, so the same
-   object always shows the same photograph and neighbouring cards do not repeat.
-3. Pool photographs are labelled **صورة تعبيرية** in the media badge, and the decision
-   page says in plain Arabic that the photograph is a real, illustrative image from the
-   prototype library and **not** a photograph of that place itself, followed by its source.
-   No generic photograph is ever presented as the exact named business or place.
+## How media is chosen (the rule the code enforces)
 
-## 2. Where the assets live
+| Tier | When | What the user is told |
+|---|---|---|
+| **Exact** | The object's own `pt` names a photograph of that very subject | Caption: «الصورة: …» with the subject; badge «صورة حقيقية» |
+| **Contextual** | `pt` + `ptc`: a verified Makkah photograph that frames the object without being it | Caption: «صورة سياقية: … — ليست صورة المكان نفسه» |
+| **Generic** | Non-place imagery (dishes, coffee, crafts, books, a hotel room) or verified Makkah landmarks for city-level content | Caption: «صورة عامة للتوضيح — ليست صورة … نفسه»; badge «صورة عامة» |
+| **Illustration** | Everything else | The drawn editorial scene; caption «رسم توضيحي داخل التطبيق — لا تتوفر صورة موثّقة …»; badge «رسم توضيحي» |
 
-- `assets/photos/*.webp` — the processed library (820×512 for hero crops, 576×432 for
-  cards, WebP q52).
-- `assets/photo-data.js` — the same images base64-encoded; the generator inlines this into
-  `EyeMakkah-app.jsx` as `PHOTO_DATA`, so the single-file JSX artifact and the zero-build
-  Vercel package both carry their own photography and need no image host at runtime.
+Real named places (`real: true`) and public-place objects never take a generic pool
+photograph. Neighbourhoods show a photograph only where the pictured landmark is in that
+district (محيط الحرم, أجياد). Community "member photos" are always illustrated, because no
+stock photograph can stand in for what a member shared. No photograph of Madinah or any
+other city is in the library.
 
-## 3. The library (47 photographs)
+## Library
 
-| Key | Subject | Source repository / dataset | Path or image id |
-|---|---|---|---|
-| `cafe_front_day` | Specialty coffee shop storefront, day | github.com/MuradBadaev/savva-cafe | `photos/storefront-day.jpg` |
-| `cafe_front_night` | Specialty coffee shop storefront, night | github.com/MuradBadaev/savva-cafe | `photos/storefront-night.jpg` |
-| `cafe_interior` | Specialty coffee shop interior (Savva, Madinah) | github.com/MuradBadaev/savva-cafe | `photos/interior.jpg` |
-| `coffee_cup` | Cup of coffee | Open Images Dataset V6 (CC BY 4.0) | `test/17416c467792e70f` |
-| `coffee_cup_dark` | Cup of coffee, dark background | Open Images Dataset V6 (CC BY 4.0) | `test/7facac4942003401` |
-| `courtyard_people_sitting` | People sitting together under courtyard umbrellas | github.com/bkcarwash/taxibhi | `public/images/hero/madinah-nabawi-pilgrims-umbrellas.webp` |
-| `courtyard_umbrellas` | Shade umbrellas over a mosque courtyard | github.com/bkcarwash/taxibhi | `public/images/ziyarat/madinah-nabawi-umbrella-courtyard.webp` |
-| `craft_loom_colours` | Coloured warp on a loom | Open Images Dataset V6 (CC BY 4.0) | `test/41997dbb05aaf10b` |
-| `craft_loom_frame` | Loom frame with woven cloth | Open Images Dataset V6 (CC BY 4.0) | `test/2e80e093d1965563` |
-| `craft_loom_hands` | Hands weaving on a hand loom | Open Images Dataset V6 (CC BY 4.0) | `test/0c0d68281631c4eb` |
-| `craft_pottery_bowls` | Finished pottery bowls on a workshop table | Open Images Dataset V6 (CC BY 4.0) | `test/65892cd9e4f9852b` |
-| `craft_pottery_wheel` | Hands shaping clay on a wheel | Open Images Dataset V6 (CC BY 4.0) | `test/ab552f0453075570` |
-| `craft_pottery_wheel2` | Throwing a pot on the wheel | Open Images Dataset V6 (CC BY 4.0) | `test/f02e5fa4cf9459c7` |
-| `dining_room_warm` | Warm restaurant dining room | github.com/adeeshperera/restaurant-website-template | `assets/img/slider/3.jpg` |
-| `food_bakery_rounds` | Bakery breads on a tray | Open Images Dataset V6 (CC BY 4.0) | `test/ca0c7a2b10950385` |
-| `food_bowl` | Bowl meal with fresh sides | github.com/aloukikjoshi/Restaurant-website | `images/edgar-castrejon-1SPu0KT-Ejg-unsplash.jpg` |
-| `food_bread_loaf` | Fresh bread loaf | Open Images Dataset V6 (CC BY 4.0) | `test/519802347d9a5fcf` |
-| `food_grill` | Grilled meat on a board | github.com/adeeshperera/restaurant-website-template | `assets/img/team/8.jpg` |
-| `food_platter_rice` | Rice platter with side dishes | github.com/adeeshperera/restaurant-website-template | `assets/img/team/1.jpg` |
-| `food_platter_sides` | Rice dish with accompaniments | github.com/adeeshperera/restaurant-website-template | `assets/img/team/3.jpg` |
-| `food_prep_hands` | Hands preparing food in a kitchen | github.com/aloukikjoshi/Restaurant-website | `images/pexels-ivan-samkov-8951136.jpg` |
-| `food_shared_table` | Shared table — curries, rice and flatbread | github.com/adeeshperera/restaurant-website-template | `assets/img/slider/1.jpg` |
-| `food_skewers_grill` | Skewers over a grill | Open Images Dataset V6 (CC BY 4.0) | `test/c479a061acbf7ee6` |
-| `food_skewers_tray` | Skewers on a tray | Open Images Dataset V6 (CC BY 4.0) | `test/2bdfe9748821f5d0` |
-| `food_spread_top` | Table spread from above | github.com/aloukikjoshi/Restaurant-website | `images/istockphoto-1317255793-612x612.jpg` |
-| `gathering_evening` | Large evening gathering | github.com/umair986/MuftiTravels | `public/gallery/3.jpg` |
-| `library_old_books` | Stacks of old bound books | Open Images Dataset V6 (CC BY 4.0) | `test/cf2b1577b88dae7e` |
-| `library_reading_room` | Library reading room shelves | Open Images Dataset V6 (CC BY 4.0) | `test/bb10f3e84b54bfc7` |
-| `library_shelves` | Library shelving | Open Images Dataset V6 (CC BY 4.0) | `test/7566d3b732a9e208` |
-| `makkah_camel_site` | Camels on the outskirts of Makkah | github.com/bkcarwash/taxibhi | `public/images/ziyarat/makkah-camel-site-tour.webp` |
-| `makkah_city_dusk` | Makkah skyline at dusk — Clock Tower, Haram and the city | github.com/Wa7eed1234/vision-world-hotels | `public/assets/makkah.jpg` |
-| `makkah_clocktower_day` | Abraj Al Bait Clock Tower, daylight | github.com/bkcarwash/taxibhi | `public/images/hero/makkah-clock-tower-day.webp` |
-| `makkah_clocktower_night` | Clock Tower and the Haram at night | github.com/shafiqahmed73188-art/seair | `gallery-1.jpeg` |
-| `makkah_coach_group` | Group travelling together inside a coach | github.com/shafiqahmed73188-art/seair | `gallery-2.jpeg` |
-| `makkah_coach_outside` | Licensed coach, Makkah transport | github.com/shafiqahmed73188-art/seair | `gallery-6.jpeg` |
-| `makkah_haram_courtyard` | Haram courtyard, people at prayer | github.com/shafiqahmed73188-art/seair | `index hajj.webp` |
-| `makkah_historic_site` | Historic site entrance on the city's edge | github.com/bkcarwash/taxibhi | `public/images/ziyarat/makkah-historical-site-entrance.webp` |
-| `makkah_mountain_view` | Rocky Makkah mountains | github.com/bkcarwash/taxibhi | `public/images/ziyarat/makkah-mountain-view.webp` |
-| `makkah_stay_room` | Accommodation room in Makkah | github.com/shafiqahmed73188-art/seair | `Swissôtel Makkah.jpg` |
-| `makkah_street_day` | Makkah street, daytime | github.com/umair986/MuftiTravels | `public/packages/package1.webp` |
-| `makkah_street_hotels` | Makkah building facades and street traffic | github.com/umair986/MuftiTravels | `public/packages/package2.webp` |
-| `makkah_terrace_dining` | Terrace seating overlooking the Haram | github.com/shafiqahmed73188-art/seair | `Raffles Makkah Palace.jpg` |
-| `makkah_tower_night_wide` | Abraj Al Bait at night, wide | github.com/bkcarwash/taxibhi | `public/images/hero/makkah-clock-tower-night.webp` |
-| `makkah_ziyarat_route` | Makkah ziyarat route, hillside monument | github.com/bkcarwash/taxibhi | `public/images/ziyarat/makkah-ziyarat-route.webp` |
-| `mosque_evening` | Mosque courtyard in the evening (Madinah) | github.com/umair986/MuftiTravels | `public/Hero/hero1.jpg` |
-| `mosque_red_mountain` | Mosque against a red mountain (Uhud, Madinah) | github.com/bkcarwash/taxibhi | `public/images/ziyarat/madinah-uhud-sunset.webp` |
-| `street_transfer_day` | Private transfer vehicle on a city street | github.com/bkcarwash/taxibhi | `public/Taxi-Bhai-GMC-SUV-Madinah-Street-Private-Transfer.jpg` |
+"Exact" and "contextual" describe how a photograph is used; "Verified Makkah" means the
+subject was confirmed visually (the Kaaba, Abraj Al Bait or Jabal al-Nour's profile is in
+frame), not only by filename.
 
-Open Images entries are fetched from `https://open-images-dataset.s3.amazonaws.com/<split>/<id>.jpg`;
-the dataset's image-level annotations are CC BY 4.0 and the photographs are CC BY 2.0 from
-their original Flickr authors. GitHub entries are files committed to the public
-repositories named above.
+| File | Application use | Depicted subject / location | Source | Creator | Licence / reuse basis | Classification |
+|---|---|---|---|---|---|---|
+| `assets/photos/coffee_black_cup.webp` | cafe pool | Lemongrass & Ginger tea. Pulled from garden. (generic) | https://www.flickr.com/photos/32552299@N04/6778001966 (Open Images V6 image `ac2a19be6aa6e088`) | Lucy Kalantari | CC BY 2.0 | Generic |
+| `assets/photos/coffee_cup.webp` | cafe pool | cafe (generic) | https://www.flickr.com/photos/60986678@N08/5551396998 (Open Images V6 image `17416c467792e70f`) | berta_pastor | CC BY 2.0 | Generic |
+| `assets/photos/coffee_cup_dark.webp` | cafe pool | Eric's Latte Art (generic) | https://www.flickr.com/photos/redbandcoffee/4877591846 (Open Images V6 image `7facac4942003401`) | Redband Coffee Co. | CC BY 2.0 | Generic |
+| `assets/photos/coffee_latte_heart.webp` | cafe pool | Coffee love! (generic) | https://www.flickr.com/photos/dcadenas/5587600775 (Open Images V6 image `dcb9db5b0ab1bc7b`) | Daniel Cadenas | CC BY 2.0 | Generic |
+| `assets/photos/coffee_latte_white.webp` | cafe pool | Mug Shots with George Howell (generic) | https://www.flickr.com/photos/breville/16913117516 (Open Images V6 image `a8b14d4a442bf4a8`) | Breville USA | CC BY 2.0 | Generic |
+| `assets/photos/coffee_small_ornate.webp` | cafe pool | Turkish coffee (generic) | https://www.flickr.com/photos/absolutsara/17070965382 (Open Images V6 image `921f8ec5e40246cd`) | Sara D. | CC BY 2.0 | Generic |
+| `assets/photos/craft_loom_frame.webp` | workshop pool | P1040182.JPG (generic) | https://www.flickr.com/photos/bradspry/4736630383 (Open Images V6 image `2e80e093d1965563`) | Brad Spry | CC BY 2.0 | Generic |
+| `assets/photos/craft_loom_hands.webp` | workshop pool | Hands in Motion (generic) | https://www.flickr.com/photos/kretyen/5953163896 (Open Images V6 image `0c0d68281631c4eb`) | Ken Bosma | CC BY 2.0 | Generic |
+| `assets/photos/craft_pottery_bowls.webp` | workshop pool | Rustic pots and dishes (generic) | https://www.flickr.com/photos/bonitalabanane/2472056158 (Open Images V6 image `65892cd9e4f9852b`) | Bonita de Boer | CC BY 2.0 | Generic |
+| `assets/photos/craft_pottery_wheel.webp` | workshop pool | Hágalo usted mismo (generic) | https://www.flickr.com/photos/solrobayo/2960806084 (Open Images V6 image `ab552f0453075570`) | Sol Robayo | CC BY 2.0 | Generic |
+| `assets/photos/craft_pottery_wheel2.webp` | workshop pool | North Carolina Potter (generic) | https://www.flickr.com/photos/46183897@N00/3492636579 (Open Images V6 image `f02e5fa4cf9459c7`) | Robert Nunnally | CC BY 2.0 | Generic |
+| `assets/photos/food_bakery_rounds.webp` | food pool | ... Faschingkrapfen im Café Luitpold ... (generic) | https://www.flickr.com/photos/14646075@N03/5506895777 (Open Images V6 image `ca0c7a2b10950385`) | digital cat | CC BY 2.0 | Generic |
+| `assets/photos/food_bowl.webp` | food pool | Bowl meal with fresh sides (generic) | https://unsplash.com/photos/1SPu0KT-Ejg (file via github.com/aloukikjoshi/Restaurant-website images/edgar-castrejon-1SPu0KT-Ejg-unsplash.jpg) | Edgar Castrejon | Unsplash License | Generic |
+| `assets/photos/food_bread_loaf.webp` | food pool | it's about the crust (generic) | https://www.flickr.com/photos/yutakaseki/16971567450 (Open Images V6 image `519802347d9a5fcf`) | Yutaka Seki | CC BY 2.0 | Generic |
+| `assets/photos/food_grill.webp` | food pool | Grilled meat on a board (generic) | https://github.com/adeeshperera/restaurant-website-template/blob/main/assets/img/team/8.jpg | not recorded by the source | Repository is Apache-2.0; photograph origin not recorded | Generic |
+| `assets/photos/food_platter_rice.webp` | food pool | Rice platter with sides (generic) | https://github.com/adeeshperera/restaurant-website-template/blob/main/assets/img/team/1.jpg | not recorded by the source | Repository is Apache-2.0; photograph origin not recorded | Generic |
+| `assets/photos/food_platter_sides.webp` | food pool | Rice dish with accompaniments (generic) | https://github.com/adeeshperera/restaurant-website-template/blob/main/assets/img/team/3.jpg | not recorded by the source | Repository is Apache-2.0; photograph origin not recorded | Generic |
+| `assets/photos/food_prep_hands.webp` | food pool | Hands preparing food in a kitchen (generic) | https://www.pexels.com/photo/8951136/ (file via github.com/aloukikjoshi/Restaurant-website images/pexels-ivan-samkov-8951136.jpg) | Ivan Samkov | Pexels License | Generic |
+| `assets/photos/food_shared_table.webp` | food pool | Shared table: curries, rice, flatbread (generic) | https://github.com/adeeshperera/restaurant-website-template/blob/main/assets/img/slider/1.jpg | not recorded by the source | Repository is Apache-2.0; the photograph's own origin is not recorded | Generic |
+| `assets/photos/food_skewers_grill.webp` | food pool | DSCF1978 (generic) | https://www.flickr.com/photos/liormasculine/4364686222 (Open Images V6 image `c479a061acbf7ee6`) | Liormasculine | CC BY 2.0 | Generic |
+| `assets/photos/food_skewers_tray.webp` | food pool | veggie kabobs (generic) | https://www.flickr.com/photos/gottshar/17316948902 (Open Images V6 image `2bdfe9748821f5d0`) | SharonaGott | CC BY 2.0 | Generic |
+| `assets/photos/library_old_books.webp` | library pool | Book Stacks (generic) | https://www.flickr.com/photos/monkeymyshkin/468730533 (Open Images V6 image `cf2b1577b88dae7e`) | MonkeyMyshkin | CC BY 2.0 | Generic |
+| `assets/photos/library_reading_room.webp` | library pool | Librería Desnivel de Madrid (generic) | https://www.flickr.com/photos/ofernandezberrios/7899374124 (Open Images V6 image `bb10f3e84b54bfc7`) | Olga Berrios | CC BY 2.0 | Generic |
+| `assets/photos/library_shelves.webp` | library pool | Book Barn (generic) | https://www.flickr.com/photos/chillihead/1778980935 (Open Images V6 image `7566d3b732a9e208`) | Chilli Head | CC BY 2.0 | Generic |
+| `assets/photos/makkah_city_dusk.webp` | Landing + Language cover; skyline pool; context photo for حافلة معالم مكة | Makkah at dusk: Abraj Al Bait Clock Tower and Masjid al-Haram | https://github.com/Wa7eed1234/vision-world-hotels/blob/main/public/assets/makkah.jpg — repo README credits its Makkah hero to https://www.expedia.com/Things-To-Do-In-Makkah.d178043.Travel-Guide-Activities | not recorded by the source | Not stated (repo has no licence file); used under the project owner's rights assumption | Verified Makkah — contextual (city-wide) |
+| `assets/photos/makkah_clocktower_day.webp` | Exact photo for متحف برج الساعة; neighbourhood أجياد; skyline pool | Abraj Al Bait Clock Tower face, daylight (Ajyad, Makkah) | https://github.com/bkcarwash/taxibhi/blob/main/public/images/hero/makkah-clock-tower-day.webp | not recorded by the source | Not stated (no licence file); owner's rights assumption | Verified Makkah — exact for the Clock Tower / its museum building |
+| `assets/photos/makkah_clocktower_night.webp` | haram + skyline pools (visitor communities, city-level content) | Clock Tower and the Kaaba at night, Masjid al-Haram | https://github.com/shafiqahmed73188-art/seair/blob/main/gallery-1.jpeg | not recorded by the source | Not stated (no licence file); owner's rights assumption | Verified Makkah — contextual |
+| `assets/photos/makkah_haram_courtyard.webp` | Exact photo for المسجد الحرام; neighbourhood محيط الحرم; haram pool | Masjid al-Haram courtyard with the Kaaba and worshippers | https://github.com/shafiqahmed73188-art/seair/blob/main/index%20hajj.webp | not recorded by the source | Not stated (no licence file); owner's rights assumption | Verified Makkah — exact for المسجد الحرام |
+| `assets/photos/makkah_jabal_nour.webp` | Exact photo for جبل النور; context photo for حي حراء الثقافي | Jabal al-Nour (Mountain of Light), Makkah, with pilgrims on the path to Hira | https://commons.wikimedia.org/wiki/File:HAC_2010_MEKKE_NUR_DAGINA_BAKIS_-_panoramio_(1).jpg (file obtained via https://github.com/MorhafGhziel/saudinationalday/blob/main/public/worlds/makkah/land-still0.webp, whose ASSETS.md records this attribution) | Selami Akceylan | CC BY 3.0 (per the Commons attribution recorded in ASSETS.md; the Commons page itself was not reachable from the build environment) | Verified Makkah — exact for جبل النور |
+| `assets/photos/makkah_stay_room.webp` | stay pool (stays, stay-type services, the housing community) | Hotel room interior — generic, not identifiable | https://github.com/shafiqahmed73188-art/seair/blob/main/Swiss%C3%B4tel%20Makkah.jpg | not recorded by the source | Not stated (no licence file); owner's rights assumption | Generic |
+| `assets/photos/makkah_tower_night_wide.webp` | skyline pool | Abraj Al Bait Clock Tower lit green at night | https://github.com/bkcarwash/taxibhi/blob/main/public/images/hero/makkah-clock-tower-night.webp | not recorded by the source | Not stated (no licence file); owner's rights assumption | Verified Makkah — contextual |
 
-## 4. What this environment could and could not reach
+Open Images photographs are served from `https://open-images-dataset.s3.amazonaws.com/<split>/<id>.jpg`;
+author, licence and original Flickr page come from the dataset's own
+`*-images-with-rotation.csv` metadata.
 
-The build environment's egress policy denies every stock-photo and media CDN
-(`images.unsplash.com`, `images.pexels.com`, `cdn.pixabay.com`, `live.staticflickr.com`,
-`i.imgur.com`, `media.istockphoto.com`) and all of Wikimedia (`upload.wikimedia.org`,
-`commons.wikimedia.org`, `api.wikimedia.org`), so the previous Wikimedia hotlinks were
-removed. GitHub, Amazon S3 and Google Cloud Storage are reachable, which is why the
-library above is sourced from public GitHub repositories and the Open Images dataset.
+## Reuse basis
 
-Consequences worth knowing before a public release:
-
-- **Exact-subject photography is thin.** Makkah's real named places (Hira Cultural
-  District, the Clock Tower Museum, the Kiswah complex, individual restaurants and cafés)
-  have no exact photograph in the library, so they render a labelled illustrative
-  photograph rather than a false claim.
-- **Everyday Makkah life is under-represented.** Local markets, family and student scenes,
-  neighbourhood streets and volunteering could not be sourced at an acceptable standard;
-  those surfaces currently draw on the nearest appropriate real photography (courtyards,
-  streets, crafts, food) rather than Makkah-specific imagery.
-
-## 5. Production requirement
-
-Before any public release, replace this library with imagery your organization **owns or
-has explicitly licensed**, hosted on your own CDN, covering: Makkah places and landmarks,
-named partner restaurants and cafés, markets and craftspeople, neighbourhoods and streets,
-families, students, workshops, community activity and evening life. Keep the two rules the
-prototype already enforces: an exact-subject photograph is credited as such, and anything
-else is visibly labelled illustrative.
+The project owner has stated that the prototype has the rights it needs to use suitable
+real photography, so no photograph was excluded purely on licensing grounds. Where a
+source records no creator or licence, this file says so rather than inventing one. Before
+a public release, confirm rights for every row marked "not stated", and keep the two
+rules above: an exact photograph must show that subject, and nothing else may be
+presented as a specific place.
