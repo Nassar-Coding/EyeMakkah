@@ -206,24 +206,48 @@
   function scatterOpp(rows){
     const shown=rows.slice(0,18),w=680,h=300,p=42;
     const x=v=>p+(v/100)*(w-p*2),y=v=>18+(1-v/100)*(h-62);
-    return '<div class="scatter-chart"><svg viewBox="0 0 '+w+' '+h+'"><line x1="'+x(50)+'" y1="18" x2="'+x(50)+'" y2="'+(h-44)+'" stroke="'+C.grid+'" stroke-dasharray="5 5"/><line x1="'+p+'" y1="'+y(65)+'" x2="'+(w-p)+'" y2="'+y(65)+'" stroke="'+C.grid+'" stroke-dasharray="5 5"/>'+shown.map(r=>'<circle class="scatter-dot" cx="'+x(r.supply_index).toFixed(1)+'" cy="'+y(r.demand_index).toFixed(1)+'" r="'+(5+Math.min(12,r.score/12)).toFixed(1)+'" fill="'+(r.demand_index>65&&r.supply_index<50?C.gold:C.green)+'" fill-opacity=".72"><title>'+esc(r.area)+' · '+esc(r.category)+' · '+esc("الطلب")+' '+r.demand_index+' · '+esc("العرض")+' '+r.supply_index+' · '+esc("الإشارة")+' '+r.score+'</title></circle>').join("")+'<text x="'+p+'" y="'+(h-9)+'">'+esc("مستوى العرض")+' →</text><text x="7" y="18">'+esc("مؤشر الطلب")+'</text></svg></div>'
+    return '<div class="scatter-chart"><svg viewBox="0 0 '+w+' '+h+'"><rect x="'+p+'" y="18" width="'+(x(50)-p)+'" height="'+(y(65)-18)+'" fill="rgba(184,148,74,.055)"/><line x1="'+x(50)+'" y1="18" x2="'+x(50)+'" y2="'+(h-44)+'" stroke="'+C.grid+'" stroke-dasharray="5 5"/><line x1="'+p+'" y1="'+y(65)+'" x2="'+(w-p)+'" y2="'+y(65)+'" stroke="'+C.grid+'" stroke-dasharray="5 5"/><text x="'+(p+8)+'" y="36">'+esc("طلب مرتفع · عرض أقل")+'</text>'+shown.map(r=>'<circle class="scatter-dot" cx="'+x(r.supply_index).toFixed(1)+'" cy="'+y(r.demand_index).toFixed(1)+'" r="'+(5+Math.min(12,r.score/12)).toFixed(1)+'" fill="'+(r.demand_index>65&&r.supply_index<50?C.gold:C.green)+'" fill-opacity=".72"><title>'+esc(r.area)+' · '+esc(r.category)+' · '+esc("الطلب")+' '+r.demand_index+' · '+esc("العرض")+' '+r.supply_index+' · '+esc("الإشارة")+' '+r.score+'</title></circle>').join("")+'<text x="'+p+'" y="'+(h-9)+'">'+esc("مستوى العرض")+' →</text><text x="7" y="18">'+esc("مؤشر الطلب")+'</text></svg></div>'
+  }
+
+
+  const AI_QUESTIONS=[
+    ["top-category","ما أكثر الفئات طلبًا؟","What categories have the highest demand?"],
+    ["top-area","أي منطقة تشهد أعلى نمو في الاهتمام؟","Which area has the fastest interest growth?"],
+    ["largest-gap","أين تظهر أكبر فجوة بين الطلب والعرض؟","Where is the largest gap between demand and supply?"],
+    ["top-activity","ما أكثر الأنشطة إضافة إلى «خطتي»؟","Which activity is added to My Plan most often?"],
+    ["audience","كيف يختلف السكان عن الزوار؟","How do residents and visitors differ?"],
+    ["watch-signal","ما أبرز إشارة تحتاج متابعة؟","What signal needs the most attention?"]
+  ];
+  let aiQuestion="top-category";
+  function aiAnswer(id){
+    const m=metrics(),op=scaledOppRows(OPPS.filter(r=>(state.area==="مكة المكرمة"||r.area===state.area)&&(state.category==="الكل"||r.category===state.category))).sort((a,b)=>b.score-a.score),acts=activityRows(),areas=(state.area==="مكة المكرمة"?AREAS:[state.area]).map(a=>({area:a,growth:scaledRate(.04+(AF[a]-.68)*.18,a+"ai")})).sort((a,b)=>b.growth-a.growth),cats=(state.category==="الكل"?CATS:[state.category]).map(c=>({category:c,value:Math.round(m.interactions*CF[c]*rowNoise(c+"ai"))})).sort((a,b)=>b.value-a.value),gaps=op.slice().sort((a,b)=>(b.demand_index-b.supply_index)-(a.demand_index-a.supply_index)),topAct=acts.slice().sort((a,b)=>b.plans-a.plans)[0],residents=Math.round(m.searches*.58),visitors=Math.round(m.searches*.42);
+    if(id==="top-category"){const x=cats[0];return tr("الفئة الأعلى طلبًا ضمن الفلاتر الحالية هي <b>"+esc(x?x.category:"—")+"</b>، مع مستوى تفاعل تجريبي يقارب <b>"+fmt(x?x.value:0)+"</b>.","The highest-demand category under the active filters is <b>"+esc(enText(x?x.category:"—"))+"</b>, with illustrative engagement of about <b>"+fmt(x?x.value:0)+"</b>.")}
+    if(id==="top-area"){const x=areas[0];return tr("أعلى نمو في الاهتمام يظهر في <b>"+esc(x?x.area:"—")+"</b> بنحو <b>"+Math.round((x?x.growth:0)*100)+"%</b>.","The fastest interest growth appears in <b>"+esc(enText(x?x.area:"—"))+"</b> at about <b>"+Math.round((x?x.growth:0)*100)+"%</b>.")}
+    if(id==="largest-gap"){const x=gaps[0];return tr("أكبر فجوة تجريبية تظهر في <b>"+esc(x?x.area:"—")+" · "+esc(x?x.category:"—")+"</b>، بفارق <b>"+((x?x.demand_index:0)-(x?x.supply_index:0))+" نقطة</b> بين الطلب والعرض.","The largest illustrative gap appears in <b>"+esc(enText(x?x.area:"—"))+" · "+esc(enText(x?x.category:"—"))+"</b>, with a <b>"+((x?x.demand_index:0)-(x?x.supply_index:0))+"-point</b> difference between demand and supply.")}
+    if(id==="top-activity"){return tr(topAct?"أكثر نشاط إضافة إلى «خطتي» هو <b>"+esc(topAct.activity)+"</b> بعدد تجريبي <b>"+fmt(topAct.plans)+"</b>.":"لا توجد أنشطة مطابقة للفلاتر الحالية.","The activity most often added to My Plan is <b>"+esc(topAct?enText(topAct.activity):"—")+"</b> with an illustrative <b>"+fmt(topAct?topAct.plans:0)+"</b> additions.")}
+    if(id==="audience"){return tr("ضمن النموذج الحالي، تمثل عمليات البحث المنسوبة لسكان مكة نحو <b>"+fmt(residents)+"</b> مقابل <b>"+fmt(visitors)+"</b> للزوار. استخدم فلتر الجمهور لقراءة كل شريحة منفصلة.","In the current model, searches attributed to Makkah residents are about <b>"+fmt(residents)+"</b> versus <b>"+fmt(visitors)+"</b> for visitors. Use the audience filter to inspect each segment separately.")}
+    const x=op[0];return tr("أبرز إشارة تحتاج متابعة تظهر في <b>"+esc(x?x.area:"—")+" · "+esc(x?x.category:"—")+"</b> بمؤشر <b>"+(x?x.score.toFixed(0):0)+"/100</b>. هذه إشارة للتحقق وليست ضمانًا تجاريًا.","The signal needing the most attention appears in <b>"+esc(enText(x?x.area:"—"))+" · "+esc(enText(x?x.category:"—"))+"</b> with a <b>"+(x?x.score.toFixed(0):0)+"/100</b> signal index. It is a validation signal, not a commercial guarantee.")
+  }
+  function aiAssistant(){
+    const q=AI_QUESTIONS.find(x=>x[0]===aiQuestion)||AI_QUESTIONS[0];
+    return '<section class="ai-agent"><div class="ai-head"><div><span class="ai-badge">AI AGENT</span><h2>'+tr("مساعد EyeMakkah التحليلي","EyeMakkah Analytics Assistant")+'</h2><p>'+tr("اختر سؤالًا من البنك الثابت، وسأجيب وفق الفلاتر والبيانات التجريبية الحالية.","Choose a question from the fixed bank and the answer will use the current filters and synthetic data.")+'</p></div><div class="ai-orb"><i></i><i></i><i></i></div></div><div class="ai-grid"><div class="ai-questions">'+AI_QUESTIONS.map(x=>'<button type="button" data-ai-question="'+x[0]+'" class="'+(x[0]===aiQuestion?"active":"")+'">'+esc(state.lang==="ar"?x[1]:x[2])+'</button>').join("")+'</div><div class="ai-answer"><div class="ai-answer-label">'+tr("الإجابة التحليلية","Analytical answer")+'</div><div class="ai-answer-text">'+aiAnswer(q[0])+'</div><div class="ai-foot">'+tr("إجابة نموذجية مبنية على بيانات اصطناعية وليست مخرجات من نموذج ذكاء اصطناعي حي.","Prototype answer based on synthetic data; not generated by a live AI model.")+'</div></div></div></section>'
   }
 
   function dashboard(){
     const m=metrics(),tr=trend(["searches","saves","plans"]),catSet=state.category==="الكل"?CATS:[state.category],areaSet=state.area==="مكة المكرمة"?AREAS:[state.area],cats=catSet.map(c=>({name:c,value:Math.round(m.interactions*CF[c]/catSet.reduce((s,x)=>s+CF[x],0)*rowNoise(c+"dash"))})).sort((a,b)=>b.value-a.value),ag=areaSet.map(a=>({area:a,growth:scaledRate(.04+(AF[a]-.68)*.18,a+"dash")})).sort((a,b)=>b.growth-a.growth),top=scaledOppRows(OPPS.filter(r=>(state.area==="مكة المكرمة"||r.area===state.area)&&(state.category==="الكل"||r.category===state.category))).sort((a,b)=>b.score-a.score)[0],comm=communityRows();
     return header("لوحة المعلومات","لقطة تنفيذية لما يحدث عبر تجربة EyeMakkah، من الاهتمام والاكتشاف إلى التخطيط والانتقال للإجراء.")+filters()+
-      '<div class="kpi-grid">'+kpi("إجمالي التفاعلات",fmt(m.interactions),delta(1))+kpi("المستخدمون النشطون",fmt(m.active_users),delta(2))+kpi("عمليات البحث",fmt(m.searches),delta(3))+kpi("الإضافات إلى «خطتي»",fmt(m.plans),delta(4))+kpi("الانتقال إلى الإجراء",fmt(m.actions),delta(5))+'</div>'+
+      '<div class="kpi-grid">'+kpi("إجمالي التفاعلات",fmt(m.interactions),delta(1))+kpi("المستخدمون النشطون",fmt(m.active_users),delta(2))+kpi("عمليات البحث",fmt(m.searches),delta(3))+kpi("الإضافات إلى «خطتي»",fmt(m.plans),delta(4))+kpi("الانتقال إلى الإجراء",fmt(m.actions),delta(5))+'</div>'+aiAssistant()+
       '<div class="grid-2">'+panel("اتجاهات الطلب عبر الزمن","البحث والحفظ والإضافة إلى خطتي.",line([{name:"بحث",color:C.green,values:tr.searches},{name:"حفظ",color:C.gold,values:tr.saves},{name:"إضافة إلى خطتي",color:C.clay,values:tr.plans}]))+panel("أكثر القطاعات جذبًا للاهتمام","حصة التفاعلات حسب الفئة.",donutData(cats,"name","value"))+'</div>'+
       insight("يتسارع الاهتمام في <b>"+esc(ag[0].area)+"</b> بالتزامن مع إشارات طلب مرتفعة في <b>"+esc(top.category)+"</b>. الإشارة مناسبة للاستكشاف واتخاذ القرار، وليست توقعًا تجاريًا مضمونًا.",["نمو متوسط "+Math.round(ag[0].growth*100)+"%","ارتفاع البحث والحفظ","مقارنة مستوى العرض بالطلب"])+
       '<div class="grid-2 equal">'+panel("المناطق الأعلى نموًا في الاهتمام","اتجاه النمو التجريبي.",bar(ag,"area","growth",C.gold,true))+panel("مختصر المجتمعات","الموضوعات التي تجمع نمو النقاش مع نشاط مرتفع.",'<div class="community-list">'+comm.slice().sort((a,b)=>b.growth-a.growth).slice(0,5).map(r=>'<div class="community-row"><strong>'+esc(r.community)+'</strong><span class="growth">'+Math.round(r.growth*100)+'% ↑</span><p>'+esc(r.themes)+'</p></div>').join("")+'</div>')+'</div>';
   }
   function demand(){
-    const m=metrics(),tr=trend(["searches","plans","actions"]),terms=termRows(),fast=terms.slice().sort((a,b)=>b.growth-a.growth).slice(0,7),audAll=[{aud:"سكان مكة",searches:m.searches*.58,plans:m.plans*.61,actions:m.actions*.57},{aud:"الزوار",searches:m.searches*.42,plans:m.plans*.39,actions:m.actions*.43}],aud=state.audience==="الكل"?audAll:audAll.filter(x=>x.aud===state.audience);
+    const m=metrics(),trn=trend(["searches","plans","actions"]),terms=termRows(),fast=terms.slice().sort((a,b)=>b.growth-a.growth).slice(0,7),audAll=[{aud:"سكان مكة",searches:m.searches*.58,plans:m.plans*.61,actions:m.actions*.57},{aud:"الزوار",searches:m.searches*.42,plans:m.plans*.39,actions:m.actions*.43}],aud=state.audience==="الكل"?audAll:audAll.filter(x=>x.aud===state.audience),topTerm=fast[0],saveToPlan=m.saves?Math.round(m.plans/m.saves*100):0;
     return header("تحليل الطلب","فهم ما يبحث عنه المستخدمون، متى يرتفع الاهتمام، وكيف ينتقل الطلب من البحث إلى الإجراء.")+filters()+
-      '<div class="grid-2">'+panel("الطلب عبر الزمن","البحث والخطة والإجراء.",line([{name:"بحث",color:C.green,values:tr.searches},{name:"خطتي",color:C.gold,values:tr.plans},{name:"إجراء",color:C.clay,values:tr.actions}]))+panel("أسرع عمليات البحث نموًا","مؤشر تجريبي مبني على بيانات اصطناعية.",bar(fast,"term","growth",C.gold,true))+'</div>'+
+      '<div class="grid-2">'+panel("الطلب عبر الزمن","البحث والخطة والإجراء.",line([{name:"بحث",color:C.green,values:trn.searches},{name:"خطتي",color:C.gold,values:trn.plans},{name:"إجراء",color:C.clay,values:trn.actions}]))+panel("أسرع عمليات البحث نموًا","مؤشر تجريبي مبني على بيانات اصطناعية.",bar(fast,"term","growth",C.gold,true))+'</div>'+
       '<div class="grid-2 equal">'+panel("أكثر مصطلحات البحث","ترتيب نسبي للاهتمام.",table(terms.slice().sort((a,b)=>b.index-a.index),[["term","مصطلح البحث"],["category","الفئة"],["index","مؤشر الطلب"],["growth","النمو","pct"]]))+panel("سكان مكة مقابل الزوار","مقارنة الطلب حسب نوع الجمهور.",stackedAudience(aud))+'</div>'+
       panel("رحلة الطلب","الحفظ لا يساوي الإضافة إلى خطتي، والإضافة لا تعني حجزًا أو إكمالًا.",funnel(["بحث","عرض التفاصيل","حفظ","إضافة إلى خطتي","انتقال للإجراء"],[m.searches,m.views,m.saves,m.plans,m.actions]))+
-      insight("جزء مهم من الطلب يتوقف بعد الحفظ وقبل الإضافة إلى «خطتي»؛ هذه نقطة مناسبة لاختبار تحسينات تجربة التخطيط.",["معدل حفظ مرتفع","هبوط بين الحفظ والخطة","تفاوت حسب الفئة"]);
+      insight("أعلى نمو في البحث حاليًا يظهر في <b>"+esc(topTerm?topTerm.term:"—")+"</b> بنسبة <b>"+(topTerm?Math.round(topTerm.growth*100):0)+"%</b>، بينما ينتقل نحو <b>"+saveToPlan+"%</b> من الحفظ إلى «خطتي».",["الفئة: "+(topTerm?topTerm.category:"—"),"الحفظ "+fmt(m.saves),"الإضافة إلى خطتي "+fmt(m.plans)]);
   }
   function areas(){
     const area=state.selectedArea,oo=scaledOppRows(OPPS.filter(o=>o.area===area&&(state.category==="الكل"||o.category===state.category))),d=Math.round(sum(oo,"demand_index")/oo.length),g=sum(oo,"growth")/oo.length,top=oo.slice().sort((a,b)=>b.demand_index-a.demand_index)[0],best=oo.slice().sort((a,b)=>b.score-a.score)[0],rows=oo.slice().sort((a,b)=>b.demand_index-a.demand_index);
@@ -235,11 +259,12 @@
   }
   function activities(){
     const a=activityRows();
-    if(!a.length)return header("الأنشطة والتجارب","تحليل سلوك المشاركة مع الحفاظ على الفرق بين العرض والحفظ والتخطيط والانضمام والإجراء والإكمال.")+filters()+'<div class="notice">لا توجد أنشطة تجريبية مطابقة لهذه الفلاتر.</div>';
-    const max=k=>a.slice().sort((x,y)=>y[k]-x[k])[0];
+    if(!a.length)return header("الأنشطة والتجارب","تحليل سلوك المشاركة مع الحفاظ على الفرق بين العرض والحفظ والتخطيط والانضمام والإجراء والإكمال.")+filters()+emptyState("لا توجد أنشطة تجريبية مطابقة لهذه الفلاتر.");
+    const max=k=>a.slice().sort((x,y)=>y[k]-x[k])[0],lead=max("plans");
     return header("الأنشطة والتجارب","تحليل سلوك المشاركة مع الحفاظ على الفرق بين العرض والحفظ والتخطيط والانضمام والإجراء والإكمال.")+filters()+
-      '<div class="kpi-grid">'+kpi("الأكثر مشاهدة",max("views").activity,.12,"ضمن بيانات النموذج",true)+kpi("الأكثر حفظًا",max("saves").activity,.16,"ضمن بيانات النموذج",true)+kpi("الأكثر إضافة إلى خطتي",max("plans").activity,max("plans").growth,"ضمن بيانات النموذج",true)+kpi("الأعلى في نية الحضور",max("joins").activity,.09,"ضمن بيانات النموذج",true)+kpi("الأعلى انتقالًا للإجراء",max("actions").activity,.11,"ضمن بيانات النموذج",true)+'</div>'+
+      '<div class="kpi-grid">'+kpi("الأكثر مشاهدة",max("views").activity,.12,"ضمن بيانات النموذج",true)+kpi("الأكثر حفظًا",max("saves").activity,.16,"ضمن بيانات النموذج",true)+kpi("الأكثر إضافة إلى خطتي",lead.activity,lead.growth,"ضمن بيانات النموذج",true)+kpi("الأعلى في نية الحضور",max("joins").activity,.09,"ضمن بيانات النموذج",true)+kpi("الأعلى انتقالًا للإجراء",max("actions").activity,.11,"ضمن بيانات النموذج",true)+'</div>'+
       '<div class="grid-2 equal">'+panel("قمع التفاعل","المراحل منفصلة ولا يتم دمجها في «تحويل» واحد.",funnel(["عرض","حفظ","إضافة إلى خطتي","انضمام / نية حضور","انتقال للإجراء","إكمال"],["views","saves","plans","joins","actions","complete"].map(k=>sum(a,k))))+panel("المشاهدة مقابل الحفظ","كل نقطة تمثل نشاطًا؛ حجم النقطة يعكس اتجاه النمو.",bubbleActivities(a))+'</div>'+
+      insight("يتصدر <b>"+esc(lead.activity)+"</b> الإضافة إلى «خطتي» ضمن الفلاتر الحالية، مع نمو تجريبي قدره <b>"+Math.round(lead.growth*100)+"%</b>.",["مشاهدة "+fmt(lead.views),"حفظ "+fmt(lead.saves),"خطتي "+fmt(lead.plans)])+
       panel("أداء الأنشطة","ترتيب تفاعلي للأنشطة مع مؤشرات كل مرحلة.",table(a.slice().sort((x,y)=>y.plans-x.plans),[["activity","النشاط"],["category","الفئة"],["area","المنطقة"],["views","عرض","num"],["saves","حفظ","num"],["plans","خطتي","num"],["joins","انضمام","num"],["actions","إجراء","num"],["complete","إكمال","num"],["growth","النمو","pct"]]));
   }
   function communities(){
@@ -248,29 +273,32 @@
       ["تجارب المساء",scaledRate(.29,"topic2"),"اقتراحات لأنشطة اجتماعية"],
       ["الورش الإبداعية",scaledRate(.27,"topic3"),"بحث عن تجارب قصيرة"],
       ["أماكن قريبة",scaledRate(.18,"topic4"),"طلب خيارات حسب الحي"]
-    ];
+    ],lead=comm.slice().sort((a,b)=>b.engagement-a.engagement)[0],topic=topics.slice().sort((a,b)=>b[1]-a[1])[0];
     return header("المجتمعات والاهتمامات","ذكاء مجتمعي يركز على أنماط الموضوعات والمشاركة، دون ملفات نفسية أو تعرّف على الأفراد.")+filters()+
       '<div class="grid-2">'+panel("المجتمعات الأكثر نشاطًا","حجم التفاعل ونمو النقاش.",bar(comm.slice().sort((a,b)=>b.engagement-a.engagement),"community","engagement"))+panel("أنماط المساهمة","نوع المساهمة الأكثر ظهورًا في كل مجتمع.",donut(comm))+'</div>'+
       panel("موضوعات تكتسب زخمًا","ملخص نوعي للنقاشات التجريبية.",'<div class="grid-4" style="margin-top:0">'+topics.map(x=>'<div class="kpi-card"><div class="kpi-label">'+esc(x[2])+'</div><div class="kpi-value text">'+esc(x[0])+'</div><div class="delta up">↑ '+Math.round(x[1]*100)+'%</div></div>').join("")+'</div>')+
-      insight("أعلى نمو للنقاش التجريبي يظهر حول الأنشطة المناسبة للعائلة والخيارات المسائية، مع تكرار أسئلة «ما القريب مني؟» و«ماذا يمكن أن نفعل هذا الأسبوع؟».",["نمو الأسئلة","زيادة التوصيات","ارتفاع الحفظ المرتبط بالموضوع"]);
+      insight("المجتمع الأكثر نشاطًا حاليًا هو <b>"+esc(lead.community)+"</b>، بينما يحقق موضوع <b>"+esc(topic[0])+"</b> أسرع زخم تجريبي.",["تفاعل "+fmt(lead.engagement),"نمو المجتمع "+Math.round(lead.growth*100)+"%","نمو الموضوع "+Math.round(topic[1]*100)+"%"]);
   }
   function campaigns(){
     let rows=campaignRows();
-    if(!rows.length)return header("الحملات والعروض","قراءة أداء حملات تجريبية للشركاء والعلامات التجارية.")+filters()+'<div class="notice">لا توجد حملات تجريبية مطابقة للفلاتر المحددة.</div>';
+    if(!rows.length)return header("الحملات والعروض","قراءة أداء حملات تجريبية للشركاء والعلامات التجارية.")+filters()+emptyState("لا توجد حملات تجريبية مطابقة للفلاتر المحددة.");
     if(!rows.some(r=>r.campaign===state.campaign))state.campaign=rows[0].campaign;
     const r=rows.find(x=>x.campaign===state.campaign);
     const areaSet=state.area==="مكة المكرمة"?AREAS:[state.area];
     const geo=areaSet.map(a=>({area:a,value:scaledCount(r.handoffs/Math.max(1,areaSet.length),r.campaign+a+"geo",AF[a]*periodIntensity())}));
+    const viewRate=r.impressions?Math.round(r.views/r.impressions*100):0,handoffRate=r.views?Math.round(r.handoffs/r.views*100):0;
     return header("الحملات والعروض","قراءة أداء حملات تجريبية للشركاء والعلامات التجارية من الظهور حتى الانتقال إلى العرض أو الإجراء.")+filters()+
       '<div class="campaign-selector"><label>اختر حملة</label><select id="campaign-select">'+opts(rows.map(x=>x.campaign),state.campaign)+'</select></div>'+
       '<div class="kpi-grid">'+kpi("الظهور",fmt(r.impressions),r.growth)+kpi("المشاهدة",fmt(r.views),delta(11))+kpi("فتح التفاصيل",fmt(r.details),delta(12))+kpi("الحفظ",fmt(r.saves),delta(13))+kpi("الانتقال للعرض",fmt(r.handoffs),delta(14))+'</div>'+
-      '<div class="grid-2">'+panel("قمع الحملة","أداء «"+r.campaign+"» عبر مراحل التفاعل.",funnel(["ظهور","مشاهدة","فتح التفاصيل","حفظ","إضافة إلى خطتي","انتقال إلى العرض"],[r.impressions,r.views,r.details,r.saves,Math.floor(r.saves*(.38+.08*periodIntensity())),r.handoffs]))+panel("الأداء الجغرافي","توزيع تجريبي للاستجابة حسب المنطقة.",bar(geo,"area","value"))+'</div>';
+      '<div class="grid-2">'+panel("قمع الحملة","أداء «"+r.campaign+"» عبر مراحل التفاعل.",funnel(["ظهور","مشاهدة","فتح التفاصيل","حفظ","إضافة إلى خطتي","انتقال إلى العرض"],[r.impressions,r.views,r.details,r.saves,Math.floor(r.saves*(.38+.08*periodIntensity())),r.handoffs]))+panel("الأداء الجغرافي","توزيع تجريبي للاستجابة حسب المنطقة.",bar(geo,"area","value"))+'</div>'+
+      insight("حققت حملة <b>"+esc(r.campaign)+"</b> معدل مشاهدة تقريبيًا <b>"+viewRate+"%</b> من الظهور، ومعدل انتقال للعرض <b>"+handoffRate+"%</b> من المشاهدات.",["المشاهدة "+fmt(r.views),"الحفظ "+fmt(r.saves),"الانتقال للعرض "+fmt(r.handoffs)]);
   }
   function opportunities(){
-    const o=scaledOppRows(OPPS.filter(r=>(state.area==="مكة المكرمة"||r.area===state.area)&&(state.category==="الكل"||r.category===state.category))).sort((a,b)=>b.score-a.score),top=o[0];
+    const o=scaledOppRows(OPPS.filter(r=>(state.area==="مكة المكرمة"||r.area===state.area)&&(state.category==="الكل"||r.category===state.category))).sort((a,b)=>b.score-a.score),top=o[0],gaps=o.map(r=>Object.assign({},r,{gap:r.demand_index-r.supply_index})).sort((a,b)=>b.gap-a.gap),avgDemand=Math.round(sum(o,"demand_index")/Math.max(o.length,1)),avgSupply=Math.round(sum(o,"supply_index")/Math.max(o.length,1));
     return header("الفرص والفجوات","إشارات دعم قرار تجمع الطلب والنمو ومستوى العرض. لا تمثل هذه الإشارات ضمانًا لجدوى مشروع أو استثمار.")+filters()+
+      '<div class="kpi-grid" style="grid-template-columns:repeat(4,1fr)">'+kpi("متوسط مؤشر الطلب",avgDemand+"/100",top.growth)+kpi("متوسط مستوى العرض",avgSupply+"/100",-.03)+kpi("أكبر فجوة",gaps[0].gap+" نقطة",gaps[0].growth,"طلب − عرض",true)+kpi("أعلى إشارة",top.score.toFixed(0)+"/100",top.growth,top.area+" · "+top.category,true)+'</div>'+
       insight("أقوى إشارة في الفلاتر الحالية تظهر في <b>"+esc(top.area)+"</b> ضمن <b>"+esc(top.category)+"</b>: "+esc(top.reason)+". يوصى باستخدامها كنقطة بداية للتحقق الميداني ودراسة السوق.",["مؤشر طلب "+top.demand_index,"نمو "+Math.round(top.growth*100)+"%","مؤشر عرض "+top.supply_index])+
-      '<div class="grid-2">'+panel("الطلب مقابل العرض","كل نقطة تمثل منطقة × فئة؛ أعلى الطلب مع عرض أقل يستحق تحققًا أعمق.",scatterOpp(o))+panel("الإشارات الأعلى","ترتيب وفق مؤشر تجريبي مركب.",'<div>'+o.slice(0,6).map(r=>'<div class="signal"><b>'+esc(r.area)+' · '+esc(r.category)+'</b><span class="signal-score">'+r.score.toFixed(0)+'</span><small>'+esc(r.reason)+' · نمو '+Math.round(r.growth*100)+'%</small></div>').join("")+'</div>')+'</div>'+
+      '<div class="grid-2">'+panel("الطلب مقابل العرض","كل نقطة تمثل منطقة × فئة؛ أعلى الطلب مع عرض أقل يستحق تحققًا أعمق.",scatterOpp(o))+panel("الإشارات الأعلى","ترتيب وفق مؤشر تجريبي مركب.",'<div>'+o.slice(0,7).map(r=>'<div class="signal"><b>'+esc(r.area)+' · '+esc(r.category)+'</b><span class="signal-score">'+r.score.toFixed(0)+'</span><small>'+esc(r.reason)+' · نمو '+Math.round(r.growth*100)+'%</small></div>').join("")+'</div>')+'</div>'+
       panel("جدول الفرص","تفاصيل الإشارات الداعمة للقرار.",table(o,[["area","المنطقة"],["category","الفئة"],["demand_index","مؤشر الطلب"],["growth","اتجاه النمو","pct"],["supply_index","مستوى العرض"],["reason","سبب ظهور الفرصة"],["score","مؤشر الإشارة"]]));
   }
   function reportRows(){
@@ -297,8 +325,9 @@
     return rows;
   }
   function reports(){
-    const rr=[["التقرير الشهري للطلب والاهتمام","ملخص البحث والحفظ والتخطيط واتجاهات الطلب."],["تحليل مناطق مكة","مقارنة المناطق والفئات ومؤشرات النمو."],["تقرير المجتمعات والاهتمامات","أنماط النقاش والمساهمة والموضوعات الصاعدة."],["أداء الحملات والعروض","قمع الحملات والأداء حسب الجمهور والمنطقة."],["تقرير الفرص والفجوات","إشارات الطلب مقابل العرض لدعم التحقق والدراسة."]],rows=reportRows();
+    const rr=[["التقرير الشهري للطلب والاهتمام","ملخص البحث والحفظ والتخطيط واتجاهات الطلب."],["تحليل مناطق مكة","مقارنة المناطق والفئات ومؤشرات النمو."],["تقرير المجتمعات والاهتمامات","أنماط النقاش والمساهمة والموضوعات الصاعدة."],["أداء الحملات والعروض","قمع الحملات والأداء حسب الجمهور والمنطقة."],["تقرير الفرص والفجوات","إشارات الطلب مقابل العرض لدعم التحقق والدراسة."]],rows=reportRows(),m=metrics(),trn=trend(["searches","plans"]);
     return header("التقارير","مركز مبسط لعرض التقارير الدورية وتصدير ملخصات البيانات التجريبية.")+filters()+
+      '<div class="report-summary"><div>'+kpi("عمليات البحث",fmt(m.searches),delta(21))+kpi("الإضافات إلى «خطتي»",fmt(m.plans),delta(22))+kpi("الانتقال إلى الإجراء",fmt(m.actions),delta(23))+'</div>'+panel("اتجاه مختصر","ملخص بصري للفترة الحالية.",line([{name:"بحث",color:C.green,values:trn.searches},{name:"خطتي",color:C.gold,values:trn.plans}]))+'</div>'+
       rr.map(x=>'<details class="report"><summary>'+esc(x[0])+'</summary><div class="report-body">'+esc(x[1])+'<br><small>الفترة: '+esc(state.period)+' · المنطقة: '+esc(state.area)+' · الفئة: '+esc(state.category)+' · الجمهور: '+esc(state.audience)+'</small><br>يعرض النموذج بنية التقرير وتجربة التفاعل. البيانات توضيحية وليست بيانات تشغيلية حية.</div></details>').join("")+
       panel("تصدير ملخص CSV","يحتوي الملف على مؤشرات مجمعة وفق الفلاتر الحالية.",'<button class="download-btn" id="download-csv">تصدير CSV</button><div style="height:10px"></div>'+table(rows.slice(0,30),[["area","المنطقة"],["category","الفئة"],["audience","الجمهور"],["interactions","التفاعلات","num"],["active_users","المستخدمون النشطون","num"],["searches","البحث","num"],["views","العرض","num"],["saves","الحفظ","num"],["plans","الإضافة إلى خطتي","num"],["actions","الانتقال للإجراء","num"]]))+
       '<script id="report-data" type="application/json">'+JSON.stringify(rows).replace(/</g,"\\u003c")+'</script>';
@@ -356,6 +385,28 @@
     ["الفترة: ","Period: "],[" · المنطقة: "," · Area: "],[" · الفئة: "," · Category: "],[" · الجمهور: "," · Audience: "],
     ["نمو ","Growth "],["مؤشر طلب ","Demand index "],["مؤشر عرض ","Supply index "],["داخل ","Within "],[" للفترة الحالية."," for the current period."]
   ];
+  Object.assign(EN_MAP,{
+    "لقطة تنفيذية لما يحدث عبر تجربة EyeMakkah، من الاهتمام والاكتشاف إلى التخطيط والانتقال للإجراء.":"Executive view of the EyeMakkah journey, from interest and discovery to planning and action handoff.",
+    "البحث والحفظ والإضافة إلى خطتي.":"Search, saves, and additions to My Plan.","حصة التفاعلات حسب الفئة.":"Share of interactions by category.","اتجاه النمو التجريبي.":"Illustrative growth trend.","الموضوعات التي تجمع نمو النقاش مع نشاط مرتفع.":"Topics combining discussion growth with strong activity.",
+    "فهم ما يبحث عنه المستخدمون، متى يرتفع الاهتمام، وكيف ينتقل الطلب من البحث إلى الإجراء.":"Understand what users search for, when interest rises, and how demand moves from search to action.","البحث والخطة والإجراء.":"Search, planning, and action handoff.","مؤشر تجريبي مبني على بيانات اصطناعية.":"Illustrative indicator based on synthetic data.","ترتيب نسبي للاهتمام.":"Relative interest ranking.","مقارنة الطلب حسب نوع الجمهور.":"Demand comparison by audience type.","الحفظ لا يساوي الإضافة إلى خطتي، والإضافة لا تعني حجزًا أو إكمالًا.":"Saving is not the same as adding to a plan, and adding to a plan does not mean booking or completion.",
+    "قراءة جغرافية مبسطة للاهتمام والطلب والفرص على مستوى أحياء ومناطق مكة.":"A simplified geographic view of interest, demand, and opportunity signals across Makkah areas.","مؤشرات الفجوة والطلب.":"Demand and gap indicators.","طلب − عرض":"Demand − Supply","أكبر فجوة":"Largest gap","أعلى إشارة":"Top signal","متوسط مؤشر الطلب":"Average demand index","متوسط مستوى العرض":"Average supply level",
+    "تحليل سلوك المشاركة مع الحفاظ على الفرق بين العرض والحفظ والتخطيط والانضمام والإجراء والإكمال.":"Analyze participation behavior while keeping views, saves, planning, joining, action, and completion distinct.","المراحل منفصلة ولا يتم دمجها في «تحويل» واحد.":"Stages remain distinct and are not collapsed into a single conversion metric.","ترتيب تفاعلي للأنشطة مع مؤشرات كل مرحلة.":"Interactive activity ranking with metrics for every stage.",
+    "ذكاء مجتمعي يركز على أنماط الموضوعات والمشاركة، دون ملفات نفسية أو تعرّف على الأفراد.":"Community analytics focused on topics and participation patterns without profiling or identifying individuals.","حجم التفاعل ونمو النقاش.":"Engagement volume and discussion growth.","نوع المساهمة الأكثر ظهورًا في كل مجتمع.":"Most visible contribution type in each community.","ملخص نوعي للنقاشات التجريبية.":"Qualitative summary of illustrative discussions.",
+    "قراءة أداء حملات تجريبية للشركاء والعلامات التجارية من الظهور حتى الانتقال إلى العرض أو الإجراء.":"Illustrative campaign performance from impression through offer or action handoff.","توزيع تجريبي للاستجابة حسب المنطقة.":"Illustrative response distribution by area.",
+    "إشارات دعم قرار تجمع الطلب والنمو ومستوى العرض. لا تمثل هذه الإشارات ضمانًا لجدوى مشروع أو استثمار.":"Decision-support signals combining demand, growth, and supply. These signals do not guarantee project or investment feasibility.","ترتيب وفق مؤشر تجريبي مركب.":"Ranking based on an illustrative composite index.","تفاصيل الإشارات الداعمة للقرار.":"Decision-support signal details.","طلب مرتفع · عرض أقل":"High demand · lower supply",
+    "مركز مبسط لعرض التقارير الدورية وتصدير ملخصات البيانات التجريبية.":"A simple center for periodic reports and exporting illustrative data summaries.","اتجاه مختصر":"Quick trend","ملخص بصري للفترة الحالية.":"Visual summary for the current period.","يحتوي الملف على مؤشرات مجمعة وفق الفلاتر الحالية.":"The file contains aggregated indicators based on the active filters.","يعرض النموذج بنية التقرير وتجربة التفاعل. البيانات توضيحية وليست بيانات تشغيلية حية.":"The prototype demonstrates report structure and interaction. Data is illustrative and not live operational data.",
+    "جرّب توسيع الفلاتر أو العودة إلى الإعدادات الافتراضية.":"Try broadening the filters or return to the default settings.","إعادة ضبط الفلاتر":"Reset filters","الإعدادات — قريبًا":"Settings — coming soon","سيتم تفعيل استعادة الحساب عند ربط نظام الدخول.":"Account recovery will be enabled when live authentication is connected.",
+    "المشاهدات":"Views","ضمن بيانات النموذج":"Within demo data","ضمن النموذج":"Within demo"
+  });
+  const EXTRA_EN_PARTS=[
+    ["أعلى نمو في البحث حاليًا يظهر في ","The fastest search growth currently appears in "],[" بنسبة "," at "],["، بينما ينتقل نحو "," while about "],[" من الحفظ إلى «خطتي»."," move from saves to My Plan."],
+    ["يتصدر ",""],[" الإضافة إلى «خطتي» ضمن الفلاتر الحالية، مع نمو تجريبي قدره "," leads additions to My Plan under the active filters, with illustrative growth of "],
+    ["المجتمع الأكثر نشاطًا حاليًا هو ","The most active community is "],["، بينما يحقق موضوع "," while the topic "],[" أسرع زخم تجريبي."," shows the fastest illustrative momentum."],
+    ["حققت حملة ","Campaign "],[" معدل مشاهدة تقريبيًا "," reached an approximate view rate of "],[" من الظهور، ومعدل انتقال للعرض "," from impressions, with an offer-handoff rate of "],[" من المشاهدات."," from views."],
+    ["أقوى إشارة في الفلاتر الحالية تظهر في ","The strongest signal under the active filters appears in "],[" ضمن "," within "],[". يوصى باستخدامها كنقطة بداية للتحقق الميداني ودراسة السوق.",". Use it as a starting point for field validation and market study."],
+    ["الفئة: ","Category: "],["مشاهدة ","Views "],["حفظ ","Saves "],["الإضافة إلى خطتي ","Added to My Plan "],["تفاعل ","Engagement "],["نمو المجتمع ","Community growth "],["نمو الموضوع ","Topic growth "],["الانتقال للعرض ","Offer handoff "]
+  ];
+  EN_PARTS.push(...EXTRA_EN_PARTS);
   function enText(s){
     let out=String(s);
     if(EN_MAP[out])return EN_MAP[out];
@@ -394,13 +445,23 @@
   function signOut(){
     session.logged=false;sessionStorage.removeItem("eyemakkah-ba-session");flow="login";render()
   }
+  function transitionUpdate(fn){
+    document.body.classList.add("is-updating");
+    window.setTimeout(()=>{fn();render()},140)
+  }
+  function resetFilters(){
+    state.period="آخر 30 يومًا";state.area="مكة المكرمة";state.category="الكل";state.audience="الكل";state.selectedArea="العزيزية";state.campaign="نكهات مكة"
+  }
+  function emptyState(message){
+    return '<div class="empty-state"><div class="empty-icon">◇</div><b>'+esc(message)+'</b><p>'+esc("جرّب توسيع الفلاتر أو العودة إلى الإعدادات الافتراضية.")+'</p><button type="button" class="secondary-btn" data-reset-filters>'+esc("إعادة ضبط الفلاتر")+'</button></div>'
+  }
 
   function page(){switch(state.page){case"لوحة المعلومات":return dashboard();case"تحليل الطلب":return demand();case"تحليل المناطق":return areas();case"الأنشطة والتجارب":return activities();case"المجتمعات والاهتمامات":return communities();case"الحملات والعروض":return campaigns();case"الفرص والفجوات":return opportunities();case"التقارير":return reports();default:return dashboard();}}
   function shell(){
     const lang='<div class="lang-switch"><button data-lang="ar" class="'+(state.lang==="ar"?"active":"")+'">العربية</button><button data-lang="en" class="'+(state.lang==="en"?"active":"")+'">English</button></div>';
     return '<div class="bi-shell"><aside class="sidebar"><div class="brand"><div class="brand-main">EyeMakkah</div><div class="brand-sub">منصة EyeMakkah لتحليلات الأعمال</div><span class="brand-badge">BUSINESS ANALYTICS</span>'+lang+'</div><nav class="nav">'+
       PAGES.map(x=>'<button data-page="'+esc(x[0])+'" class="'+(state.page===x[0]?"active":"")+'"><span class="nav-icon">'+x[1]+'</span><span>'+esc(x[0])+'</span></button>').join("")+
-      '</nav><div class="sidebar-meta">آخر تحديث للنموذج: 22 سبتمبر 2026<br>بيانات اصطناعية لأغراض العرض<br>لا تتضمن معلومات شخصية.</div></aside><main class="main"><div class="mobile-tools"><select id="mobile-page">'+opts(PAGES.map(x=>x[0]),state.page)+'</select>'+lang+'</div><div id="page" class="page-motion">'+page()+'</div><div class="data-note">البيانات المعروضة في هذا النموذج توضيحية لأغراض تصميم وتجربة المنصة، ولا تمثل بيانات تشغيلية حية أو معلومات عن أفراد.</div><div class="footer-links">EyeMakkah · نموذج تحليلات الأعمال</div></main></div>';
+      '</nav><div class="sidebar-meta">آخر تحديث للنموذج: 22 سبتمبر 2026<br>بيانات اصطناعية لأغراض العرض<br>لا تتضمن معلومات شخصية.</div></aside><main class="main"><div class="mobile-tools"><select id="mobile-page">'+opts(PAGES.map(x=>x[0]),state.page)+'</select>'+lang+userMenu()+'</div><div class="loading-strip" aria-hidden="true"><span></span><span></span><span></span></div><div id="page" class="page-motion">'+page()+'</div><div class="data-note">البيانات المعروضة في هذا النموذج توضيحية لأغراض تصميم وتجربة المنصة، ولا تمثل بيانات تشغيلية حية أو معلومات عن أفراد.</div><div class="footer-links">EyeMakkah · نموذج تحليلات الأعمال</div></main></div>';
   }
   function downloadCsv(){
     const e=document.getElementById("report-data");if(!e)return;
@@ -420,22 +481,24 @@
     const demo=document.querySelector("[data-demo-login]");if(demo)demo.onclick=enterApp;
     const forgot=document.querySelector("[data-forgot]");if(forgot)forgot.onclick=()=>{forgot.textContent=tr("سيتم تفعيل استعادة الحساب عند ربط نظام الدخول.","Account recovery will be enabled when live authentication is connected.")};
 
-    document.querySelectorAll("[data-page]").forEach(b=>b.onclick=()=>{state.page=b.dataset.page;render();scrollTo({top:0,behavior:"smooth"})});
-    const mp=document.getElementById("mobile-page");if(mp)mp.onchange=e=>{state.page=e.target.value;render()};
-    document.querySelectorAll("[data-filter]").forEach(s=>s.onchange=e=>{state[e.target.dataset.filter]=e.target.value;if(e.target.dataset.filter==="area"&&state.area!=="مكة المكرمة")state.selectedArea=state.area;render()});
-    const ad=document.getElementById("area-detail");if(ad)ad.onchange=e=>{state.selectedArea=e.target.value;render()};
-    const cp=document.getElementById("campaign-select");if(cp)cp.onchange=e=>{state.campaign=e.target.value;render()};
+    document.querySelectorAll("[data-page]").forEach(b=>b.onclick=()=>transitionUpdate(()=>{state.page=b.dataset.page;scrollTo({top:0,behavior:"smooth"})}));
+    const mp=document.getElementById("mobile-page");if(mp)mp.onchange=e=>transitionUpdate(()=>{state.page=e.target.value});
+    document.querySelectorAll("[data-filter]").forEach(s=>s.onchange=e=>{const key=e.target.dataset.filter,val=e.target.value;transitionUpdate(()=>{state[key]=val;if(key==="area"&&state.area!=="مكة المكرمة")state.selectedArea=state.area})});
+    const ad=document.getElementById("area-detail");if(ad)ad.onchange=e=>{const v=e.target.value;transitionUpdate(()=>{state.selectedArea=v})};
+    const cp=document.getElementById("campaign-select");if(cp)cp.onchange=e=>{const v=e.target.value;transitionUpdate(()=>{state.campaign=v})};
     const dl=document.getElementById("download-csv");if(dl)dl.onclick=downloadCsv;
     document.querySelectorAll("[data-lang],[data-menu-lang]").forEach(b=>b.onclick=()=>{state.lang=b.dataset.lang||b.dataset.menuLang;localStorage.setItem("eyemakkah-ba-lang",state.lang);render()});
-    const logout=document.querySelector("[data-logout]");if(logout)logout.onclick=signOut;
-    const settings=document.querySelector("[data-settings]");if(settings)settings.onclick=()=>{settings.textContent=tr("الإعدادات — قريبًا","Settings — coming soon")};
+    document.querySelectorAll("[data-reset-filters]").forEach(b=>b.onclick=()=>transitionUpdate(resetFilters));
+    document.querySelectorAll("[data-ai-question]").forEach(b=>b.onclick=()=>{aiQuestion=b.dataset.aiQuestion;const box=document.querySelector(".ai-answer");if(box)box.classList.add("refreshing");window.setTimeout(render,130)});
+    document.querySelectorAll("[data-logout]").forEach(b=>b.onclick=signOut);
+    document.querySelectorAll("[data-settings]").forEach(b=>b.onclick=()=>{b.textContent=tr("الإعدادات — قريبًا","Settings — coming soon")});
   }
   function render(){
     document.documentElement.lang=state.lang;document.documentElement.dir=state.lang==="ar"?"rtl":"ltr";document.body.dir=document.documentElement.dir;
     const root=document.getElementById("app");
     root.innerHTML=flow==="welcome"?welcomeScreen():flow==="login"?loginScreen():shell();
     attach();
-    if(flow==="app")localizeDom()
+    if(flow==="app")localizeDom();requestAnimationFrame(()=>document.body.classList.remove("is-updating"))
   }
   render();
 })();
