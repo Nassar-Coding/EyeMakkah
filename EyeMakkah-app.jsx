@@ -5509,14 +5509,7 @@ function ScreenHome() {
 
       <DegradedBanner />
 
-      {!p.locationGranted && (
-        <button className="press row" onClick={() => dispatch({ type: "profile", patch: { locationGranted: true } })}
-          style={{ width: "calc(100% - 32px)", margin: "0 16px 16px", padding: "10px 14px", background: T.sand, borderRadius: 22, gap: 8, textAlign: "start", minHeight: 44 }}>
-          <MapPin size={15} color={T.green} style={{ flexShrink: 0 }} />
-          <span style={{ flex: 1, fontSize: 12.5, fontWeight: 700, lineHeight: 1.55 }}>{tx("نتائج", "Showing")} {NB[p.nb]?.name} {D("— فعّل الموقع لنتائج أدق")}</span>
-          <ChevronLeft size={15} color={T.green} />
-        </button>
-      )}
+      <AssistantCard />
 
       <div style={{ padding: "0 16px 18px" }}>
         <div style={{ fontSize: 12.5, fontWeight: 800, marginBottom: 8 }}>كم معك وقت الآن؟</div>
@@ -5533,6 +5526,94 @@ function ScreenHome() {
         هذا نموذج أولي. القيم التشغيلية والعروض والمساهمات توضيحية، ولا تمثل معلومات حيّة.
       </div>
     </div>
+  );
+}
+
+/* The Home assistant: a compact entry point to the same horizontal intelligence that
+   ranks Home, not a separate chatbot. «خصّص يومي» assembles a short day from the ranked
+   inventory; «اسأل» routes a question to the right community. */
+function AssistantCard() {
+  const { state, ctx } = useApp();
+  const p = state.profile;
+  const [dayOpen, setDayOpen] = useState(false);
+  const [askOpen, setAskOpen] = useState(false);
+  const nb = NB[p.nb]?.name || "";
+  const t = p.timeAvailable;
+  const timeAr = t === 60 ? "ساعة" : t === 120 ? "ساعتان" : t != null ? "المساء كله" : null;
+  const timeEn = t === 60 ? "an hour" : t === 120 ? "two hours" : t != null ? "the whole evening" : null;
+  const line = p.mode === "visitor"
+    ? tx("أول أيامك في مكة؟ أرتّب لك يومًا هادئًا يبدأ من أقرب ما يناسبك.", "New to Makkah? I'll line up a calm day that starts close to you.")
+    : timeAr
+    ? tx(`معك ${timeAr} في ${nb}؟ جهّزت لك خطوات قريبة تناسب اهتماماتك.`, `${timeEn[0].toUpperCase() + timeEn.slice(1)} in ${nb}? I've lined up nearby steps that fit your interests.`)
+    : tx(`${ctx.evening ? "مساؤك" : "يومك"} في ${nb} — أرتّبه لك حسب وقتك واهتماماتك.`, `Your ${ctx.evening ? "evening" : "day"} in ${nb}, arranged around your time and interests.`);
+  return (
+    <div style={{ padding: "0 16px 16px" }}>
+      <div className="up" style={{
+        position: "relative", overflow: "hidden", borderRadius: R.mediaLg, padding: "14px 14px 13px",
+        background: "linear-gradient(135deg, #1D5446 0%, #133B31 55%, #0E2E26 100%)", color: "#F6EFE0",
+        boxShadow: "0 14px 30px -18px rgba(14,46,38,.75)",
+      }}>
+        <div aria-hidden="true" style={{ position: "absolute", insetInlineEnd: -40, top: -50, width: 150, height: 150, borderRadius: 999, background: "radial-gradient(circle, rgba(212,176,106,.28), rgba(212,176,106,0) 70%)" }} />
+        <div className="row" style={{ gap: 11, alignItems: "flex-start", position: "relative" }}>
+          <div aria-hidden="true" style={{
+            width: 40, height: 40, flex: "0 0 40px", borderRadius: 999, display: "grid", placeItems: "center",
+            background: "linear-gradient(145deg, #E3C78C, #B8944A)", boxShadow: "0 0 0 3px rgba(227,199,140,.18)",
+          }}><Sparkles size={19} color="#133B31" strokeWidth={2.2} /></div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: 11, fontWeight: 800, color: "#E3C78C", letterSpacing: ".02em" }}>{tx("مساعد EyeMakkah", "EyeMakkah assistant")}</div>
+            <div style={{ fontSize: 14, fontWeight: 700, lineHeight: 1.6, marginTop: 3 }}>{line}</div>
+          </div>
+        </div>
+        <div className="row" style={{ gap: 8, marginTop: 12, position: "relative" }}>
+          <button className="press" onClick={() => setDayOpen(true)}
+            style={{ flex: 1, minHeight: 40, borderRadius: R.pill, background: "#F6EFE0", color: "#133B31", fontSize: 13.5, fontWeight: 800 }}>
+            <Sparkles size={14} style={{ verticalAlign: "-2px", marginInlineEnd: 6 }} />{tx("خصّص يومي", "Plan my day")}
+          </button>
+          <button className="press" onClick={() => setAskOpen(true)}
+            style={{ minHeight: 40, paddingInline: 18, borderRadius: R.pill, border: "1px solid rgba(246,239,224,.38)", color: "#F6EFE0", fontSize: 13.5, fontWeight: 800 }}>
+            {tx("اسأل", "Ask")}
+          </button>
+        </div>
+      </div>
+      <DaySheet open={dayOpen} onClose={() => setDayOpen(false)} />
+      <AskSheet open={askOpen} onClose={() => setAskOpen(false)} />
+    </div>
+  );
+}
+
+function DaySheet({ open, onClose }) {
+  const { state, ctx, dispatch, go, toast } = useApp();
+  const p = state.profile;
+  const picks = useMemo(() => (open ? rank(INVENTORY.filter(isPromotable), ctx, { limit: 3, maxPerCategory: 1 }) : []), [open, ctx]);
+  return (
+    <Sheet open={open} onClose={onClose} title={tx("يومك المقترح", "Your suggested day")}>
+      <div style={{ fontSize: 12.5, color: T.muted, lineHeight: 1.8, marginBottom: 10 }}>
+        {tx("ثلاث خطوات مرتّبة من وقتك وحيّك واهتماماتك. أضفها لخطتك أو افتح أيًّا منها.", "Three steps chosen from your time, district and interests. Add them to your plan or open any of them.")}
+      </div>
+      {picks.map((x, i) => (
+        <button key={x.o.id} className="press" onClick={() => { onClose(); go({ s: "object", id: x.o.id }); }}
+          style={{ display: "flex", width: "100%", gap: 11, textAlign: "start", padding: "10px 0", borderBottom: `1px solid ${T.lineSoft}`, alignItems: "center" }}>
+          <div style={{ width: 22, flex: "0 0 22px", height: 22, borderRadius: 99, background: T.sand, color: T.green, fontSize: 11.5, fontWeight: 800, display: "grid", placeItems: "center" }}>{ar(i + 1)}</div>
+          <div style={{ width: 52, flex: "0 0 52px" }}><Photo kind={x.o.scene} seed={x.o.id} photo={x.o.photo} ratio="1 / 1" radius={R.box} scrim="none" /></div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: 14, fontWeight: 800, lineHeight: 1.45 }}>{x.o.name}</div>
+            <MetaLine o={x.o} />
+            {x.why?.[0] && <div className="clamp1" style={{ fontSize: 11.5, color: T.ok, fontWeight: 700 }}>{x.why[0]}</div>}
+          </div>
+        </button>
+      ))}
+      {!p.locationGranted && (
+        <button className="press row" onClick={() => dispatch({ type: "profile", patch: { locationGranted: true } })}
+          style={{ width: "100%", gap: 8, marginTop: 12, padding: "10px 12px", borderRadius: R.ctl, background: T.sand, textAlign: "start", minHeight: 44 }}>
+          <MapPin size={15} color={T.green} style={{ flexShrink: 0 }} />
+          <span style={{ flex: 1, fontSize: 12.5, fontWeight: 700 }}>{tx("فعّل الموقع لاقتراحات أقرب", "Turn on location for closer suggestions")}</span>
+        </button>
+      )}
+      <button className="press" onClick={() => { picks.forEach((x) => dispatch({ type: "plan", obj: x.o.id })); toast(tx("أُضيفت إلى خطتي — لم يُحجز شيء بعد", "Added to my plan — nothing is booked yet")); onClose(); }}
+        style={{ width: "100%", marginTop: 14, padding: "13px", borderRadius: R.ctl, background: T.deep, color: "#F6EFE0", fontWeight: 800, fontSize: 14 }}>
+        {tx("أضف الخطوات لخطتي", "Add these steps to my plan")}
+      </button>
+    </Sheet>
   );
 }
 
