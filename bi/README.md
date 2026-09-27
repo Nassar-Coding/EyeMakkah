@@ -15,12 +15,18 @@ bi
 
 No backend, database, Python runtime, or environment variables are required.
 
-## Prototype capabilities
+## Phase 1 implemented
 
-- Arabic RTL + English LTR
-- Eight analytics screens
-- Shared filters for time period, area, category, and audience
-- Every shared filter recalculates the synthetic KPIs, charts, rates, tables, funnels, campaigns, opportunities, communities, and reports
+- Welcome + language selection flow
+- Arabic RTL and English LTR
+- Prototype sign-in screen (no live authentication backend)
+- Session-only sign-in and sign-out
+- In-platform user menu
+- Dynamic shared filters for period, area, category, and audience
+- Deterministic synthetic calculations across KPIs, charts, tables, funnels, campaigns, communities, opportunities, and reports
+- Diversified analytics charts: time-series line, donut, stacked audience, grouped demand/supply, bubble chart, funnel, and demand/supply scatter
+- Hover/tooltips on visual data points
+- Premium, restrained motion system with reduced-motion support
 - CSV export follows active filters and language
 - Synthetic demo data only; no PII and no live operational data
 - No pricing, investment, ROI, revenue projections, or financial-feasibility assumptions
