@@ -625,7 +625,7 @@
       const m=metrics(),acts=activityRows(),comms=communityRows(),camps=campaignRows(),terms=termRows(),
         filteredOpp=scaledOppRows(OPPS.filter(r=>(state.area==="مكة المكرمة"||r.area===state.area)&&(state.category==="الكل"||r.category===state.category))),
         allOpp=scaledOppRows(OPPS.filter(r=>state.category==="الكل"||r.category===state.category)),
-        areaGrowth=AREAS.map(a=>({area:a,growth:scaledRate(.04+(AF[a]-.68)*.18,a+"agent-area")})).sort((a,b)=>b.growth-a.growth),
+        areaGrowth=(state.area==="مكة المكرمة"?AREAS:[state.area]).map(a=>({area:a,growth:scaledRate(.04+(AF[a]-.68)*.18,a+"agent-area")})).sort((a,b)=>b.growth-a.growth),
         catSet=state.category==="الكل"?CATS:[state.category],
         catRank=catSet.map(c=>({category:c,value:Math.round(m.interactions*CF[c]*rowNoise(c+"agent-cat"))})).sort((a,b)=>b.value-a.value),
         areaProfiles=AREAS.map(a=>{const oo=scaledOppRows(OPPS.filter(o=>o.area===a&&(state.category==="الكل"||o.category===state.category))),d=oo.length?Math.round(sum(oo,"demand_index")/oo.length):0,g=oo.length?sum(oo,"growth")/oo.length:0,top=oo.slice().sort((x,y)=>y.demand_index-x.demand_index)[0],sig=oo.slice().sort((x,y)=>y.score-x.score)[0];return {area:a,interest:d,growth:g,top_category:top?top.category:"—",peak_time:["العوالي","العزيزية","الشوقية"].includes(a)?"المساء 7–10 م":"العصر 4–7 م",signal:sig}}),
