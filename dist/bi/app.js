@@ -70,6 +70,7 @@
     chevronDown:'<path d="m6 9 6 6 6-6"/>',
     settings:'<path d="M12 15.5A3.5 3.5 0 1 0 12 8a3.5 3.5 0 0 0 0 7.5Z"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.88l.06.06-2.83 2.83-.06-.06A1.7 1.7 0 0 0 15 19.4a1.7 1.7 0 0 0-1 .6 1.7 1.7 0 0 0-.4 1.1V21H9v-.1A1.7 1.7 0 0 0 8.6 20a1.7 1.7 0 0 0-1-.6 1.7 1.7 0 0 0-1.88.34l-.06.06-2.83-2.83.06-.06A1.7 1.7 0 0 0 3.23 15a1.7 1.7 0 0 0-.6-1 1.7 1.7 0 0 0-1.1-.4H1V9h.1A1.7 1.7 0 0 0 2 8.6a1.7 1.7 0 0 0 .6-1 1.7 1.7 0 0 0-.34-1.88l-.06-.06 2.83-2.83.06.06A1.7 1.7 0 0 0 7 3.23a1.7 1.7 0 0 0 1-.6 1.7 1.7 0 0 0 .4-1.1V1h4.6v.1a1.7 1.7 0 0 0 .4 1.1 1.7 1.7 0 0 0 1 .6 1.7 1.7 0 0 0 1.88-.34l.06-.06 2.83 2.83-.06.06A1.7 1.7 0 0 0 18.77 7a1.7 1.7 0 0 0 .6 1 1.7 1.7 0 0 0 1.1.4H21V13h-.1a1.7 1.7 0 0 0-1.1.4 1.7 1.7 0 0 0-.4 1Z"/>',
     logOut:'<path d="M10 17l5-5-5-5"/><path d="M15 12H3"/><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/>',
+    logOutRtl:'<path d="M14 17l-5-5 5-5"/><path d="M9 12h12"/><path d="M9 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h4"/>',
     sparkles:'<path d="m12 3-1.2 3.3L7.5 7.5l3.3 1.2L12 12l1.2-3.3 3.3-1.2-3.3-1.2L12 3Z"/><path d="m5 14-.8 2.2L2 17l2.2.8L5 20l.8-2.2L8 17l-2.2-.8L5 14Z"/><path d="m19 13-.8 2.2L16 16l2.2.8L19 19l.8-2.2L22 16l-2.2-.8L19 13Z"/>',
     download:'<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/><path d="M12 15V3"/>',
     compass:'<circle cx="12" cy="12" r="10"/><path d="m16 8-2.4 5.6L8 16l2.4-5.6L16 8Z"/>',
@@ -77,7 +78,7 @@
     refreshCw:'<path d="M21 12a9 9 0 0 0-15.2-6.5L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 15.2 6.5L21 16"/><path d="M16 16h5v5"/>'
   };
   function iconSvg(name,size){
-    const p=ICON_PATHS[name]||ICON_PATHS.dashboard,s=size||18,directional=name==="logOut"?" directional-icon":"";
+    const key=name==="logOut"&&state.lang==="ar"?"logOutRtl":name,p=ICON_PATHS[key]||ICON_PATHS.dashboard,s=size||18,directional=name==="logOut"?" directional-icon":"";
     return '<svg class="ui-icon'+directional+'" aria-hidden="true" viewBox="0 0 24 24" width="'+s+'" height="'+s+'" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">'+p+'</svg>'
   }
   function wordmark(size,light){

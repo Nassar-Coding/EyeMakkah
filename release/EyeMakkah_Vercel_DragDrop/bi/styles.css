@@ -458,3 +458,12 @@ html[dir="ltr"] .subtitle,html[dir="ltr"] .panel-copy,html[dir="ltr"] .state-bod
   .shim,.loading-strip span{animation:none!important;background:var(--sand)!important}.page-motion,.user-pop,.loading-state{animation:none!important}
   button:active:not(:disabled),.state-action:active{transform:none!important}
 }
+
+
+/* PATCH 03 final QA fixes — exact fixes verified in rendered Chromium */
+.user-menu summary.user-trigger{width:48px;min-width:48px;max-width:48px}
+@media (max-width:860px){
+  .mobile-tools .user-menu summary.user-trigger{width:44px;min-width:44px;max-width:44px}
+}
+/* Direction is encoded in the logout SVG geometry to avoid browser-specific SVG transform behavior. */
+.directional-icon{transform:none!important;transform-box:fill-box;transform-origin:center}
