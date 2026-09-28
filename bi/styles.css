@@ -467,3 +467,49 @@ html[dir="ltr"] .subtitle,html[dir="ltr"] .panel-copy,html[dir="ltr"] .state-bod
 }
 /* Direction is encoded in the logout SVG geometry to avoid browser-specific SVG transform behavior. */
 .directional-icon{transform:none!important;transform-box:fill-box;transform-origin:center}
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   AGENT PHASE 2 — free-text assistant + contextual suggestions
+   ═══════════════════════════════════════════════════════════════════════════ */
+.agent-free{padding:16px 17px 15px}
+.agent-free .ai-head{margin-bottom:13px}
+.agent-free .ai-copy p{max-width:720px}
+.agent-bank-loading{padding:18px 0 7px;color:rgba(248,242,228,.62);font-size:12.5px}
+.agent-thread{display:grid;gap:9px;margin:4px 0 12px;max-height:330px;overflow:auto;scrollbar-width:thin}
+.agent-welcome{font-size:13px;line-height:1.75;color:rgba(248,242,228,.72);padding:6px 0 2px}
+.agent-message{display:flex;gap:8px;align-items:flex-start;max-width:88%}
+.agent-message.user{margin-inline-start:auto;flex-direction:row-reverse}
+.agent-message.assistant{margin-inline-end:auto}
+.agent-avatar{width:26px;height:26px;border-radius:999px;display:grid;place-items:center;flex:0 0 auto}
+.agent-message.assistant .agent-avatar{background:linear-gradient(135deg,var(--brass-soft),var(--gold));color:var(--deep)}
+.agent-message.user .agent-avatar{background:rgba(255,255,255,.10);color:#F8F2E4}
+.agent-bubble{padding:9px 11px;border-radius:12px;font-size:13px;line-height:1.68}
+.agent-message.assistant .agent-bubble{background:rgba(255,255,255,.075);border:1px solid rgba(216,190,134,.17);color:#F8F2E4}
+.agent-message.user .agent-bubble{background:rgba(216,190,134,.14);border:1px solid rgba(216,190,134,.22);color:#F8F2E4}
+.agent-message.assistant .agent-bubble b{color:var(--brass-soft)}
+.agent-typing{display:inline-flex;gap:4px;align-items:center;min-height:18px}
+.agent-typing i{width:5px;height:5px;border-radius:999px;background:var(--brass-soft);opacity:.45;animation:agentDot 1s ease-in-out infinite}
+.agent-typing i:nth-child(2){animation-delay:.12s}.agent-typing i:nth-child(3){animation-delay:.24s}
+.agent-suggestions{display:flex;flex-wrap:wrap;gap:7px;margin:3px 0 10px}
+.agent-suggestion{border:1px solid rgba(216,190,134,.24);background:rgba(255,255,255,.055);color:#F8F2E4;border-radius:999px;padding:7px 11px;min-height:34px;font-size:11.5px;font-weight:700;cursor:pointer;transition:background .16s ease,border-color .16s ease,transform .16s ease}
+.agent-suggestion:hover{background:rgba(216,190,134,.13);border-color:rgba(216,190,134,.45)}
+.agent-suggestion:active{transform:scale(.98)}
+.agent-form{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:end}
+.agent-input{width:100%;min-height:44px;max-height:112px;resize:none;border:1px solid rgba(216,190,134,.25);background:rgba(255,255,255,.07);color:#F8F2E4;border-radius:var(--r-ctl);padding:11px 12px;font-size:13px;line-height:1.55;outline:none}
+.agent-input::placeholder{color:rgba(248,242,228,.47)}
+.agent-input:focus{border-color:rgba(216,190,134,.62);box-shadow:0 0 0 3px rgba(216,190,134,.08)}
+.agent-send{width:44px;height:44px;border:1px solid var(--brass-soft);background:linear-gradient(135deg,var(--brass-soft),var(--gold));color:var(--deep);border-radius:var(--r-ctl);display:grid;place-items:center;cursor:pointer}
+.agent-send:disabled{opacity:.42;cursor:default}
+.agent-foot{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:9px;font-size:10px;line-height:1.55;color:rgba(248,242,228,.48)}
+.agent-context{color:rgba(216,190,134,.72)}
+.agent-error{font-size:12px;color:#F2C8B9;padding:8px 0}
+@keyframes agentDot{0%,100%{opacity:.28;transform:translateY(0)}50%{opacity:.9;transform:translateY(-2px)}}
+@media(max-width:620px){
+  .agent-free{padding:14px}
+  .agent-message{max-width:96%}
+  .agent-form{grid-template-columns:minmax(0,1fr) 44px}
+  .agent-suggestions{flex-wrap:nowrap;overflow-x:auto;padding-bottom:3px}
+  .agent-suggestion{white-space:nowrap}
+}
+@media(prefers-reduced-motion:reduce){.agent-typing i{animation:none!important}.agent-suggestion{transition:none!important}}
