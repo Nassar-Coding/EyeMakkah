@@ -85,6 +85,17 @@
     return best
   }
   function matchIntent(q,lang){
+    const nq=norm(q),short=toks(q).length<=5;
+    if(ctx.lastStandaloneIntent&&short){
+      const quick=[
+        ["followup_same_metric_visitors",["زوار","visitor","visitors"]],
+        ["followup_same_metric_residents",["سكان","سكان مكه","resident","residents"]],
+        ["followup_same_metric_period",["7 ايام","30 يوم","3 اشهر","12 شهر","اسبوع","شهر","سنه","last 7","last 30","3 months","12 months","week","month","year"]],
+        ["followup_same_metric_area",["العزيزيه","الشوقيه","العوالي","النسيم","الزاهر","الشرائع","بطحاء","aziziyah","awali","shawqiyah","naseem","zahir","shara","batha"]],
+        ["followup_same_metric_category",["مطاعم","مقاهي","انشطه","تجارب","تسوق","ترفيه","ثقافه","خدمات","مجتمعات","ضيافه","restaurants","cafes","activities","shopping","entertainment","culture","services","communities","hospitality"]]
+      ];
+      for(const [id,terms] of quick){if(terms.some(x=>nq.includes(norm(x)))){const hit=intents.find(x=>x.id===id);if(hit&&contextAvailable(hit))return {intent:hit,score:2}}}
+    }
     let best=null,bs=-1;
     for(const it of intents){const s=scoreIntent(it,q,lang);if(s>bs){bs=s;best=it}}
     if(!best||bs<.43)best=intents.find(x=>x.id==="fallback_unclear");
@@ -92,6 +103,11 @@
   }
   function chooseFixed(it,lang,q){
     const arr=((it.answer||{}).responses||{})[lang]||[];
+    if(it.id==="greeting_general"&&arr.length){
+      const nq=norm(q);
+      if(lang==="ar"&&nq.includes("السلام"))return arr[2]||arr[0];
+      return arr[0];
+    }
     return arr.length?arr[Math.floor(h01(q+"|"+it.id)*arr.length)%arr.length]:say("ما عندي إجابة جاهزة لهذا السؤال ضمن النموذج الحالي.","I don't have a prepared answer for that question in the current prototype.",lang)
   }
   function snapshot(){return A.snapshot()}
@@ -211,7 +227,7 @@
       if(h==="reports_available")text=say("التقارير المتاحة: التقرير الشهري للطلب والاهتمام، تحليل مناطق مكة، تقرير المجتمعات والاهتمامات، أداء الحملات والعروض، وتقرير الفرص والفجوات.","Available reports: Monthly Demand & Interest, Makkah Area Analysis, Communities & Interests, Campaigns & Offers Performance, and Opportunities & Gaps.",lang)
       else if(h==="reports_current_summary")text=say("ملخص التقارير: ","Reports summary: ",lang)+num(m.searches)+" "+say("بحث · ","searches · ",lang)+num(m.plans)+" "+say("خطتي · ","My Plan · ",lang)+num(m.actions)+" "+say("إجراء.","actions.",lang)
       else if(h==="reports_filter_scope"||h==="cross_page_filter_effect")text=name(st.period,lang)+" · "+name(st.area,lang)+" · "+name(st.category,lang)+" · "+name(st.audience,lang)
-      else if(h==="reports_export_csv"){A.downloadCsv();text=say("تم تشغيل تصدير CSV وفق الفلاتر الحالية.","CSV export was triggered using the active filters.",lang)}
+      else if(h==="reports_export_csv"){if(st.page==="التقارير"){A.downloadCsv();text=say("تم تشغيل تصدير CSV وفق الفلاتر الحالية.","CSV export was triggered using the active filters.",lang)}else{text=say("تصدير CSV متاح من صفحة «التقارير». انتقل إلى التقارير وسيُطبّق التصدير على الفلاتر الحالية.","CSV export is available from the Reports page. Open Reports and the export will use the current filters.",lang)}}
       else if(h==="reports_export_contents")text=say("ملف CSV يتضمن المنطقة، الفئة، الجمهور، التفاعلات، المستخدمين النشطين، البحث، العرض، الحفظ، «خطتي»، والانتقال للإجراء.","The CSV includes area, category, audience, interactions, active users, searches, views, saves, My Plan additions, and action handoffs.",lang)
       else if(h==="reports_row_breakdown"){const rows=s.reportRows.slice(0,5);text=rows.map(r=>"<b>"+name(r.area,lang)+" · "+name(r.category,lang)+"</b> — "+num(r.interactions)+" "+say("تفاعل","interactions",lang)).join("<br>")}
       else if(h==="reports_demo_disclosure")text=say("هذه تقارير نموذج أولي مبنية على بيانات اصطناعية/توضيحية، وليست تقارير تشغيلية حية أو بيانات أفراد.","These are prototype reports based on synthetic/illustrative data, not live operational reports or individual-level data.",lang)
@@ -298,7 +314,7 @@
       history.push({role:"assistant",html:result.html||""});history=history.slice(-8);
       if(it){
         ctx.lastIntent=it.id;
-        if(it.category!=="conversation_context"&&it.category!=="social"&&it.category!=="fallback"){ctx.lastStandaloneIntent=it.id;ctx.lastQuery=q}
+        if(["dashboard","demand","areas","activities","communities","campaigns","opportunities","reports","cross_page"].includes(it.category)){ctx.lastStandaloneIntent=it.id;ctx.lastQuery=q}
         if(result.html)ctx.lastResult=result.html;
         if(result.ranked&&result.ranked.length)ctx.lastRankedResults=result.ranked;
         if(result.entities&&result.entities.length)ctx.lastEntities=result.entities;
