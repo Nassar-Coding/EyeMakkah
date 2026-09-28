@@ -191,3 +191,173 @@ html[dir="ltr"] .sidebar{border-right:1px solid var(--line);border-left:0}html[d
 @keyframes emShellUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
 @keyframes emLanguageFlow{from{opacity:0;transform:scaleX(.25)}to{opacity:.7;transform:scaleX(1)}}
 @media (prefers-reduced-motion:reduce){.entry-content,.login-card,.language-gate:before{animation:none!important}.entry-primary,.entry-secondary,.language-option,.nav button{transition:none!important}}
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   PATCH 02 — EyeMakkah Analytics Experience
+   Shared component-level visual alignment; analytics logic is unchanged.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* User menu — overlay is one of the few places where elevation is intentional */
+.user-trigger{width:auto;min-width:48px;height:42px;padding:2px 5px 2px 3px;border-radius:var(--r-pill);box-shadow:none}
+.avatar{width:36px;height:36px;font-size:12.5px}
+.user-pop{width:228px;background:var(--paper);border:1px solid var(--line);border-radius:var(--r-box);box-shadow:0 18px 42px -24px rgba(38,28,16,.42);padding:7px}
+.user-pop-name{display:grid;gap:2px;padding:8px 9px 10px;border-bottom:1px solid var(--line-soft);margin-bottom:5px}
+.user-pop-name strong{font-size:12.5px;font-weight:800;color:var(--deep)}
+.user-pop-name small{font-family:var(--font-en);font-size:10.5px;font-weight:500;color:var(--muted);direction:ltr;text-align:start}
+.menu-row{min-height:44px;width:100%;display:flex;align-items:center;gap:9px;border:0;background:transparent;text-align:start;padding:8px 9px;border-radius:var(--r-ctl);color:var(--text);cursor:pointer;font-size:12.5px;font-weight:600}
+.menu-row:hover,.menu-row.selected{background:rgba(61,114,94,.07);color:var(--green)}
+.menu-row.selected{font-weight:800}
+.menu-row.danger{color:var(--clay)}.menu-row.danger:hover{background:rgba(166,95,69,.07);color:var(--warn)}
+.menu-icon{width:20px;display:grid;place-items:center;color:inherit}.menu-separator{height:1px;background:var(--line-soft);margin:5px 7px}
+
+/* Filters — control language from Phone App; wrappers are not cards */
+.filters{display:flex;flex-wrap:wrap;gap:10px;margin:0 0 22px;padding:0}
+.filter{flex:1 1 180px;min-width:155px;background:transparent;border:0;border-radius:0;padding:0}
+.filter label{display:block;margin:0 0 5px;font-size:12px;font-weight:700;color:var(--muted);line-height:1.35}
+.filter select{width:100%;height:42px;border:1px solid var(--line);border-radius:var(--r-ctl);background:var(--paper);color:var(--deep);font-size:13px;font-weight:700;outline:none;padding:0 11px;box-shadow:none;transition:border-color .14s ease,background .14s ease}
+.filter select:hover{border-color:rgba(23,70,58,.27)}
+.filter select:focus{border-color:rgba(23,70,58,.58);box-shadow:0 0 0 3px rgba(23,70,58,.06)}
+.area-selector,.campaign-selector{margin:0 0 18px;display:flex;align-items:center;gap:9px}
+.area-selector label,.campaign-selector label{font-size:12px;color:var(--muted);font-weight:700}
+.area-selector select,.campaign-selector select{height:42px;background:var(--paper);border:1px solid var(--line);border-radius:var(--r-ctl);padding:0 11px;color:var(--deep);font-size:13px;font-weight:700;outline:none}
+.area-selector select:focus,.campaign-selector select:focus{border-color:rgba(23,70,58,.58);box-shadow:0 0 0 3px rgba(23,70,58,.06)}
+
+/* KPI area — one structural surface with lineSoft divisions */
+.kpi-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:0;background:var(--paper);border:1px solid var(--line-soft);border-radius:var(--r-box);overflow:hidden;margin-bottom:18px}
+.kpi-card{background:transparent;border:0;border-radius:0;padding:16px 17px 15px;min-height:112px;box-shadow:none;position:relative;transition:none}
+.kpi-grid>.kpi-card+.kpi-card{border-inline-start:1px solid var(--line-soft)}
+.kpi-card:hover{transform:none;box-shadow:none}
+.kpi-label{color:var(--muted);font-size:12.5px;font-weight:600;line-height:1.4;margin-bottom:7px}
+.kpi-value{color:var(--deep);font-size:28px;font-weight:800;line-height:1.08;overflow-wrap:anywhere}
+.kpi-value.text{font-size:16px;line-height:1.4}
+.kpi-meta{display:flex;align-items:baseline;gap:7px;flex-wrap:wrap;margin-top:9px}
+.delta{font-size:11.5px;font-weight:800;margin:0;direction:ltr}.delta.up{color:var(--ok)}.delta.down{color:var(--warn)}
+.kpi-note{font-size:10.5px;font-weight:500;color:var(--muted);margin:0}
+html[dir="ltr"] .kpi-card{text-align:left}html[dir="rtl"] .kpi-card{text-align:right}
+.grid-4 .kpi-card{background:transparent;border:0;border-radius:0;min-height:96px;padding:13px 14px}
+.grid-4 .kpi-card+.kpi-card{border-inline-start:1px solid var(--line-soft)}
+
+/* Panels / section surfaces — flatter, grouped, less floating chrome */
+.grid-2,.grid-2.equal,.grid-2.reverse{gap:0;margin-top:18px;background:var(--paper);border:1px solid var(--line-soft);border-radius:var(--r-box);overflow:hidden}
+.grid-2>.panel{background:transparent;border:0;border-radius:0;box-shadow:none;padding:18px 19px}
+.grid-2>.panel+.panel{border-inline-start:1px solid var(--line-soft)}
+.panel{background:var(--paper);border:1px solid var(--line-soft);border-radius:var(--r-box);padding:18px 19px;box-shadow:none;min-width:0;margin-top:18px}
+.panel:hover{transform:none;box-shadow:none}
+.panel-head{margin-bottom:13px}.panel-title{font-size:15.5px;font-weight:800;line-height:1.4;color:var(--text);margin:0}
+.panel-copy{font-size:12px;font-weight:500;color:var(--muted);margin:4px 0 0;line-height:1.6}
+.panel-body{min-width:0}
+.grid-4{gap:0;margin-top:0;background:transparent}
+.community-list,.signal{background:transparent}
+.community-row,.signal{border-bottom-color:var(--line-soft)}
+
+/* Charts — flatter marks, Phone palette, unified type and grid language */
+.chart{min-height:250px}.chart svg{min-height:250px}
+.chart text,.bubble-chart text,.scatter-chart text{font-family:var(--font-ui)!important;font-size:11px;fill:var(--muted)}
+html[dir="ltr"] .chart text,html[dir="ltr"] .bubble-chart text,html[dir="ltr"] .scatter-chart text{font-family:var(--font-en)!important}
+.legend{gap:13px;font-size:11.5px;font-weight:500;color:var(--muted);margin-bottom:10px}
+.legend span{gap:6px}.legend i,.stack-legend i,.group-key i{width:8px;height:8px;border-radius:2px}
+.bar-list{gap:10px}.bar-row{font-size:12px}.bar-track{height:9px;background:rgba(232,221,201,.72);border-radius:6px}.bar-fill{border-radius:5px}
+.funnel{gap:7px}.funnel-step{height:36px;border-radius:6px;font-size:12px;font-weight:700;box-shadow:none}
+.funnel-caption{font-size:10.5px;color:var(--muted)}
+.trend-path{filter:none}.trend-dot,.scatter-dot,.bubble-dot{filter:none;opacity:.74}
+.trend-dot:hover,.scatter-dot:hover,.bubble-dot:hover{opacity:1;filter:none}
+.donut:after{background:var(--paper)}.donut-legend{font-size:11.5px}.donut-legend i{width:8px;height:8px;border-radius:2px}
+.stack-track{height:40px;border-radius:6px;background:rgba(232,221,201,.72)}.stack-seg{font-size:11px;font-weight:800}
+.grouped-pair i{border-radius:5px 5px 2px 2px}.grouped-bars{border-bottom-color:var(--line-soft)}
+.scatter-chart svg,.bubble-chart svg{overflow:visible}
+
+/* One shared, styled analytics tooltip */
+.chart-tooltip{position:fixed;z-index:90;pointer-events:none;max-width:280px;padding:8px 10px;border-radius:10px;background:var(--paper);border:1px solid var(--line);box-shadow:0 14px 34px -20px rgba(38,28,16,.5);color:var(--text);font-size:12px;font-weight:600;line-height:1.45;opacity:0;transform:translateY(3px);transition:opacity .11s ease;white-space:normal}
+.chart-tooltip.show{opacity:1;transform:none}
+
+/* Tables — preserve BI density and sticky/header behavior */
+.table-wrap{overflow:auto;border:1px solid var(--line-soft);border-radius:var(--r-box);box-shadow:none;background:var(--paper)}
+.data-table{width:100%;border-collapse:collapse;min-width:680px;font-size:12px;background:var(--paper)}
+.data-table th,.data-table td{padding:10px 11px;border-bottom:1px solid var(--line-soft);text-align:start;vertical-align:middle}
+.data-table th{position:sticky;top:0;background:rgba(232,221,201,.58);color:var(--deep);font-size:12px;font-weight:800;z-index:2}
+.data-table tbody tr:last-child td{border-bottom:0}.data-table tbody tr:hover td{background:rgba(232,221,201,.22)}
+.data-table .num-cell{font-family:var(--font-en);text-align:end;font-variant-numeric:tabular-nums}
+html[dir="ltr"] .data-table{font-family:var(--font-en)}
+html[dir="rtl"] .data-table{font-family:var(--font-ar)}
+html[dir="rtl"] .data-table .num-cell,html[dir="ltr"] .data-table .num-cell{direction:ltr}
+
+/* Analytical insights — integrated, flat, brass rule only */
+.insight{background:rgba(61,114,94,.055);border:0;border-inline-start:3px solid var(--brass-soft);border-radius:var(--r-box);padding:14px 16px;margin:18px 0;box-shadow:none}
+.insight-label{color:#8B6D35;font-size:11.5px;font-weight:800}
+.insight-text{color:var(--deep);font-size:14.5px;font-weight:800;line-height:1.72;margin-top:4px}
+.insight-reasons{color:var(--muted);font-size:11.5px;font-weight:500;line-height:1.65;margin-top:6px}
+
+/* EyeMakkah Analytics Assistant — same AssistantCard language, not a separate AI product */
+.ai-agent{margin:18px 0;background:linear-gradient(135deg,#1D5446 0%,#133B31 55%,#0E2E26 100%);color:#F6EFE0;border-radius:var(--r-media-lg);padding:17px 18px 16px;border:0;box-shadow:0 14px 30px -22px rgba(14,46,38,.75);overflow:hidden;position:relative}
+.ai-agent:after{display:none!important;animation:none!important}
+.ai-accent{position:absolute;inset-inline-end:-40px;top:-52px;width:160px;height:160px;border-radius:var(--r-pill);background:radial-gradient(circle,rgba(216,190,134,.25),rgba(216,190,134,0) 70%);pointer-events:none}
+.ai-head{display:flex;align-items:flex-start;gap:11px;position:relative;z-index:1}
+.ai-symbol{width:40px;height:40px;flex:0 0 40px;border-radius:var(--r-pill);display:grid;place-items:center;background:linear-gradient(145deg,#E3C78C,var(--gold));color:#133B31;box-shadow:0 0 0 3px rgba(227,199,140,.16)}
+.ai-copy{min-width:0}.ai-head h2{margin:1px 0 3px;font-size:16px;font-weight:800;line-height:1.4}.ai-head p{margin:0;color:#D3CBBB;font-size:11.5px;font-weight:500;line-height:1.65;max-width:760px}
+.ai-badge,.ai-orb{display:none!important}.ai-grid{display:grid;grid-template-columns:minmax(240px,.7fr) minmax(0,1.3fr);gap:12px;margin-top:14px;position:relative;z-index:1}
+.ai-questions{display:grid;gap:5px}
+.ai-questions button{min-height:38px;border:1px solid rgba(246,239,224,.14);background:rgba(246,239,224,.045);color:#F1ECE2;text-align:start;padding:8px 10px;border-radius:var(--r-ctl);cursor:pointer;font-size:11.5px;font-weight:600;line-height:1.45;transition:background .13s ease,border-color .13s ease,color .13s ease}
+.ai-questions button:hover{background:rgba(246,239,224,.075);border-color:rgba(246,239,224,.24)}
+.ai-questions button.active{background:rgba(227,199,140,.14);border-color:rgba(227,199,140,.48);color:#FFF8E9;font-weight:800}
+.ai-answer{background:rgba(246,239,224,.07);border:1px solid rgba(246,239,224,.10);border-radius:var(--r-box);padding:15px;min-height:156px;display:flex;flex-direction:column;justify-content:center;transition:opacity .13s ease}
+.ai-answer.refreshing{opacity:.28;transform:none}
+.ai-answer-label{font-size:10.5px;color:#E3C78C;font-weight:800;margin-bottom:7px}
+.ai-answer-text{font-size:14.5px;font-weight:700;line-height:1.75;color:#F6EFE0}.ai-answer-text b{color:#F0D58D}
+.ai-foot{font-size:10px;color:#BFB6A5;margin-top:12px;line-height:1.55}
+
+/* Reports — open structural rows rather than repeated cards */
+.report-summary{gap:16px;margin-bottom:18px}
+.report-kpis{display:grid;grid-template-columns:1fr;background:var(--paper);border:1px solid var(--line-soft);border-radius:var(--r-box);overflow:hidden}
+.report-kpis .kpi-card{min-height:88px;padding:13px 15px}.report-kpis .kpi-card+.kpi-card{border-top:1px solid var(--line-soft)}
+.report-summary>.panel{margin-top:0}
+.reports-list{background:var(--paper);border:1px solid var(--line-soft);border-radius:var(--r-box);overflow:hidden;margin:18px 0}
+.report{border:0;border-radius:0;background:transparent;margin:0;overflow:hidden;border-bottom:1px solid var(--line-soft);box-shadow:none}
+.report:last-child{border-bottom:0}
+.report summary{cursor:pointer;min-height:46px;padding:11px 14px;font-size:13px;font-weight:800;color:var(--deep);display:flex;align-items:center;justify-content:space-between;gap:12px}
+.report summary::-webkit-details-marker{display:none}.report-chevron{color:var(--muted);transition:transform .14s ease}.report[open] .report-chevron{transform:rotate(180deg)}
+.report-body{padding:0 14px 14px;color:var(--muted);font-size:12px;line-height:1.7}
+.report-body small{font-size:11px;color:var(--muted)}
+.report-export{background:var(--paper);border:1px solid var(--line-soft);border-radius:var(--r-box);padding:17px;margin-top:18px}
+.report-export-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-bottom:12px}
+.download-btn{min-height:40px;border:1px solid var(--line);background:var(--paper);color:var(--deep);border-radius:var(--r-ctl);padding:8px 12px;cursor:pointer;font-size:12.5px;font-weight:800;display:inline-flex;align-items:center;gap:7px;white-space:nowrap;box-shadow:none}
+.download-btn:hover{border-color:rgba(23,70,58,.35);background:rgba(61,114,94,.045)}
+
+/* Existing chart animations remain one-time and purposeful; no hover lift. */
+.kpi-card,.panel{transition:none}
+.bar-fill{animation-duration:.42s}.trend-path{animation-duration:.72s}.trend-dot,.scatter-dot,.bubble-dot{animation-duration:.32s}.funnel-step{animation-duration:.35s}.donut{animation-duration:.55s}
+
+/* Narrow layouts stay analytical; Patch 03 will complete the final responsive pass. */
+@media (max-width:1180px){
+  .kpi-grid{grid-template-columns:repeat(3,1fr)}
+  .kpi-grid>.kpi-card:nth-child(4){border-inline-start:0;border-top:1px solid var(--line-soft)}
+  .kpi-grid>.kpi-card:nth-child(n+4){border-top:1px solid var(--line-soft)}
+}
+@media (max-width:860px){
+  .filters{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+  .grid-2,.grid-2.equal,.grid-2.reverse{grid-template-columns:1fr}
+  .grid-2>.panel+.panel{border-inline-start:0;border-top:1px solid var(--line-soft)}
+  .ai-grid{grid-template-columns:1fr}.ai-questions{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .report-export-head{align-items:center}
+}
+@media (max-width:620px){
+  .filters{grid-template-columns:1fr}.filter{min-width:0}
+  .kpi-grid{grid-template-columns:repeat(2,1fr)}
+  .kpi-grid>.kpi-card{border-top:0}
+  .kpi-grid>.kpi-card:nth-child(even){border-inline-start:1px solid var(--line-soft)}
+  .kpi-grid>.kpi-card:nth-child(odd){border-inline-start:0}
+  .kpi-grid>.kpi-card:nth-child(n+3){border-top:1px solid var(--line-soft)}
+  .ai-questions{grid-template-columns:1fr}
+  .report-export-head{display:grid}
+}
+@media (max-width:520px){
+  .kpi-value{font-size:24px}.kpi-card{padding:14px 13px;min-height:104px}
+  .panel{padding:15px}.grid-2>.panel{padding:15px}
+  .report-export{padding:14px}
+}
+
+/* RTL/LTR details for analytics components */
+html[dir="ltr"] .filter select,html[dir="ltr"] .area-selector select,html[dir="ltr"] .campaign-selector select{text-align:left}
+html[dir="rtl"] .filter select,html[dir="rtl"] .area-selector select,html[dir="rtl"] .campaign-selector select{text-align:right}
+html[dir="ltr"] .menu-row,html[dir="ltr"] .ai-questions button{text-align:left}
+html[dir="rtl"] .menu-row,html[dir="rtl"] .ai-questions button{text-align:right}
