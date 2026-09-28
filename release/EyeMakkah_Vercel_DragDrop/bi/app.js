@@ -75,7 +75,8 @@
     download:'<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/><path d="M12 15V3"/>',
     compass:'<circle cx="12" cy="12" r="10"/><path d="m16 8-2.4 5.6L8 16l2.4-5.6L16 8Z"/>',
     alertTriangle:'<path d="m21.73 18-8-14a2 2 0 0 0-3.46 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/>',
-    refreshCw:'<path d="M21 12a9 9 0 0 0-15.2-6.5L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 15.2 6.5L21 16"/><path d="M16 16h5v5"/>'
+    refreshCw:'<path d="M21 12a9 9 0 0 0-15.2-6.5L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 15.2 6.5L21 16"/><path d="M16 16h5v5"/>',
+    send:'<path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/>'
   };
   function iconSvg(name,size){
     const key=name==="logOut"&&state.lang==="ar"?"logOutRtl":name,p=ICON_PATHS[key]||ICON_PATHS.dashboard,s=size||18,directional=name==="logOut"?" directional-icon":"";
@@ -242,28 +243,10 @@
   }
 
 
-  const AI_QUESTIONS=[
-    ["top-category","ما أكثر الفئات طلبًا؟","What categories have the highest demand?"],
-    ["top-area","أي منطقة تشهد أعلى نمو في الاهتمام؟","Which area has the fastest interest growth?"],
-    ["largest-gap","أين تظهر أكبر فجوة بين الطلب والعرض؟","Where is the largest gap between demand and supply?"],
-    ["top-activity","ما أكثر الأنشطة إضافة إلى «خطتي»؟","Which activity is added to My Plan most often?"],
-    ["audience","كيف يختلف السكان عن الزوار؟","How do residents and visitors differ?"],
-    ["watch-signal","ما أبرز إشارة تحتاج متابعة؟","What signal needs the most attention?"]
-  ];
-  let aiQuestion="top-category";
   let uiIssue=null;
-  function aiAnswer(id){
-    const m=metrics(),op=scaledOppRows(OPPS.filter(r=>(state.area==="مكة المكرمة"||r.area===state.area)&&(state.category==="الكل"||r.category===state.category))).sort((a,b)=>b.score-a.score),acts=activityRows(),areas=(state.area==="مكة المكرمة"?AREAS:[state.area]).map(a=>({area:a,growth:scaledRate(.04+(AF[a]-.68)*.18,a+"ai")})).sort((a,b)=>b.growth-a.growth),cats=(state.category==="الكل"?CATS:[state.category]).map(c=>({category:c,value:Math.round(m.interactions*CF[c]*rowNoise(c+"ai"))})).sort((a,b)=>b.value-a.value),gaps=op.slice().sort((a,b)=>(b.demand_index-b.supply_index)-(a.demand_index-a.supply_index)),topAct=acts.slice().sort((a,b)=>b.plans-a.plans)[0],residents=Math.round(m.searches*.58),visitors=Math.round(m.searches*.42);
-    if(id==="top-category"){const x=cats[0];return tr("الفئة الأعلى طلبًا ضمن الفلاتر الحالية هي <b>"+esc(x?x.category:"—")+"</b>، مع مستوى تفاعل تجريبي يقارب <b>"+fmt(x?x.value:0)+"</b>.","The highest-demand category under the active filters is <b>"+esc(enText(x?x.category:"—"))+"</b>, with illustrative engagement of about <b>"+fmt(x?x.value:0)+"</b>.")}
-    if(id==="top-area"){const x=areas[0];return tr("أعلى نمو في الاهتمام يظهر في <b>"+esc(x?x.area:"—")+"</b> بنحو <b>"+Math.round((x?x.growth:0)*100)+"%</b>.","The fastest interest growth appears in <b>"+esc(enText(x?x.area:"—"))+"</b> at about <b>"+Math.round((x?x.growth:0)*100)+"%</b>.")}
-    if(id==="largest-gap"){const x=gaps[0];return tr("أكبر فجوة تجريبية تظهر في <b>"+esc(x?x.area:"—")+" · "+esc(x?x.category:"—")+"</b>، بفارق <b>"+((x?x.demand_index:0)-(x?x.supply_index:0))+" نقطة</b> بين الطلب والعرض.","The largest illustrative gap appears in <b>"+esc(enText(x?x.area:"—"))+" · "+esc(enText(x?x.category:"—"))+"</b>, with a <b>"+((x?x.demand_index:0)-(x?x.supply_index:0))+"-point</b> difference between demand and supply.")}
-    if(id==="top-activity"){return tr(topAct?"أكثر نشاط إضافة إلى «خطتي» هو <b>"+esc(topAct.activity)+"</b> بعدد تجريبي <b>"+fmt(topAct.plans)+"</b>.":"لا توجد أنشطة مطابقة للفلاتر الحالية.","The activity most often added to My Plan is <b>"+esc(topAct?enText(topAct.activity):"—")+"</b> with an illustrative <b>"+fmt(topAct?topAct.plans:0)+"</b> additions.")}
-    if(id==="audience"){return tr("ضمن النموذج الحالي، تمثل عمليات البحث المنسوبة لسكان مكة نحو <b>"+fmt(residents)+"</b> مقابل <b>"+fmt(visitors)+"</b> للزوار. استخدم فلتر الجمهور لقراءة كل شريحة منفصلة.","In the current model, searches attributed to Makkah residents are about <b>"+fmt(residents)+"</b> versus <b>"+fmt(visitors)+"</b> for visitors. Use the audience filter to inspect each segment separately.")}
-    const x=op[0];return tr("أبرز إشارة تحتاج متابعة تظهر في <b>"+esc(x?x.area:"—")+" · "+esc(x?x.category:"—")+"</b> بمؤشر <b>"+(x?x.score.toFixed(0):0)+"/100</b>. هذه إشارة للتحقق وليست ضمانًا تجاريًا.","The signal needing the most attention appears in <b>"+esc(enText(x?x.area:"—"))+" · "+esc(enText(x?x.category:"—"))+"</b> with a <b>"+(x?x.score.toFixed(0):0)+"/100</b> signal index. It is a validation signal, not a commercial guarantee.")
-  }
   function aiAssistant(){
-    const q=AI_QUESTIONS.find(x=>x[0]===aiQuestion)||AI_QUESTIONS[0];
-    return '<section class="ai-agent"><div class="ai-accent" aria-hidden="true"></div><div class="ai-head"><div class="ai-symbol">'+iconSvg("sparkles",19)+'</div><div class="ai-copy"><h2>'+tr("مساعد EyeMakkah التحليلي","EyeMakkah Analytics Assistant")+'</h2><p>'+tr("اختر سؤالًا من البنك الثابت، وسأجيب وفق الفلاتر والبيانات التجريبية الحالية.","Choose a question from the fixed bank and the answer will use the current filters and synthetic data.")+'</p></div></div><div class="ai-grid"><div class="ai-questions">'+AI_QUESTIONS.map(x=>'<button type="button" data-ai-question="'+x[0]+'" class="'+(x[0]===aiQuestion?"active":"")+'">'+esc(state.lang==="ar"?x[1]:x[2])+'</button>').join("")+'</div><div class="ai-answer"><div class="ai-answer-label">'+tr("الإجابة التحليلية","Analytical answer")+'</div><div class="ai-answer-text">'+aiAnswer(q[0])+'</div><div class="ai-foot">'+tr("إجابة نموذجية مبنية على بيانات اصطناعية وليست مخرجات من نموذج ذكاء اصطناعي حي.","Prototype answer based on synthetic data; not generated by a live AI model.")+'</div></div></div></section>'
+    if(window.EyeMakkahAgentRuntime&&typeof window.EyeMakkahAgentRuntime.render==="function")return window.EyeMakkahAgentRuntime.render();
+    return '<section class="ai-agent agent-free"><div class="ai-accent" aria-hidden="true"></div><div class="ai-head"><div class="ai-symbol">'+iconSvg("sparkles",19)+'</div><div class="ai-copy"><h2>'+tr("مساعد EyeMakkah التحليلي","EyeMakkah Analytics Assistant")+'</h2><p>'+tr("اسأل بطريقتك عن الطلب والمناطق والأنشطة والمجتمعات والحملات والفرص.","Ask naturally about demand, areas, activities, communities, campaigns, and opportunity signals.")+'</p></div></div><div class="agent-bank-loading">'+tr("جارٍ تجهيز سياق المساعد…","Preparing assistant context…")+'</div></section>'
   }
 
   function dashboard(){
@@ -618,7 +601,7 @@
     document.querySelectorAll("[data-lang],[data-menu-lang]").forEach(b=>b.onclick=()=>{state.lang=b.dataset.lang||b.dataset.menuLang;localStorage.setItem("eyemakkah-ba-lang",state.lang);render()});
     document.querySelectorAll("[data-reset-filters]").forEach(b=>b.onclick=()=>transitionUpdate(resetFilters));
     document.querySelectorAll("[data-recover]").forEach(b=>b.onclick=()=>{const scope=b.dataset.recover;uiIssue=null;if(scope==="page")state.page=PAGES[0][0];render()});
-    document.querySelectorAll("[data-ai-question]").forEach(b=>b.onclick=()=>{aiQuestion=b.dataset.aiQuestion;const box=document.querySelector(".ai-answer");if(box)box.classList.add("refreshing");window.setTimeout(render,180)});
+    if(window.EyeMakkahAgentRuntime&&typeof window.EyeMakkahAgentRuntime.attach==="function")window.EyeMakkahAgentRuntime.attach();
     const chartTip=document.getElementById("chart-tooltip");
     if(chartTip){
       const moveTip=e=>{const gap=12,w=chartTip.offsetWidth||240,h=chartTip.offsetHeight||44;chartTip.style.left=Math.max(gap,Math.min(e.clientX+14,window.innerWidth-w-gap))+"px";chartTip.style.top=Math.max(gap,Math.min(e.clientY+14,window.innerHeight-h-gap))+"px"};
@@ -631,6 +614,28 @@
     document.querySelectorAll("[data-logout]").forEach(b=>b.onclick=signOut);
     document.querySelectorAll("[data-settings]").forEach(b=>b.onclick=()=>{b.textContent=tr("الإعدادات — قريبًا","Settings — coming soon")});
   }
+  window.EyeMakkahAgentAdapter={
+    getState:()=>Object.assign({},state),
+    tr,esc,enText,fmt,iconSvg,
+    applyFilters:patch=>{Object.keys(patch||{}).forEach(k=>{if(["period","area","category","audience","selectedArea","campaign"].includes(k)&&patch[k]!=null)state[k]=patch[k]});if(patch&&patch.area&&patch.area!=="مكة المكرمة")state.selectedArea=patch.area;render()},
+    resetFilters:()=>{resetFilters();render()},
+    render:()=>render(),
+    downloadCsv:()=>downloadCsv(),
+    snapshot:()=>{
+      const m=metrics(),acts=activityRows(),comms=communityRows(),camps=campaignRows(),terms=termRows(),
+        filteredOpp=scaledOppRows(OPPS.filter(r=>(state.area==="مكة المكرمة"||r.area===state.area)&&(state.category==="الكل"||r.category===state.category))),
+        allOpp=scaledOppRows(OPPS.filter(r=>state.category==="الكل"||r.category===state.category)),
+        areaGrowth=AREAS.map(a=>({area:a,growth:scaledRate(.04+(AF[a]-.68)*.18,a+"agent-area")})).sort((a,b)=>b.growth-a.growth),
+        catSet=state.category==="الكل"?CATS:[state.category],
+        catRank=catSet.map(c=>({category:c,value:Math.round(m.interactions*CF[c]*rowNoise(c+"agent-cat"))})).sort((a,b)=>b.value-a.value),
+        areaProfiles=AREAS.map(a=>{const oo=scaledOppRows(OPPS.filter(o=>o.area===a&&(state.category==="الكل"||o.category===state.category))),d=oo.length?Math.round(sum(oo,"demand_index")/oo.length):0,g=oo.length?sum(oo,"growth")/oo.length:0,top=oo.slice().sort((x,y)=>y.demand_index-x.demand_index)[0],sig=oo.slice().sort((x,y)=>y.score-x.score)[0];return {area:a,interest:d,growth:g,top_category:top?top.category:"—",peak_time:["العوالي","العزيزية","الشوقية"].includes(a)?"المساء 7–10 م":"العصر 4–7 م",signal:sig}}),
+        topics=[["أنشطة الأطفال",scaledRate(.34,"topic1"),"أسئلة وتوصيات نهاية الأسبوع"],["تجارب المساء",scaledRate(.29,"topic2"),"اقتراحات لأنشطة اجتماعية"],["الورش الإبداعية",scaledRate(.27,"topic3"),"بحث عن تجارب قصيرة"],["أماكن قريبة",scaledRate(.18,"topic4"),"طلب خيارات حسب الحي"]].map(x=>({topic:x[0],growth:x[1],theme:x[2]})).sort((a,b)=>b.growth-a.growth),
+        contribution=comms.reduce((o,r)=>(o[r.type]=(o[r.type]||0)+r.engagement,o),{}),
+        demandTrend=trend(["searches","saves","plans","actions"]);
+      return {state:Object.assign({},state),metrics:m,activities:acts,communities:comms,campaigns:camps,terms,opportunities:filteredOpp,allOpportunities:allOpp,areaGrowth,categoryRank:catRank,areaProfiles,topics,contribution,demandTrend,reportRows:reportRows(),raw:{areas:AREAS.slice(),categories:CATS.slice(),audiences:AUD.slice(),campaigns:CAMPS.map(x=>x.campaign),activities:ACTIVITIES.map(x=>x.activity),communities:COMM.map(x=>x.community)}};
+    }
+  };
+
   function render(){
     document.documentElement.lang=state.lang;document.documentElement.dir=state.lang==="ar"?"rtl":"ltr";document.body.dir=document.documentElement.dir;
     const root=document.getElementById("app");
