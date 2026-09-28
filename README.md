@@ -27,6 +27,8 @@ meeting direction and the five transformation groups in `docs/handover/`.
 | `scripts/crawl.mjs` | QA crawl for blank screens, dead ends and console errors. |
 | `scripts/shots.mjs` | Screenshot sweep of the main surfaces. |
 | `docs/JOURNEYS.md` | The 48 validated Makkah journeys. |
+| `docs/AGENT_AND_OFFERS.md` | The shared offers model and the free-text EyeMakkah Assistant (Intent Bank pipeline, follow-ups, actions, limits). |
+| `assets/agent/`, `scripts/agent-sync.mjs` | The four Agent Bank JSON files (150 intents, 2,123 AR/EN examples) and the step that inlines them into the app. |
 | `baseline/` | The canonical **current** EyeMakkah (`EyeMakkah-app.current.tsx`, `eyemakkah-vercel.current.zip`) kept for comparison. |
 | `docs/handover/` | Meeting notes, the five group definitions, product rules, visual system, DO-NOT-DO. |
 | `PHOTO_SOURCES.md` | Every bundled photograph: its use, tier (exact / Makkah context / generic) and provenance. |
@@ -38,6 +40,16 @@ meeting direction and the five transformation groups in `docs/handover/`.
 
 **الرئيسية · اكتشف · المجتمع · خطتي** — Profile sits behind the avatar. There is no AI tab:
 AI is horizontal (relevance, trust, journey continuity, translation, community intelligence).
+The EyeMakkah Assistant opens from the Home assistant card (and from search) as a single
+free-text conversation — no fifth tab, no floating bubble.
+
+## Offers & the Assistant
+
+Offers and discounts are one shared model (`DEALS`: 64 illustrative records across
+restaurants, cafés, stays, culture, experiences, activities, events, markets and services)
+read by cards, decision pages, the Home and Discover deal rails, My Plan and the Assistant.
+The Assistant matches free Arabic/English text against the full four-part Intent Bank and
+answers from the same objects, offers and plan state. See `docs/AGENT_AND_OFFERS.md`.
 
 ## State semantics that never collapse
 
@@ -60,6 +72,7 @@ Leaving EyeMakkah for an external provider records `انتقلت لإكمال ا
 
 ```bash
 npm install
+node scripts/agent-sync.mjs  # inline assets/agent/*.json as AGENT_BANK (after editing the bank)
 npm run build             # → dist/app.js
 node scripts/verify.mjs   # 23 runtime journeys in Chromium, fails on any console error
 node scripts/crawl.mjs    # broad QA crawl for dead ends and blank screens

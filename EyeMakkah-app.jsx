@@ -1934,6 +1934,11 @@ const EN_TXT = {
   "٩ ص — ٩ م": "9 AM – 9 PM",
   "پہلا عمرہ — پہنچنے اور شروع کرنے کے درمیان کتنا وقت درکار ہے؟": "First Umrah — how much time is needed between arriving and starting?",
   "— فعّل الموقع لنتائج أدق": "— turn on location for sharper results",
+  "عروض وخصومات": "Offers & discounts",
+  "عروض سارية مختارة لك — تختفي عند انتهائها": "Valid offers picked for you — gone once they end",
+  "كل العروض": "All offers",
+  "عليه عرض": "Has an offer",
+  "مطاعم ومقاهٍ وإقامة وتجارب — عروض سارية فقط": "Restaurants, cafés, stays and experiences — valid offers only",
 };
 /* English for an Arabic string: the dictionary entry, or — for composed names such as
    "مطعم الركن — العوالي" — the entries of every " — " part; "" when unknown. */
@@ -3695,6 +3700,147 @@ const INVENTORY = [
 const OBJ = byId(INVENTORY);
 const getObj = (id) => OBJ[id] || null;
 
+
+/* ───────── 4.8 Offers & deals — one shared model ─────────
+   Every deal the app shows (badges on cards, the decision-page panel, the Home and
+   Discover deal rails, My Plan and the Assistant) reads these records. A record is
+   linked to an inventory object; the older offer-type objects (o-*) point back to
+   their record through `offerObj`, so both read the same value, terms and validity.
+   Values, packages and validity are ILLUSTRATIVE prototype data, not live commercial
+   offers, and the UI says so. Lifecycle is derived from validity against the
+   prototype clock; expired and not-yet-started offers are never promoted. */
+const DEAL_KIND = bilingual(
+  { percent: "خصم", fixed: "خصم", package: "باقة", bundle: "باقة", special: "سعر خاص" },
+  { percent: "Discount", fixed: "Discount", package: "Package", bundle: "Bundle", special: "Special price" });
+const REDEEM = bilingual(
+  { booking: "يُطبّق عند إكمال الحجز لدى مقدّم الخدمة", venue: "اعرض العرض في المكان قبل الدفع", code: "يُفعّل برمز EyeMakkah عند الدفع" },
+  { booking: "Applied when you complete the booking with the provider", venue: "Show the offer at the venue before paying", code: "Activated with an EyeMakkah code at checkout" });
+const WHO = bilingual(
+  { all: "للجميع", family: "للعائلات", kids: "للأطفال وذويهم", students: "لحاملي البطاقة الجامعية", women: "للنساء", groups: "للمجموعات", visitors: "للزوار" },
+  { all: "Everyone", family: "Families", kids: "Children and parents", students: "Students with a university card", women: "Women", groups: "Groups", visitors: "Visitors" });
+const WHEN_TAG = bilingual({ morning: "عرض صباحي", evening: "عرض مسائي", weekend: "نهاية الأسبوع" }, { morning: "Morning offer", evening: "Evening offer", weekend: "Weekend offer" });
+
+/* [id, object, kind, spec] — spec: badge/title/desc/terms [ar, en]; pct, now/was (SAR);
+   who; excl (EyeMakkah-exclusive); from/to (days from now); when; redeem; incl (contents) */
+const OFFER_SEED = [
+  ["of-sufrah", "r-sufrah", "package", { offerObj: "o-sufrah-family", badge: ["الطبق الثاني −٥٠٪", "2nd dish −50%"], title: ["عرض العشاء العائلي", "Family dinner offer"], desc: ["الطبق الثاني بنصف السعر ضمن الطلب العائلي، داخل الفرع.", "The second dish at half price on family orders, dine-in."], who: "family", when: "evening", redeem: "venue", terms: ["فرع العوالي فقط، لا يُجمع مع عروض أخرى.", "Al-Awali branch only; cannot be combined."] }],
+  ["of-mandi", "r-mandi", "percent", { pct: 15, excl: true, badge: ["−١٥٪", "15% off"], title: ["خصم ١٥٪ عبر EyeMakkah", "15% off through EyeMakkah"], desc: ["خصم على الفاتورة عند إظهار رمز EyeMakkah.", "Off the bill when you show the EyeMakkah code."], who: "all", from: -3, to: 10, redeem: "code", terms: ["حتى ٤ أشخاص للفاتورة الواحدة.", "Up to 4 people per bill."] }],
+  ["of-foul", "r-foul", "special", { now: 22, was: 30, badge: ["عرض صباحي", "Morning deal"], title: ["فطور الحارة: فول + معصوب + شاي", "Harah breakfast: foul, masoob and tea"], desc: ["فطور لشخص بسعر خاص قبل ١٠ صباحًا.", "Breakfast for one at a special price before 10 am."], incl: [["فول", "Foul"], ["معصوب", "Masoob"], ["شاي", "Tea"]], who: "all", when: "morning", from: -5, to: 14, redeem: "venue", terms: ["قبل الساعة ١٠ صباحًا فقط.", "Before 10 am only."] }],
+  ["of-saleeg", "r-saleeg", "package", { now: 180, was: 220, badge: ["باقة عائلية", "Family package"], title: ["باقة السليق العائلية لأربعة", "Saleeg family package for four"], desc: ["صحن سليق كبير مع دجاج ومقبلات لأربعة أشخاص.", "A large saleeg platter with chicken and sides for four."], incl: [["سليق لأربعة", "Saleeg for four"], ["نصف دجاجتين", "Two half chickens"], ["مقبلات وسلطة", "Starters and salad"]], who: "family", from: -2, to: 12, redeem: "venue", terms: ["للطلبات داخل المطعم.", "Dine-in orders."] }],
+  ["of-sea", "r-sea", "percent", { pct: 10, excl: true, badge: ["−١٠٪", "10% off"], title: ["خصم ١٠٪ لعشاء نهاية الأسبوع", "10% off weekend dinner"], desc: ["على طلبات العشاء عبر EyeMakkah.", "On dinner orders through EyeMakkah."], who: "all", when: "weekend", from: -1, to: 1.2, redeem: "code", terms: ["الخميس إلى السبت بعد المغرب.", "Thursday to Saturday after sunset."] }],
+  ["of-kebda", "r-kebda", "special", { now: 25, was: 32, badge: ["عرض مسائي", "Evening deal"], title: ["كبدة + خبز + شاي", "Kebda, bread and tea"], desc: ["وجبة مسائية سريعة بسعر خاص.", "A quick evening plate at a special price."], incl: [["كبدة", "Kebda"], ["خبز تميس", "Tamees bread"], ["شاي", "Tea"]], who: "all", when: "evening", from: -4, to: 9, redeem: "venue", terms: ["بعد العصر حتى الإغلاق.", "From afternoon until closing."] }],
+  ["of-shawarma", "r-shawarma", "bundle", { badge: ["وجبة طفل مجانية", "Free kid's meal"], title: ["وجبة طفل مجانية مع وجبتين", "Free kid's meal with two meals"], desc: ["عند طلب وجبتين كاملتين.", "When you order two full meals."], who: "kids", from: -2, to: 8, redeem: "venue", terms: ["طفل واحد لكل طلب.", "One child per order."] }],
+  ["of-hijazi-bf", "r-hijazi-breakfast", "percent", { pct: 20, excl: true, badge: ["−٢٠٪", "20% off"], title: ["خصم ٢٠٪ على الريوق", "20% off breakfast"], desc: ["خصم صباحي حصري عبر EyeMakkah.", "A morning discount exclusive to EyeMakkah."], who: "all", when: "morning", from: -6, to: 6, redeem: "code", terms: ["من ٦ حتى ١١ صباحًا.", "From 6 to 11 am."] }],
+  ["of-biryani", "r-biryani", "fixed", { now: 28, was: 38, badge: ["−١٠ ريال", "SAR 10 off"], title: ["خصم ١٠ ريال على البرياني", "SAR 10 off biryani"], desc: ["على الطبق الكبير.", "On the large plate."], who: "all", from: -3, to: 11, redeem: "venue", terms: ["طبق واحد لكل فاتورة.", "One plate per bill."] }],
+  ["of-grill-old", "r-grill", "percent", { offerObj: "o-expired-grill", pct: 20, badge: ["−٢٠٪", "20% off"], title: ["عرض المشاوي", "Grill offer"], desc: ["عرض سابق على المشاوي.", "A past grill offer."], who: "all", redeem: "venue", terms: ["انتهى.", "Ended."] }],
+  ["of-sweets", "r-sweets", "percent", { offerObj: "o-sweets", pct: 20, badge: ["−٢٠٪", "20% off"], title: ["خصم الحلويات بعد العشاء", "After-dinner sweets discount"], desc: ["من ١٠ مساءً حتى الإغلاق.", "From 10 pm until closing."], who: "all", when: "evening", redeem: "venue", terms: ["على الحلويات الشرقية فقط.", "Eastern sweets only."] }],
+  ["of-family-hall", "r-family-hall", "package", { now: 199, was: 260, badge: ["باقة عائلية", "Family package"], title: ["سفرة العائلة لأربعة", "Family spread for four"], desc: ["أطباق رئيسية ومقبلات وعصائر لأربعة.", "Mains, starters and juices for four."], incl: [["طبقان رئيسيان كبيران", "Two large mains"], ["٣ مقبلات", "3 starters"], ["٤ عصائر", "4 juices"]], who: "family", from: -6, to: 0.7, redeem: "venue", terms: ["جلسات عائلية فقط.", "Family seating only."] }],
+  ["of-late", "r-late", "percent", { pct: 10, badge: ["−١٠٪", "10% off"], title: ["خصم آخر الليل", "Late-night discount"], desc: ["خصم بعد ١١ مساءً.", "A discount after 11 pm."], who: "all", when: "evening", from: -2, to: 13, redeem: "venue", terms: ["بعد الساعة ١١ مساءً.", "After 11 pm."] }],
+  ["of-turkish", "r-turkish", "percent", { pct: 15, excl: true, badge: ["−١٥٪", "15% off"], title: ["خصم ١٥٪ عبر EyeMakkah", "15% off through EyeMakkah"], desc: ["على الأطباق الرئيسية.", "On main dishes."], who: "all", from: -1, to: 7, redeem: "code", terms: ["لا يشمل المشروبات.", "Drinks not included."] }],
+  ["of-burger", "r-burger", "package", { now: 99, was: 130, badge: ["باقة عائلية", "Family package"], title: ["وجبة العائلة لأربعة", "Family meal for four"], desc: ["٤ برجر مع بطاطس ومشروبات.", "Four burgers with fries and drinks."], incl: [["٤ برجر", "4 burgers"], ["بطاطس كبيرة", "Large fries"], ["٤ مشروبات", "4 drinks"]], who: "family", from: -3, to: 9, redeem: "venue", terms: ["طلب داخلي أو استلام.", "Dine-in or pickup."] }],
+  ["of-yemeni", "r-yemeni", "package", { now: 150, was: 185, badge: ["باقة الجمعة", "Friday package"], title: ["باقة الجمعة العائلية", "Friday family package"], desc: ["مندي ومقبلات لأربعة يوم الجمعة.", "Mandi and sides for four on Fridays."], who: "family", when: "weekend", from: -2, to: 16, redeem: "venue", terms: ["الجمعة فقط.", "Fridays only."] }],
+  ["of-soup", "r-soup", "special", { now: 20, was: 26, badge: ["سعر خاص", "Special price"], title: ["شوربة + سلطة", "Soup and salad"], desc: ["وجبة خفيفة بسعر خاص.", "A light meal at a special price."], who: "all", from: -5, to: 10, redeem: "venue", terms: ["طوال اليوم.", "All day."] }],
+  ["of-breakfast-tanim", "r-breakfast-tanim", "percent", { pct: 15, badge: ["−١٥٪", "15% off"], title: ["عرض الصباح", "Morning offer"], desc: ["خصم على الفطور قبل ٩ صباحًا.", "Off breakfast before 9 am."], who: "all", when: "morning", from: -3, to: 12, redeem: "venue", terms: ["قبل ٩ صباحًا.", "Before 9 am."] }],
+  ["of-cafe-morning", "c-specialty", "special", { offerObj: "o-cafe-morning", badge: ["عرض صباحي", "Morning deal"], title: ["قهوة الصباح", "Morning coffee"], desc: ["سعر خاص على القهوة المقطّرة قبل ١٠ صباحًا.", "A special price on filter coffee before 10 am."], who: "all", when: "morning", redeem: "venue", terms: ["قبل ١٠ صباحًا.", "Before 10 am."] }],
+  ["of-rooftop", "c-rooftop", "bundle", { offerObj: "o-cafe-evening", badge: ["٢ بسعر ١", "2 for 1"], title: ["مشروبان بسعر واحد", "Two drinks for one"], desc: ["على المشروبات الباردة في المساء.", "On cold drinks in the evening."], who: "all", when: "evening", redeem: "venue", terms: ["بعد المغرب.", "After sunset."] }],
+  ["of-dessert", "c-dessert", "special", { now: 32, was: 42, badge: ["قهوة + حلى", "Coffee + dessert"], title: ["قهوة + حلى بسعر خاص", "Coffee and dessert at a special price"], desc: ["أي قهوة مع قطعة حلى.", "Any coffee with a dessert slice."], incl: [["قهوة", "Coffee"], ["قطعة حلى", "Dessert slice"]], who: "all", when: "evening", from: -2, to: 10, redeem: "venue", terms: ["بعد العشاء.", "After dinner."] }],
+  ["of-harah", "c-harah", "percent", { pct: 10, excl: true, badge: ["−١٠٪", "10% off"], title: ["خصم ١٠٪ عبر EyeMakkah", "10% off through EyeMakkah"], desc: ["على كل المشروبات.", "On all drinks."], who: "all", from: -4, to: 20, redeem: "code", terms: ["مرة يوميًا.", "Once a day."] }],
+  ["of-cafe-family", "c-family", "package", { now: 75, was: 96, badge: ["باقة عائلية", "Family package"], title: ["٤ مشروبات + حلى للعائلة", "4 drinks and a dessert for the family"], desc: ["باقة جلسة عائلية في المساء.", "An evening family seating package."], incl: [["٤ مشروبات", "4 drinks"], ["طبق حلى مشترك", "A shared dessert"]], who: "family", when: "evening", from: -1, to: 6, redeem: "venue", terms: ["جلسات خارجية.", "Outdoor seating."] }],
+  ["of-study", "c-study", "percent", { pct: 20, badge: ["−٢٠٪ للطلاب", "20% for students"], title: ["خصم الطلاب", "Student discount"], desc: ["خصم للطلاب طوال الأسبوع.", "A student discount all week."], who: "students", from: -8, to: 22, redeem: "venue", terms: ["بطاقة جامعية سارية.", "Valid university card."] }],
+  ["of-book-cafe", "c-book-cafe", "special", { now: 30, was: 38, badge: ["قهوة + كتاب", "Coffee + book"], title: ["قهوة + كتاب مستعمل", "Coffee and a second-hand book"], desc: ["اختر كتابًا مستعملًا مع قهوتك.", "Pick a second-hand book with your coffee."], who: "all", from: -3, to: 15, redeem: "venue", terms: ["حسب المتوفر من الكتب.", "Subject to available books."] }],
+  ["of-women-cafe", "c-women", "percent", { pct: 15, excl: true, badge: ["−١٥٪", "15% off"], title: ["خصم ١٥٪ عبر EyeMakkah", "15% off through EyeMakkah"], desc: ["على المشروبات والحلى.", "On drinks and desserts."], who: "women", from: -2, to: 9, redeem: "code", terms: ["للمقهى المخصص للنساء.", "Women-only café."] }],
+  ["of-night-cafe", "c-night", "percent", { pct: 25, badge: ["−٢٥٪", "25% off"], title: ["قهوة الليل", "Night coffee"], desc: ["خصم على القهوة بعد ١٠ مساءً.", "Off coffee after 10 pm."], who: "all", when: "evening", from: -1, to: 0.9, redeem: "venue", terms: ["بعد ١٠ مساءً.", "After 10 pm."] }],
+  ["of-stay-ajyad", "st-ajyad", "bundle", { now: 370, was: 420, excl: true, badge: ["إقامة + إفطار", "Stay + breakfast"], title: ["إقامة + إفطار بسعر خاص", "Stay and breakfast at a special price"], desc: ["ليلة مع إفطار لشخصين عند الحجز عبر EyeMakkah.", "One night with breakfast for two when booked through EyeMakkah."], incl: [["ليلة", "One night"], ["إفطار لشخصين", "Breakfast for two"]], who: "all", from: -2, to: 1.5, redeem: "booking", terms: ["حسب التوفر لدى منصة الحجز.", "Subject to availability on the booking platform."] }],
+  ["of-stay-aziziyah", "st-aziziyah", "package", { now: 510, was: 600, badge: ["باقة عائلية", "Family package"], title: ["ليلتان + إفطار للعائلة", "Two nights and breakfast for the family"], desc: ["شقة عائلية لليلتين مع إفطار.", "A family apartment for two nights with breakfast."], incl: [["ليلتان", "Two nights"], ["إفطار عائلي", "Family breakfast"]], who: "family", from: -4, to: 14, redeem: "booking", terms: ["للإقامات من ليلتين.", "Stays of two nights or more."] }],
+  ["of-stay-misfalah", "st-misfalah", "percent", { pct: 15, badge: ["−١٥٪", "15% off"], title: ["عرض نهاية الأسبوع", "Weekend offer"], desc: ["خصم على ليالي نهاية الأسبوع.", "Off weekend nights."], who: "all", when: "weekend", from: -1, to: 12, redeem: "booking", terms: ["الخميس والجمعة.", "Thursday and Friday nights."] }],
+  ["of-museum-family", "clock-museum", "package", { offerObj: "o-museum-family", badge: ["تذكرة عائلية", "Family ticket"], title: ["تذكرة عائلية", "Family ticket"], desc: ["سعر مجموعة لأربعة أفراد.", "A group price for four."], who: "family", redeem: "booking", terms: ["حتى ٤ أفراد.", "Up to four people."] }],
+  ["of-bus", "x-bus", "percent", { offerObj: "o-bus-tour", pct: 20, badge: ["−٢٠٪", "20% off"], title: ["تذكرة الحافلة — سعر مخفّض", "Bus ticket — reduced price"], desc: ["على الجولة المسائية.", "On the evening tour."], who: "all", when: "evening", redeem: "booking", terms: ["الجولة المسائية فقط.", "Evening tour only."] }],
+  ["of-revelation", "x-revelation", "percent", { pct: 10, excl: true, badge: ["−١٠٪", "10% off"], title: ["خصم ١٠٪ عند الحجز عبر EyeMakkah", "10% off when booked through EyeMakkah"], desc: ["على تذاكر معرض الوحي.", "On Revelation Exhibition tickets."], who: "all", from: -5, to: 9, redeem: "booking", terms: ["يُطبّق على منصة الحجز.", "Applied on the booking platform."] }],
+  ["of-ala-khutah", "x-ala-khutah", "package", { now: 130, was: 160, badge: ["تذكرة عائلية", "Family ticket"], title: ["تذكرة عائلية لأربعة", "Family ticket for four"], desc: ["سعر خاص لأربعة أفراد.", "A special price for four."], who: "family", from: -3, to: 11, redeem: "booking", terms: ["حتى ٤ أفراد.", "Up to four people."] }],
+  ["of-family-host", "x-family-host", "percent", { pct: 15, excl: true, badge: ["−١٥٪", "15% off"], title: ["خصم أول زيارة عبر EyeMakkah", "First-visit discount through EyeMakkah"], desc: ["لأول تجربة ضيافة تحجزها.", "For your first hosted visit."], who: "visitors", from: -2, to: 18, redeem: "booking", terms: ["مرة واحدة لكل مستخدم.", "Once per user."] }],
+  ["of-coffee-house", "x-coffee-house", "bundle", { now: 110, was: 130, badge: ["تجربتان بسعر خاص", "Two experiences"], title: ["جلسة القهوة + مشية مكة القديمة", "Coffee session and the old Makkah walk"], desc: ["احجز التجربتين معًا بسعر خاص.", "Book both experiences together at a special price."], incl: [["جلسة قهوة وحكايات", "Coffee & stories session"], ["مشية مكة القديمة", "Old Makkah walk"]], who: "all", from: -2, to: 13, redeem: "booking", terms: ["خلال أسبوع واحد.", "Within one week."] }],
+  ["of-sadu", "x-sadu", "percent", { pct: 20, badge: ["−٢٠٪", "20% off"], title: ["خصم ٢٠٪ لفترة محدودة", "20% off for a limited time"], desc: ["على ورشة السدو للمبتدئين.", "On the Sadu workshop for beginners."], who: "women", from: -6, to: 0.6, redeem: "booking", terms: ["للمقاعد المتبقية.", "Remaining seats only."] }],
+  ["of-khatt-students", "x-khatt", "percent", { offerObj: "o-workshop-student", pct: 25, badge: ["−٢٥٪ للطلاب", "25% for students"], title: ["خصم الطلاب على الورش", "Student discount on workshops"], desc: ["بطاقة جامعية سارية.", "Valid university card."], who: "students", redeem: "booking", terms: ["بطاقة جامعية سارية.", "Valid university card."] }],
+  ["of-pottery", "x-pottery", "bundle", { now: 240, was: 280, badge: ["مقعدان بسعر خاص", "Two seats"], title: ["مقعدان بسعر خاص", "Two seats at a special price"], desc: ["احجز مقعدين معًا.", "Book two seats together."], who: "groups", from: -3, to: 12, redeem: "booking", terms: ["للحجز في الجلسة نفسها.", "Same session."] }],
+  ["of-perfume", "x-perfume", "percent", { pct: 15, excl: true, badge: ["−١٥٪", "15% off"], title: ["خصم ١٥٪ عبر EyeMakkah", "15% off through EyeMakkah"], desc: ["على ورشة تركيب العطر.", "On the perfume-blending workshop."], who: "all", from: -2, to: 10, redeem: "booking", terms: ["يشمل المواد.", "Materials included."] }],
+  ["of-cook", "x-cook", "bundle", { now: 270, was: 360, badge: ["المقعد الثاني −٥٠٪", "2nd seat −50%"], title: ["المقعد الثاني بنصف السعر", "Second seat at half price"], desc: ["احضري مع ابنتك أو صديقتك.", "Come with a daughter or a friend."], who: "women", from: -1, to: 9, redeem: "booking", terms: ["مقعدان في الجلسة نفسها.", "Two seats in the same session."] }],
+  ["of-kids-science", "x-kids-science", "package", { now: 55, was: 70, badge: ["طفلان بسعر خاص", "Two kids"], title: ["طفلان بسعر خاص", "Two children at a special price"], desc: ["للإخوة في الجلسة نفسها.", "For siblings in the same session."], who: "kids", from: -3, to: 8, redeem: "booking", terms: ["من ٦ إلى ١٢ سنة.", "Ages 6 to 12."] }],
+  ["of-storyteller", "x-storyteller", "package", { now: 90, was: 120, badge: ["تذكرة عائلية", "Family ticket"], title: ["تذكرة عائلية لجلسة الحكواتي", "Family ticket for the storyteller"], desc: ["لأربعة أفراد.", "For four people."], who: "family", from: -2, to: 7, redeem: "booking", terms: ["حتى ٤ أفراد.", "Up to four."] }],
+  ["of-first-aid", "x-first-aid", "percent", { pct: 25, badge: ["−٢٥٪", "25% off"], title: ["خصم التسجيل المبكر", "Early-registration discount"], desc: ["يبدأ العرض مع فتح التسجيل.", "Starts when registration opens."], who: "all", from: 2, to: 12, redeem: "booking", terms: ["يبدأ لاحقًا.", "Starts later."] }],
+  ["of-family-cook", "x-family-cook", "percent", { pct: 10, badge: ["−١٠٪", "10% off"], title: ["خصم ١٠٪ للعائلات", "10% off for families"], desc: ["لجلسة المطبخ مع الأطفال.", "For the kids' kitchen session."], who: "kids", from: -2, to: 14, redeem: "booking", terms: ["طفل واحد على الأقل.", "At least one child."] }],
+  ["of-night-souq", "x-night-souq-tour", "percent", { pct: 15, excl: true, badge: ["−١٥٪", "15% off"], title: ["خصم ١٥٪ عبر EyeMakkah", "15% off through EyeMakkah"], desc: ["على جولة السوق الليلي.", "On the night souq tour."], who: "all", when: "evening", from: -1, to: 5, redeem: "code", terms: ["يُدفع للمرشد مباشرة.", "Paid to the guide directly."] }],
+  ["of-calligraphy", "a-calligraphy-friday", "bundle", { offerObj: "o-craft-workshop", badge: ["مقعدان بسعر واحد", "Two seats for one"], title: ["مقعدان بسعر واحد", "Two seats for the price of one"], desc: ["ورشة الخط — الجمعة.", "Calligraphy workshop — Friday."], who: "groups", redeem: "venue", terms: ["للجلسة نفسها.", "Same session."] }],
+  ["of-food-tour", "a-food-tour", "percent", { pct: 10, excl: true, badge: ["−١٠٪", "10% off"], title: ["خصم ١٠٪ عبر EyeMakkah", "10% off through EyeMakkah"], desc: ["على مسار الأكل المكي.", "On the Makkawi food trail."], who: "all", from: -3, to: 6, redeem: "code", terms: ["حتى ٤ أشخاص.", "Up to four people."] }],
+  ["of-swim", "a-swim-women", "bundle", { now: 240, was: 320, badge: ["٤ حصص بسعر ٣", "4 for 3"], title: ["٤ حصص بسعر ٣", "Four sessions for the price of three"], desc: ["اشتراك شهري للحصص النسائية.", "A monthly pass for the women's sessions."], who: "women", from: -5, to: 20, redeem: "booking", terms: ["خلال ٣٠ يومًا.", "Within 30 days."] }],
+  ["of-kids-theatre", "e-kids-theatre", "package", { now: 120, was: 160, badge: ["٤ تذاكر بسعر ٣", "4 for 3"], title: ["٤ تذاكر بسعر ٣", "Four tickets for three"], desc: ["لعرض مسرح الأطفال.", "For the children's theatre show."], who: "family", from: -2, to: 3, redeem: "booking", terms: ["حسب التوفر.", "Subject to availability."] }],
+  ["of-run", "e-sport-run", "percent", { pct: 20, badge: ["−٢٠٪", "20% off"], title: ["خصم التسجيل المبكر", "Early-bird discount"], desc: ["على تسجيل جري مكة المسائي.", "On the evening Makkah run."], who: "all", from: -7, to: 0.8, redeem: "booking", terms: ["ينتهي قبل إغلاق التسجيل.", "Ends before registration closes."] }],
+  ["of-sports-hall", "p-sports-hall", "percent", { pct: 25, badge: ["−٢٥٪", "25% off"], title: ["عرض صباحي", "Morning offer"], desc: ["خصم على حجوزات الصباح.", "Off morning bookings."], who: "all", when: "morning", from: -4, to: 16, redeem: "booking", terms: ["قبل ١٢ ظهرًا.", "Before noon."] }],
+  ["of-otaibiyah", "otaibiyah-souq", "percent", { pct: 10, excl: true, badge: ["−١٠٪", "10% off"], title: ["خصم ١٠٪ لدى محلات مشاركة", "10% off at participating shops"], desc: ["عند إظهار رمز EyeMakkah.", "When you show the EyeMakkah code."], who: "all", from: -3, to: 12, redeem: "code", terms: ["محلات مشاركة فقط.", "Participating shops only."] }],
+  ["of-dates", "p-datemarket", "special", { now: 45, was: 58, badge: ["تمور + قهوة", "Dates + coffee"], title: ["علبة تمور + قهوة عربية", "A box of dates and Arabic coffee"], desc: ["هدية زيارة بسعر خاص.", "A visit gift at a special price."], incl: [["علبة تمور ١ كجم", "1 kg box of dates"], ["قهوة عربية ٢٥٠ غ", "250 g Arabic coffee"]], who: "visitors", from: -2, to: 10, redeem: "venue", terms: ["حسب المتوفر.", "While stocks last."] }],
+  ["of-perfume-souq", "p-souq-perfume", "bundle", { badge: ["بخور هدية", "Free bakhoor"], title: ["بخور هدية مع المشتريات", "Free bakhoor with purchases"], desc: ["مع مشتريات فوق ١٠٠ ريال.", "With purchases over SAR 100."], who: "all", from: -1, to: 7, redeem: "venue", terms: ["محلات مشاركة.", "Participating shops."] }],
+  ["of-mall", "p-mall-kakiyah", "fixed", { badge: ["قسيمة ٥٠ ريال", "SAR 50 voucher"], title: ["قسيمة ٥٠ ريال للعائلات", "SAR 50 voucher for families"], desc: ["عند مشتريات فوق ٣٠٠ ريال نهاية الأسبوع.", "On weekend purchases over SAR 300."], who: "family", when: "weekend", from: -1, to: 4, redeem: "code", terms: ["قسيمة واحدة لكل عائلة.", "One voucher per family."] }],
+  ["of-craft-market", "e-craft-market", "percent", { pct: 15, badge: ["−١٥٪", "15% off"], title: ["خصم ١٥٪ على المنتجات اليدوية", "15% off handmade goods"], desc: ["الليلة فقط.", "Tonight only."], who: "all", when: "evening", from: -0.2, to: 0.3, redeem: "venue", terms: ["لدى البائعين المشاركين.", "Participating sellers."] }],
+  ["of-heritage-house", "p-heritage-house", "package", { now: 60, was: 80, badge: ["تذكرة عائلية", "Family ticket"], title: ["تذكرة عائلية لأربعة", "Family ticket for four"], desc: ["زيارة البيت المكي المرمم.", "A visit to the restored Makkan house."], who: "family", from: -3, to: 15, redeem: "venue", terms: ["حتى ٤ أفراد.", "Up to four."] }],
+  ["of-family-park", "p-park-naseem", "package", { offerObj: "o-family-park", badge: ["باقة العائلة", "Family package"], title: ["باقة العائلة — أنشطة الحديقة", "Family package — park activities"], desc: ["أربعة أنشطة بسعر واحد.", "Four activities for one price."], who: "family", redeem: "venue", terms: ["داخل الحديقة.", "Inside the park."] }],
+  ["of-transport", "s-transport", "special", { offerObj: "o-transport-day", badge: ["باقة يومية", "Day pass"], title: ["باقة النقل اليومية", "Daily transport pass"], desc: ["سعر ثابت لليوم.", "A fixed price for the day."], who: "all", redeem: "booking", terms: ["داخل مكة.", "Within Makkah."] }],
+  ["of-wheelchair", "s-wheelchair", "bundle", { badge: ["اليوم الثاني مجانًا", "2nd day free"], title: ["اليوم الثاني مجانًا", "Second day free"], desc: ["عند استئجار الكرسي ليومين.", "When you rent the wheelchair for two days."], who: "all", from: -5, to: 25, redeem: "booking", terms: ["يوصل إلى مكان الإقامة.", "Delivered to your stay."] }],
+  ["of-guide-saeed", "s-guide-saeed", "percent", { pct: 10, excl: true, badge: ["−١٠٪", "10% off"], title: ["خصم ١٠٪ عبر EyeMakkah", "10% off through EyeMakkah"], desc: ["على الجولات المرشدة.", "On guided tours."], who: "visitors", from: -2, to: 14, redeem: "code", terms: ["جولة واحدة.", "One tour."] }],
+  ["of-luggage", "s-luggage", "bundle", { badge: ["٣ حقائب بسعر ٢", "3 bags for 2"], title: ["٣ حقائب بسعر حقيبتين", "Three bags for the price of two"], desc: ["حفظ أمتعة قرب محيط الحرم.", "Luggage storage near the Haram area."], who: "visitors", from: -3, to: 10, redeem: "venue", terms: ["ليوم واحد.", "One day."] }],
+  ["of-babysit", "s-babysit", "bundle", { badge: ["ساعة إضافية مجانًا", "Extra hour free"], title: ["ساعة إضافية مجانًا", "An extra hour free"], desc: ["مع حجز ساعتين أثناء الفعاليات.", "With a two-hour booking during events."], who: "kids", from: -2, to: 9, redeem: "booking", terms: ["حسب التوفر.", "Subject to availability."] }],
+];
+
+const DEALS = OFFER_SEED.map(([id, obj, kind, s]) => {
+  const oo = s.offerObj ? getObj(s.offerObj) : null;
+  const win = oo?.timing?.kind === "window" ? oo.timing : null;
+  return {
+    id, obj, kind, pct: s.pct ?? null, now: s.now ?? null, was: s.was ?? null,
+    badge: s.badge, title: s.title, desc: s.desc, incl: s.incl || [], terms: s.terms,
+    who: s.who || "all", exclusive: !!s.excl, when: s.when || null, redeem: s.redeem || "venue",
+    start: win ? new Date(win.from) : at((s.from ?? -3) * 24), end: win ? new Date(win.to) : at((s.to ?? 10) * 24),
+    offerObj: s.offerObj || null, source: "prototype",
+  };
+});
+const DEAL_BY_ID = byId(DEALS);
+const L2 = (pair) => (pair ? (isEn() ? pair[1] : pair[0]) : "");
+function offerStatus(of) {
+  const s = of.start.getTime(), e = of.end.getTime();
+  if (e < t0) return "expired";
+  if (s > t0) return "upcoming";
+  if (e - t0 < 36 * HOUR) return "ending";
+  return "active";
+}
+const offerLive = (of) => ["active", "ending"].includes(offerStatus(of));
+/* the live offer shown for an object (its own record, or the record of an o-* offer) */
+function offerFor(objOrId) {
+  const id = typeof objOrId === "string" ? objOrId : objOrId?.id;
+  if (!id) return null;
+  const own = DEALS.filter((of) => (of.obj === id || of.offerObj === id) && offerLive(of));
+  return own.sort((a, b) => (b.exclusive - a.exclusive) || ((b.pct || 0) - (a.pct || 0)))[0] || null;
+}
+const liveOffers = () => DEALS.filter(offerLive);
+/* price the offer implies for its object — only computed from represented prices */
+function offerPrice(of) {
+  const o = getObj(of.obj);
+  if (of.now != null && of.was != null) return { now: of.now, was: of.was };
+  if (of.pct && o?.price) return { now: Math.round(o.price * (100 - of.pct) / 100), was: o.price };
+  return null;
+}
+function offerExpiry(of) {
+  const st = offerStatus(of);
+  const left = of.end.getTime() - t0;
+  if (st === "upcoming") return tx(`يبدأ ${whenAr(of.start)}`, `Starts ${whenAr(of.start)}`);
+  if (st === "expired") return tx("انتهى العرض", "Offer ended");
+  if (left < 24 * HOUR) { const h = Math.max(1, Math.round(left / HOUR)); return tx(`ينتهي خلال ${ar(h)} ساعة`, `Ends in ${h} h`); }
+  const d = Math.round(left / DAY);
+  return st === "ending" ? tx("ينتهي غدًا", "Ends tomorrow") : tx(`ساري ${ar(d)} أيام`, `Valid ${d} more days`);
+}
+/* one-line summary used by cards, Plan and the Assistant */
+function offerSummary(of) {
+  const p = offerPrice(of);
+  return Dj([L2(of.badge), p ? tx(`${ar(p.now)} ريال بدل ${ar(p.was)}`, `SAR ${p.now} instead of ${p.was}`) : null, offerExpiry(of)]);
+}
+
+
 /* Provider-published content enters the same inventory the whole app reads. */
 function registerObject(raw, forcedType) {
   const o = expand(raw, forcedType);
@@ -5020,6 +5166,7 @@ function HeroCard({ x, kicker }) {
         <div style={{ position: "absolute", insetInlineStart: 12, top: 12, display: "flex", gap: 6, flexWrap: "wrap", maxWidth: "70%" }}>
           <LifecycleChip o={o} />
           <PlanStateChip o={o} />
+          <DealBadge o={o} onPhoto />
         </div>
         <div style={{ position: "absolute", insetInlineEnd: 12, bottom: 12 }} />
       </Photo>
@@ -5086,6 +5233,7 @@ function RowCard({ x, showWhy = true, showDistance, dismissible }) {
         <div className="clamp2" style={{ fontSize: 15.5, fontWeight: 800, lineHeight: 1.45 }}>{o.name}</div>
         <div className="clamp1" style={{ fontSize: 12.5, color: T.muted, marginTop: 3 }}>{o.tagline}</div>
         <div style={{ marginTop: 5 }}><MetaLine o={o} showDistance={showDistance} /></div>
+        <DealLine o={o} compact />
         {showWhy && x.why?.length ? <div className="clamp2" style={{ fontSize: 11.5, color: T.ok, fontWeight: 700, marginTop: 5, lineHeight: 1.55 }}>{x.why[0]}</div> : null}
       </button>
       <div style={{ alignSelf: "center" }}>
@@ -5103,7 +5251,7 @@ function TileCard({ x, w, kicker }) {
     <button className="lift" onClick={() => go({ s: "object", id: o.id })} style={{ width: w || "var(--rail-tile)", textAlign: "start" }}>
       <Photo kind={o.scene} seed={o.id} photo={o.photo} ratio="4 / 3" radius={R.media} scrim="soft">
         <div style={{ position: "absolute", insetInlineStart: 9, top: 9, display: "flex", gap: 5, flexWrap: "wrap", maxWidth: "80%" }}>
-          <LifecycleChip o={o} /><PlanStateChip o={o} />
+          <LifecycleChip o={o} /><PlanStateChip o={o} /><DealBadge o={o} onPhoto />
         </div>
         <div style={{ position: "absolute", insetInlineEnd: 8, bottom: 8 }}><SaveButton o={o} size={15} onDark /></div>
       </Photo>
@@ -5323,6 +5471,867 @@ function greeting() {
   return tx("مساء الخير", "Good evening");
 }
 
+
+/* ───────── Deal presentation — one visual language for every surface ───────── */
+const DEAL = { ink: "#9A3F1E", bg: "#FBEBDD", solid: "#B4532A" };
+
+function DealBadge({ o, of: given, onPhoto, short, style }) {
+  const of = given || offerFor(o);
+  if (!of) return null;
+  const ending = offerStatus(of) === "ending";
+  return (
+    <span className="row" style={{
+      gap: 4, fontSize: 11, fontWeight: 800, lineHeight: 1.5, whiteSpace: "nowrap", borderRadius: R.pill,
+      padding: "2px 8px", color: onPhoto ? "#FFF8EA" : DEAL.ink, background: onPhoto ? DEAL.solid : DEAL.bg,
+      boxShadow: onPhoto ? "0 4px 10px -4px rgba(60,20,8,.5)" : "none", maxWidth: "100%", overflow: "hidden", textOverflow: "ellipsis", ...style,
+    }}>
+      {/* on a photo the badge stays short; validity is printed under the photo */}
+      <Tag size={11} strokeWidth={2.4} style={{ flexShrink: 0 }} />{L2(of.badge)}{ending && !onPhoto && !short ? <span style={{ opacity: .85 }}>· {tx("ينتهي قريبًا", "ends soon")}</span> : null}
+    </span>
+  );
+}
+
+/* compact line under a card's metadata: value, price, validity, exclusivity */
+function DealLine({ o, of: given, compact }) {
+  const of = given || offerFor(o);
+  if (!of) return null;
+  const p = offerPrice(of);
+  return (
+    <div style={{ marginTop: 6, display: "flex", flexWrap: "wrap", alignItems: "center", gap: "3px 7px", fontSize: 11.5, fontWeight: 700, color: DEAL.ink, lineHeight: 1.55 }}>
+      <DealBadge of={of} short />
+      {compact && offerStatus(of) === "ending" && <span style={{ color: T.warn }}>{tx("ينتهي قريبًا", "Ends soon")}</span>}
+      {p && <span><b style={{ fontWeight: 800 }}>{riyal(p.now)}</b> <s style={{ color: T.muted, fontWeight: 600 }}>{riyal(p.was)}</s></span>}
+      {!compact && of.exclusive && <span style={{ color: T.green }}>{tx("حصري عبر EyeMakkah", "EyeMakkah exclusive")}</span>}
+      {!compact && <span style={{ color: offerStatus(of) === "ending" ? T.warn : T.muted, fontWeight: 600 }}>{offerExpiry(of)}</span>}
+    </div>
+  );
+}
+
+/* decision-page panel: everything that decides whether the deal is worth it */
+function DealPanel({ o }) {
+  const of = offerFor(o);
+  if (!of) return null;
+  const p = offerPrice(of);
+  const st = offerStatus(of);
+  return (
+    <div style={{ marginTop: 16, borderRadius: R.box, overflow: "hidden", border: `1px solid ${DEAL.solid}33`, background: "#FFF7EF" }}>
+      <div className="row" style={{ gap: 8, padding: "10px 13px", background: DEAL.bg, justifyContent: "space-between", flexWrap: "wrap" }}>
+        <span className="row" style={{ gap: 6, fontSize: 12.5, fontWeight: 800, color: DEAL.ink }}><Tag size={14} />{st === "ending" ? tx("عرض ينتهي قريبًا", "Offer ending soon") : tx("عرض سارٍ", "Active offer")}</span>
+        <span className="row" style={{ gap: 6, flexWrap: "wrap" }}>
+          {of.exclusive && <Pill tone={T.green} bg={`${T.green}14`} strong>{tx("حصري عبر EyeMakkah", "EyeMakkah exclusive")}</Pill>}
+          {of.when && <Pill tone={DEAL.ink} bg="#FFFFFF">{WHEN_TAG[of.when]}</Pill>}
+        </span>
+      </div>
+      <div style={{ padding: "12px 13px 13px" }}>
+        <div className="row" style={{ gap: 12, alignItems: "flex-start" }}>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: 15.5, fontWeight: 800, lineHeight: 1.5 }}>{L2(of.title)}</div>
+            <div style={{ fontSize: 13, color: T.muted, lineHeight: 1.75, marginTop: 3 }}>{L2(of.desc)}</div>
+          </div>
+          <div style={{ textAlign: "end", flex: "0 0 auto" }}>
+            {of.pct ? <div style={{ fontSize: 24, fontWeight: 800, color: DEAL.solid, lineHeight: 1.1 }}>{tx(`${ar(of.pct)}٪`, `${of.pct}%`)}</div>
+              : <div style={{ fontSize: 13, fontWeight: 800, color: DEAL.solid, lineHeight: 1.4, maxWidth: 110 }}>{L2(of.badge)}</div>}
+            {p && <div style={{ fontSize: 12.5, fontWeight: 700, marginTop: 3 }}>{riyal(p.now)} <s style={{ color: T.muted, fontWeight: 600 }}>{riyal(p.was)}</s></div>}
+          </div>
+        </div>
+        {of.incl.length > 0 && (
+          <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 10 }}>
+            {of.incl.map((x, i) => <Pill key={i} tone={T.ink} bg={T.limestone}>{L2(x)}</Pill>)}
+          </div>
+        )}
+        <div style={{ marginTop: 10, display: "grid", gap: 5, fontSize: 12.5, lineHeight: 1.7 }}>
+          <div><b>{tx("لمن:", "Who:")}</b> {WHO[of.who]}</div>
+          <div><b>{tx("الصلاحية:", "Validity:")}</b> {tx(`حتى ${whenAr(of.end)}`, `Until ${whenAr(of.end)}`)} · {offerExpiry(of)}</div>
+          <div><b>{tx("طريقة الاستفادة:", "How to use:")}</b> {REDEEM[of.redeem]}</div>
+          <div><b>{tx("الشروط:", "Terms:")}</b> {L2(of.terms)}</div>
+        </div>
+        <div style={{ marginTop: 9, fontSize: 11, color: T.muted, lineHeight: 1.6 }}>
+          {tx("عرض توضيحي في هذا النموذج — القيم والصلاحية ليست عرضًا تجاريًا حيًّا. فتح الحجز لا يعني تأكيده.", "Illustrative offer in this prototype — values and validity are not a live commercial offer. Opening a booking does not confirm it.")}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* Home / Discover deal rail tile */
+/* live deals whose object is promotable, one per object, ranked for this person */
+function rankedDeals(ctx, limit = 8, keep) {
+  const ids = uniq(liveOffers().map((of) => of.obj)).filter((id) => { const o = getObj(id); return o && isPromotable(o) && (!keep || keep(offerFor(id), o)); });
+  return rank(ids.map(getObj), ctx, { limit, maxPerCategory: 3, maxPerNeighborhood: 3 }).map((x) => ({ ...x, of: offerFor(x.o.id) }));
+}
+function DealTile({ of }) {
+  const { go } = useApp();
+  const o = getObj(of.obj);
+  if (!o) return null;
+  const p = offerPrice(of);
+  return (
+    <button className="lift" onClick={() => go({ s: "object", id: o.id })} style={{ width: "var(--rail-tile)", textAlign: "start", alignSelf: "flex-start" }}>
+      <Photo kind={o.scene} seed={o.id} photo={o.photo} ratio="4 / 3" radius={R.media} scrim="soft">
+        <div style={{ position: "absolute", insetInlineStart: 8, top: 8, insetInlineEnd: 8 }}><DealBadge of={of} onPhoto /></div>
+        {of.exclusive && <div style={{ position: "absolute", insetInlineStart: 8, bottom: 8 }}><Pill tone="#FFF8EA" bg="rgba(14,46,38,.78)" strong size={10}>{tx("حصري عبر EyeMakkah", "EyeMakkah exclusive")}</Pill></div>}
+      </Photo>
+      <div style={{ fontSize: 14, fontWeight: 800, marginTop: 7, lineHeight: 1.45 }}>{o.name}</div>
+      <div className="clamp2" style={{ fontSize: 12, color: T.muted, marginTop: 2, lineHeight: 1.55 }}>{L2(of.title)}</div>
+      <div style={{ marginTop: 4, fontSize: 12, fontWeight: 700, color: DEAL.ink, lineHeight: 1.5 }}>
+        {p ? <>{riyal(p.now)} <s style={{ color: T.muted, fontWeight: 600 }}>{riyal(p.was)}</s> · </> : null}
+        <span style={{ color: offerStatus(of) === "ending" ? T.warn : T.muted, fontWeight: 600 }}>{offerExpiry(of)}</span>
+      </div>
+    </button>
+  );
+}
+
+/* AGENT_BANK:start — generated by scripts/agent-sync.mjs from assets/agent/*.json; do not edit by hand */
+const AGENT_BANK = {"version":"01_core@1.0.0 02_discovery@1.0.0 03_actions_business@1.0.0 04_context@1.0.0","intents":[{"id":"greeting_general","c":"social","p":98,"t":"fixed","h":null,"s":null,"ex":{"ar":["هلا","هلا والله","مرحبا","مرحبًا","أهلين","السلام عليكم","يا هلا","يا مرحبا","صباح الخير","مساء الخير","هاي","هلو"],"en":["hi","hello","hey","hello there","good morning","good evening","good afternoon","salam"]},"kw":{"ar":["هلا","مرحبا","السلام","صباح","مساء","هاي"],"en":["hi","hello","hey","morning","evening","salam"]},"en":[],"r":{"ar":["هلا، أنا مساعد EyeMakkah. وش ودك تسوي في مكة اليوم؟","وعليكم السلام. قل لي بطريقتك وش تحتاج، وأنا أساعدك من داخل EyeMakkah.","يا هلا. أقدر أساعدك تلقى مكان، تجربة، عرض، مجتمع، أو ترتّب خطتك."],"en":["Hello. I'm the EyeMakkah Assistant. What would you like to do in Makkah today?","Hi. Tell me naturally what you need and I'll help using EyeMakkah.","Hello. I can help you find a place, experience, offer, community, or build your plan."]},"req":null,"fk":[]},{"id":"how_are_you","c":"social","p":90,"t":"fixed","h":null,"s":null,"ex":{"ar":["كيف حالك","كيفك","شلونك","وش أخبارك","كيف الأمور","عساك طيب","كيف يومك","علومك"],"en":["how are you","how are you doing","how's it going","how are things","how's your day","you good"]},"kw":{"ar":["كيفك","كيف حالك","شلونك","أخبارك"],"en":["how are you","how's it going","you good"]},"en":[],"r":{"ar":["بخير وجاهز أساعدك. وش ودك تسوي أو تعرف في مكة؟","تمام، وأنا حاضر. اكتب اللي في بالك بطريقتك.","كل شيء تمام. وش تحتاج من EyeMakkah؟"],"en":["I'm ready to help. What would you like to do or know in Makkah?","Doing well. Just ask naturally.","All good. What do you need from EyeMakkah?"]},"req":null,"fk":[]},{"id":"thanks","c":"social","p":75,"t":"fixed","h":null,"s":null,"ex":{"ar":["شكرا","شكرًا","يعطيك العافية","مشكور","تسلم","الله يعطيك العافية","ما قصرت","ممتاز شكرا","شكراً لك"],"en":["thanks","thank you","thank you so much","much appreciated","appreciate it","great thanks"]},"kw":{"ar":["شكرا","العافية","مشكور","تسلم","ما قصرت"],"en":["thanks","thank you","appreciate"]},"en":[],"r":{"ar":["العفو، حياك. إذا ودك نكمل من نفس السياق أنا حاضر.","الله يعافيك. كمل بسؤالك اللي بعده.","حياك، أنا معك."],"en":["You're welcome. We can continue from the same context.","Happy to help. Go ahead with your next question.","Anytime. I'm with you."]},"req":null,"fk":[]},{"id":"goodbye","c":"social","p":70,"t":"fixed","h":null,"s":null,"ex":{"ar":["مع السلامة","سلام","أشوفك","في أمان الله","نشوفك بعدين","تصبح على خير","إلى اللقاء"],"en":["bye","goodbye","see you","see you later","talk later","good night","catch you later"]},"kw":{"ar":["مع السلامة","إلى اللقاء","في أمان الله","تصبح"],"en":["bye","goodbye","see you","good night"]},"en":[],"r":{"ar":["مع السلامة، وحياك بأي وقت.","في أمان الله.","نشوفك على خير."],"en":["Goodbye. Come back anytime.","See you later.","Take care."]},"req":null,"fk":[]},{"id":"acknowledgement_yes","c":"social","p":45,"t":"fixed","h":null,"s":null,"ex":{"ar":["ايه","ايوه","نعم","تمام","أوكي","ممتاز","حلو","صح","بالضبط","يب","تمام كذا"],"en":["yes","yeah","yep","ok","okay","correct","exactly","that's right"]},"kw":{"ar":["نعم","تمام","أوكي","صح","بالضبط"],"en":["yes","okay","correct","exactly"]},"en":[],"r":{"ar":["تمام. كمل وأنا معك.","ممتاز، وش بعد؟","تمام، نكمل من نفس السياق."],"en":["Great. Go ahead.","Okay. What's next?","Got it. We'll continue from the same context."]},"req":null,"fk":[]},{"id":"acknowledgement_no","c":"social","p":60,"t":"fixed","h":null,"s":null,"ex":{"ar":["لا","مو كذا","غلط","مو صحيح","لا مو هذا","غير كذا","لا أقصد شي ثاني","لا قصدي غير","مو هذا قصدي"],"en":["no","nope","not that","that's not it","wrong","I meant something else","that's not what I meant"]},"kw":{"ar":["لا","غلط","مو صحيح","قصدي","مو هذا"],"en":["no","wrong","meant","not that"]},"en":[],"r":{"ar":["تمام. اكتب لي وش تقصد بطريقتك وأنا أعدل المسار.","مفهوم. وضّح المقصود بجملة قصيرة وأنا أكمل معك.","تمام، وش تقصد بالضبط؟"],"en":["Understood. Tell me what you meant and I'll adjust.","Got it. Rephrase it briefly and I'll continue.","Okay. What did you mean exactly?"]},"req":null,"fk":[]},{"id":"compliment_agent","c":"social","p":35,"t":"fixed","h":null,"s":null,"ex":{"ar":["رهيب","كفو","شغل ممتاز","مرة ممتاز","جميل","حلو مرة","ذكي","ما شاء الله","عجبني","مبدع"],"en":["awesome","nice","very good","excellent","smart","love it","well done","great job"]},"kw":{"ar":["رهيب","كفو","عجبني","مبدع","ممتاز"],"en":["awesome","excellent","nice","smart","love it"]},"en":[],"r":{"ar":["يسعدني إنه ناسبك. نكمل؟","كفو منك. وش تبغى بعد؟","حلو، خلنا نكمل من نفس السياق."],"en":["Glad it works for you. Shall we continue?","Thanks. What would you like next?","Great. We can continue from the same context."]},"req":null,"fk":[]},{"id":"frustration","c":"social","p":85,"t":"fixed","h":null,"s":null,"ex":{"ar":["ما فهمتني","مو فاهم","أنت ما فهمت","غلطت","هذا مو اللي أقصده","هذا مو المطلوب","الجواب غلط","ركز معي","مو قاعد تفهمني"],"en":["you didn't understand","that's not what I meant","wrong answer","you got it wrong","not what I asked","please focus","you don't get me"]},"kw":{"ar":["ما فهمت","غلط","مو المطلوب","ركز","مو أقصده"],"en":["didn't understand","wrong","not what","focus","don't get"]},"en":[],"r":{"ar":["واضح أني أخذت سؤالك باتجاه غير اللي تقصده. اكتبه بجملة قصيرة وأنا أضبطه.","تمام، أعطني المقصود بصياغتك وأنا أعدل بدون ما أفقد السياق.","وصلت. قل لي وش الجزء اللي تبغاه تحديدًا."],"en":["I took your question in the wrong direction. Give me the exact point and I'll correct course.","Understood. Rephrase the target and I'll keep the useful context.","Got it. Tell me exactly what you need."]},"req":null,"fk":[]},{"id":"casual_laughter","c":"social","p":25,"t":"fixed","h":null,"s":null,"ex":{"ar":["هههه","ههههه","😂","ضحكتني","لول","هههه تمام","ههههههه"],"en":["lol","haha","hahaha","😂","that's funny","lol okay"]},"kw":{"ar":["هههه","لول","😂"],"en":["lol","haha","😂"]},"en":[],"r":{"ar":["😄 نكمل؟","هههه، تمام. وش ودك بعد؟"],"en":["😄 Shall we continue?","Haha. What's next?"]},"req":null,"fk":[]},{"id":"smalltalk_weather_redirect","c":"social","p":30,"t":"fixed","h":null,"s":null,"ex":{"ar":["الجو كيف","وش رايك بالجو","اليوم حر","الجو حلو اليوم","وش الطقس اليوم","مناسب أطلع الحين بسبب الجو؟"],"en":["how's the weather","what do you think of the weather","it's hot today","nice weather today","what's the weather today","is the weather good to go out"]},"kw":{"ar":["الجو","الطقس","حر","برد"],"en":["weather","hot","cold"]},"en":[],"r":{"ar":["الطقس الحي مو ضمن بيانات نسخة EyeMakkah الحالية. أقدر أساعدك تختار شيء داخلي أو خارجي حسب تفضيلك والوقت المتاح.","ما عندي طقس حي في هذا النموذج، لكن أقدر أفلتر لك تجارب داخلية أو خارجية من محتوى EyeMakkah."],"en":["Live weather is not part of the current EyeMakkah prototype. I can still help you choose indoor or outdoor options based on your preference and available time.","I don't have live weather in this prototype, but I can filter EyeMakkah experiences by indoor/outdoor context."]},"req":null,"fk":[]},{"id":"agent_identity","c":"identity","p":99,"t":"fixed","h":null,"s":null,"ex":{"ar":["من أنت","مين أنت","وش أنت","عرف نفسك","أنت مين","ايش اسمك","ما اسمك","من المساعد"],"en":["who are you","what are you","what's your name","what is your name","introduce yourself","who am I talking to"]},"kw":{"ar":["من أنت","مين أنت","اسمك","عرف نفسك","المساعد"],"en":["who are you","your name","introduce","assistant"]},"en":[],"r":{"ar":["أنا مساعد EyeMakkah. أساعد السكان والزوار يكتشفون أماكن وتجارب وأنشطة وعروض ومجتمعات، ويرتبون خطتهم باستخدام محتوى EyeMakkah وسياقهم الحالي.","أنا المساعد داخل تطبيق EyeMakkah. اكتب لي وش تحتاج بطريقتك، وأنا أحاول أوصلك لأفضل خيار أو خطوة داخل التطبيق."],"en":["I'm the EyeMakkah Assistant. I help residents and visitors discover places, experiences, activities, offers, communities, and build their plan using EyeMakkah content and current context.","I'm the assistant inside the EyeMakkah app. Ask naturally and I'll help you move to a useful option or next step."]},"req":null,"fk":[]},{"id":"agent_capabilities","c":"identity","p":97,"t":"fixed","h":null,"s":null,"ex":{"ar":["وش تقدر تسوي","ايش تقدر تسوي","كيف تساعدني","وش أقدر أسألك","وش ممكن أسألك عنه","وش خدماتك","وش دورك","كيف تفيدني"],"en":["what can you do","how can you help","what can I ask you","what do you help with","what are your capabilities","how are you useful"]},"kw":{"ar":["تقدر","تسوي","تساعدني","أسألك","دورك","تفيدني"],"en":["can you do","help","ask you","capabilities","useful"]},"en":[],"r":{"ar":["أقدر أساعدك تلقى شيء تسويه، مطعم أو مقهى، تجربة أو نشاط، عرض أو خصم، مجتمع مناسب، وأرتب لك اقتراحات حسب وقتك وحيّك واهتماماتك وخطتك.","اسألني بطريقتك عن الأماكن، الأكل، الأنشطة، العروض، المجتمعات أو «خطتي». وأقدر أتابع معك بأسئلة قصيرة مثل «غيره»، «أقرب»، «عليه عرض؟» أو «ضف الثاني لخطتي»."],"en":["I can help you find things to do, restaurants and cafés, experiences, activities, offers, communities, and suggestions based on your time, area, interests, and Plan.","Ask naturally about places, food, activities, offers, communities, or My Plan. I can also follow short turns such as 'another one', 'closer', 'with an offer?', or 'add the second one to My Plan'."]},"req":null,"fk":[]},{"id":"agent_scope_limits","c":"identity","p":85,"t":"fixed","h":null,"s":null,"ex":{"ar":["وش ما تقدر تسوي","وش حدودك","ايش خارج نطاقك","هل تجاوب على كل شي","هل تعرف كل شيء","وش الأشياء اللي ما تعرفها"],"en":["what can't you do","what are your limits","is anything out of scope","can you answer anything","do you know everything","what don't you know"]},"kw":{"ar":["حدودك","خارج نطاقك","كل شي","ما تعرف"],"en":["limits","out of scope","anything","don't know"]},"en":[],"r":{"ar":["أنا مخصص لتجربة EyeMakkah وما أختلق بيانات غير موجودة. ما أقدر أؤكد طقسًا أو ازدحامًا أو توفرًا أو حجزًا حيًا إذا التطبيق ما عنده مصدر فعلي لها.","نطاقي هو محتوى EyeMakkah وسياق الاستخدام الحالي. إذا طلبت شيء خارج البيانات المتاحة، أقول لك مباشرة بدل ما أخمّن."],"en":["I'm scoped to the EyeMakkah experience and won't invent unavailable data. I cannot confirm live weather, crowds, availability, or bookings unless the app has a real source for them.","My scope is EyeMakkah content and the current app context. If something is outside the available data, I'll say so rather than guess."]},"req":null,"fk":[]},{"id":"agent_data_source","c":"identity","p":100,"t":"fixed","h":null,"s":null,"ex":{"ar":["من وين تجيب معلوماتك","من وين المعلومات","مصدر إجاباتك","على إيش تعتمد","هل البيانات حقيقية","هل المعلومات مباشرة","هل المعلومات لايف","وش مصادر توصياتك"],"en":["where does your information come from","what data do you use","what is your data source","is the data live","is this real data","what are your recommendation sources"]},"kw":{"ar":["مصدر","المعلومات","البيانات","حقيقية","لايف","توصياتك"],"en":["source","data","live","real","recommendation"]},"en":[],"r":{"ar":["إجاباتي تعتمد على محتوى EyeMakkah الموجود في النموذج الحالي: الأماكن والتجارب والأنشطة والعروض والمجتمعات و«خطتي» وسياق المستخدم، مع معلومات مصدر/حداثة عندما تكون متاحة. بعض المحتوى تشغيلي تجريبي وليس بيانات حية.","في هذه النسخة أستخدم بيانات ومحتوى الـPrototype الحالي، وليس شبكة بيانات تشغيلية حية."],"en":["My answers use content available in the current EyeMakkah prototype: places, experiences, activities, offers, communities, My Plan, and user context, plus source/freshness information where available. Some operational content is illustrative rather than live.","In this version I use the current prototype's content and state, not a live operational data network."]},"req":null,"fk":[]},{"id":"agent_llm_api_question","c":"identity","p":100,"t":"fixed","h":null,"s":null,"ex":{"ar":["هل أنت مربوط ب api","هل مربوط بذكاء اصطناعي","هل أنت llm","هل الردود من ChatGPT","هل عندك مودل حي","هل تستخدم نموذج ذكاء اصطناعي حي","هل أنت شات جي بي تي"],"en":["are you connected to an api","are you powered by an llm","is this chatgpt","are you using a live ai model","is there a live model behind this","are you an LLM"]},"kw":{"ar":["api","llm","مودل","نموذج حي","ChatGPT","شات جي بي تي"],"en":["api","llm","chatgpt","live model"]},"en":[],"r":{"ar":["في نسخة الـPrototype الحالية، تجربة المساعد مبنية على بنك نوايا ومنطق سياقي مرتبط ببيانات EyeMakkah، وليست مرتبطة بـLLM أو API حي في الخلفية.","هذه النسخة تحاكي تجربة Agent بشكل طبيعي، لكن المطابقة والإجابات الحالية تأتي من بنك intents وhandlers محددة وليست من نموذج توليدي حي."],"en":["In the current prototype, the assistant uses an intent bank and contextual logic tied to EyeMakkah data rather than a live LLM/API backend.","This version behaves like an agent, but current matching and answers come from intents and predefined handlers rather than a live generative model."]},"req":null,"fk":[]},{"id":"agent_language_support","c":"identity","p":85,"t":"fixed","h":null,"s":null,"ex":{"ar":["تتكلم عربي","تدعم الإنجليزي","أقدر أكلمك إنجليزي","ترد عربي وإنجليزي","وش اللغات","تفهم لهجة","تفهم سعودي"],"en":["do you speak Arabic","do you support English","can I ask in Arabic","can I ask in English","what languages do you support","do you understand dialect","do you understand Saudi Arabic"]},"kw":{"ar":["عربي","إنجليزي","اللغات","لهجة","سعودي"],"en":["Arabic","English","languages","dialect","Saudi"]},"en":[],"r":{"ar":["نعم. تقدر تكلمني بالعربي أو الإنجليزي، وأفهم صياغات عربية طبيعية ولهجة سعودية بسيطة وأخطاء كتابة شائعة ضمن نطاق التطبيق.","اسأل بالعربي أو الإنجليزي، وما تحتاج تصيغ السؤال بطريقة رسمية."],"en":["Yes. You can ask in Arabic or English, including natural Arabic phrasing, simple Saudi colloquial wording, and common typos within the app scope.","Ask in Arabic or English. You don't need to phrase the question formally."]},"req":null,"fk":[]},{"id":"agent_context_memory","c":"identity","p":90,"t":"fixed","h":null,"s":null,"ex":{"ar":["تتذكر سؤالي السابق","تفهم السياق","تفهم سؤالي السابق","إذا قلت ليش تفهم","لو قلت غيره تفهم","هل تتابع الكلام","تتذكر النتائج","لو قلت الثاني تعرف"],"en":["do you remember my previous question","do you understand context","can you follow up","if I say why will you know what I mean","if I say another one do you understand","do you remember the results","if I say the second one do you know"]},"kw":{"ar":["تتذكر","السياق","سؤالي السابق","تتابع","غيره","الثاني"],"en":["remember","context","previous question","follow up","another one","second"]},"en":[],"r":{"ar":["أقدر أتابع سياق المحادثة القصير داخل جلسة المساعد، مثل آخر سؤال ونتيجة والعناصر المقترحة وسياقك الحالي، عشان أفهم متابعات مثل «ليش؟»، «غيره»، «أقرب» أو «الثاني».","المتابعات القصيرة تعتمد على آخر Intent ونتيجة وentities وسياق المستخدم داخل الجلسة الحالية."],"en":["I can follow short conversational context inside the assistant session, including the previous question, results, suggested objects, and current user context. That lets me understand turns such as 'why?', 'another one', 'closer', or 'the second one'.","Short follow-ups use the latest intent, result, entities, and user context in the current session."]},"req":null,"fk":[]},{"id":"app_what_is_eyemakkah","c":"app_help","p":95,"t":"fixed","h":null,"s":null,"ex":{"ar":["وش هي EyeMakkah","ايش EyeMakkah","وش التطبيق","ايش هذا التطبيق","ما هي EyeMakkah","اشرح لي EyeMakkah","وش هدف التطبيق","وش فكرة EyeMakkah"],"en":["what is EyeMakkah","what is this app","explain EyeMakkah","what is the purpose of the app","what is EyeMakkah for"]},"kw":{"ar":["EyeMakkah","التطبيق","هدف","فكرة"],"en":["EyeMakkah","app","purpose"]},"en":[],"r":{"ar":["EyeMakkah هو مجتمع رقمي لمكة يساعد السكان والزوار يكتشفون أماكن وتجارب وخدمات ومجتمعات، ينتقلون من الاكتشاف إلى المشاركة، ويحافظون على قراراتهم داخل «خطتي».","فكرة EyeMakkah مو مجرد دليل أماكن؛ هو تجربة تربط الاكتشاف بالمجتمع والمشاركة والخطة، وتتحسن حسب سياق واستخدام الشخص."],"en":["EyeMakkah is a digital community for Makkah that helps residents and visitors discover places, experiences, services, and communities, then move from discovery into participation and My Plan.","EyeMakkah is more than a directory. It connects discovery, community, participation, and planning around the user's context."]},"req":null,"fk":[]},{"id":"app_navigation_overview","c":"app_help","p":90,"t":"fixed","h":null,"s":null,"ex":{"ar":["وش الصفحات الرئيسية","وش الأقسام","وش التابات","وش موجود تحت","اشرح القائمة","وش أقدر أفتح من تحت","وش التنقل الرئيسي"],"en":["what are the main pages","what sections are there","what are the tabs","what is in the bottom navigation","explain the navigation"]},"kw":{"ar":["الصفحات","الأقسام","التابات","القائمة","التنقل"],"en":["pages","sections","tabs","navigation"]},"en":[],"r":{"ar":["التنقل الرئيسي في EyeMakkah أربع مناطق: «الرئيسية» للاقتراحات والسياق، «اكتشف» للتصفح والبحث، «المجتمع» للأسئلة والتوصيات والمشاركة، و«خطتي» لما حفظته أو تنوي فعله أو أكملته.","عندك أربع تبويبات رئيسية: الرئيسية، اكتشف، المجتمع، خطتي. والحساب موجود خلف صورة الملف الشخصي."],"en":["EyeMakkah has four primary areas: Home for contextual suggestions, Discover for browsing and search, Community for questions and contributions, and My Plan for what you saved, intend to do, or completed.","The four main tabs are Home, Discover, Community, and My Plan. Profile sits behind the avatar."]},"req":null,"fk":[]},{"id":"app_home_help","c":"app_help","p":85,"t":"fixed","h":null,"s":null,"ex":{"ar":["وش في الرئيسية","اشرح الصفحة الرئيسية","وش تسوي الرئيسية","وش أستفيد من الرئيسية","الرئيسية تعرض ايش"],"en":["what is on Home","explain the home page","what does Home do","what can I see on Home"]},"kw":{"ar":["الرئيسية","الصفحة الرئيسية"],"en":["home","home page"]},"en":[],"r":{"ar":["الرئيسية تجمع لك اقتراحات حسب سياقك مثل الوقت والحي والاهتمامات وخطتك، وتعرض محتوى يبدأ قريبًا، اقتراحات للمساء، مجتمع، عروض، وأماكن أو تجارب مناسبة.","الرئيسية مو قائمة ثابتة؛ المفروض تتغير حسب وقتك وسياقك وما عندك في «خطتي»."],"en":["Home brings together contextual suggestions based on time, area, interests, and My Plan, including things starting soon, evening ideas, community content, offers, and relevant places or experiences.","Home is not meant to be a static list; it adapts to your context and Plan."]},"req":null,"fk":[]},{"id":"app_discover_help","c":"app_help","p":85,"t":"fixed","h":null,"s":null,"ex":{"ar":["وش في اكتشف","اشرح اكتشف","وش أقدر أسوي في اكتشف","كيف أتصفح","وش فايدة صفحة اكتشف"],"en":["what is Discover","explain Discover","what can I do in Discover","how do I browse","what is the Discover page for"]},"kw":{"ar":["اكتشف","أتصفح","تصفح"],"en":["discover","browse"]},"en":[],"r":{"ar":["«اكتشف» للتصفح عبر الأماكن والمطاعم والمقاهي والتجارب والأنشطة والفعاليات والخدمات حسب الفئة والحي والوقت والنية مثل «الليلة» أو «للعائلة» أو «بدون حجز».","استخدم «اكتشف» إذا ودك تتصفح بدون سؤال محدد أو تضيق النتائج حسب نوع الشيء اللي تبيه."],"en":["Discover lets you browse places, restaurants, cafés, experiences, activities, events, and services by category, area, time, and intent such as tonight, family-friendly, or no booking.","Use Discover when you want to browse broadly or narrow results by what you're looking for."]},"req":null,"fk":[]},{"id":"app_community_help","c":"app_help","p":90,"t":"fixed","h":null,"s":null,"ex":{"ar":["وش المجتمع","اشرح المجتمع","وش أقدر أسوي بالمجتمع","وش فايدة المجتمع","هل أقدر أسأل الناس","وش موجود بالمجتمع"],"en":["what is Community","explain Community","what can I do in Community","what is Community for","can I ask people"]},"kw":{"ar":["المجتمع","أسأل الناس","المجتمعات"],"en":["community","ask people","communities"]},"en":[],"r":{"ar":["«المجتمع» يجمع معرفة وتجارب الناس: أسئلة، إجابات، توصيات، تقارير تجربة، نصائح، تحديثات وصور، مع مجتمعات للأحياء والزوار والحج والعمرة والأكل والثقافة والتطوع والهوايات والحياة في مكة.","تقدر تنتقل من نقاش داخل المجتمع إلى مكان أو نشاط، ومن نشاط مكتمل ترجع وتشارك معلومة تساعد غيرك."],"en":["Community brings together lived knowledge: questions, answers, recommendations, experience reports, tips, updates, and photos across neighborhoods, visitors, Hajj & Umrah, food, culture, volunteering, hobbies, and life in Makkah.","You can move from a community discussion into a place or activity, then contribute back after completing something."]},"req":null,"fk":[]},{"id":"app_plan_help","c":"app_help","p":95,"t":"fixed","h":null,"s":null,"ex":{"ar":["وش خطتي","اشرح خطتي","وش فايدة خطتي","هل خطتي مفضلة","وش أحط في خطتي","وش الفرق بين خطتي والحفظ"],"en":["what is My Plan","explain My Plan","what is My Plan for","is My Plan just favorites","what goes into My Plan","what is the difference between My Plan and save"]},"kw":{"ar":["خطتي","فايدة خطتي","مفضلة","الحفظ"],"en":["My Plan","favorites","save"]},"en":[],"r":{"ar":["«خطتي» مو مجرد مفضلة. هي سطح استمرارية يوضح ما هو الآن، اليوم، قادم، مؤكد، مهتم به، محفوظ لوقت لاحق أو مكتمل.","الحفظ يعني إن الشيء يهمك. الإضافة إلى «خطتي» تعني أنك بدأت تحوله لقرار أو ترتيب فعلي، وله حالات مختلفة بعد ذلك."],"en":["My Plan is not just favorites. It tracks what is now, today, upcoming, confirmed, interesting, saved for later, or completed.","Saving means something interests you. Adding it to My Plan means you're starting to turn it into an actual decision or plan."]},"req":null,"fk":[]},{"id":"app_search_help","c":"app_help","p":85,"t":"fixed","h":null,"s":null,"ex":{"ar":["وش أقدر أبحث","البحث يشمل ايش","كيف أبحث","وش يبحث التطبيق","هل البحث يشمل المجتمع","أقدر أبحث عن سؤال"],"en":["what can I search","what does search cover","how do I search","does search include Community","can I search questions"]},"kw":{"ar":["أبحث","البحث","يشمل"],"en":["search","what can I search","cover"]},"en":[],"r":{"ar":["البحث في EyeMakkah مو للأماكن فقط؛ يقدر يرجع أماكن ومطاعم وتجارب وأنشطة ومجتمعات وخدمات ومساهمات مرتبطة بما كتبته.","اكتب الشيء بطريقتك مثل «قهوة هادئة»، «حراء»، «للعائلة» أو «تطوع»، والبحث يحاول يطابق أكثر من نوع محتوى."],"en":["Search is not limited to places. It can return places, restaurants, experiences, activities, communities, services, and relevant contributions.","Search naturally, for example 'quiet coffee', 'Hira', 'family-friendly', or 'volunteering', and EyeMakkah can match across multiple content types."]},"req":null,"fk":[]},{"id":"app_save_vs_plan_help","c":"app_help","p":100,"t":"fixed","h":null,"s":null,"ex":{"ar":["وش الفرق بين حفظ وخطتي","الحفظ نفس خطتي","إذا حفظت ينضاف لخطتي","وش يعني حفظ","وش يعني أضف إلى خطتي","save و plan نفس الشي"],"en":["what is the difference between save and My Plan","is saving the same as My Plan","does save add it to My Plan","what does save mean","what does add to My Plan mean"]},"kw":{"ar":["الفرق","حفظ","خطتي","save","plan"],"en":["difference","save","My Plan","plan"]},"en":[],"r":{"ar":["لا. «حفظ» يعني احتفظت بالشيء للرجوع له. «أضف إلى خطتي» خطوة أقوى وتدخل العنصر في مسار التخطيط والاستمرارية. الحفظ ≠ الخطة ≠ الانضمام ≠ الحجز.","إذا حفظت شيئًا ما ما يعني أنك قررت تروح له أو حجزته. EyeMakkah يحافظ على هذه الحالات منفصلة."],"en":["No. Save means keeping something for later. Add to My Plan is a stronger planning step. Save ≠ Plan ≠ Join ≠ Booking.","Saving something does not mean you decided to go or booked it. EyeMakkah keeps those states separate."]},"req":null,"fk":[]},{"id":"app_booking_handoff_help","c":"app_help","p":100,"t":"fixed","h":null,"s":null,"ex":{"ar":["كيف الحجز","هل تحجزون من التطبيق","إذا ضغطت حجز يعني تم","وش يعني انتقلت لإكمال الحجز","هل EyeMakkah يؤكد الحجز","الحجز داخل التطبيق ولا برا"],"en":["how does booking work","do you book inside the app","if I tap book is it confirmed","what does left to complete booking mean","does EyeMakkah confirm bookings","is booking inside or outside the app"]},"kw":{"ar":["الحجز","تم الحجز","إكمال الحجز","يؤكد"],"en":["booking","confirmed","complete booking"]},"en":[],"r":{"ar":["بعض الحجوزات تنتقل لمقدم الخدمة أو منصة خارجية. EyeMakkah يسجل «انتقلت لإكمال الحجز» فقط، ولا يعتبر الحجز مؤكدًا إلا إذا وصل تأكيد فعلي أو أكده المستخدم صراحة.","الضغط على زر حجز خارجي مو نفسه «تم الحجز». التطبيق يحافظ على الفرق بين الانتقال للحجز والتأكيد."],"en":["Some bookings hand off to an external provider. EyeMakkah records that you left to complete booking, but does not mark it confirmed unless there is a real callback or explicit user confirmation.","Tapping an external booking action is not the same as a confirmed booking. EyeMakkah keeps those states separate."]},"req":null,"fk":[]},{"id":"app_trust_source_help","c":"app_help","p":95,"t":"fixed","h":null,"s":null,"ex":{"ar":["كيف أعرف المعلومة صحيحة","وش مصدر المعلومة","وش يعني معلومة رسمية","وش يعني من المجتمع","وش يعني معلومات متعارضة","وش يعني قديمة","كيف أعرف آخر تحديث"],"en":["how do I know if information is reliable","what is the source","what does official information mean","what does from community mean","what does conflicting information mean","how do I know when it was updated"]},"kw":{"ar":["مصدر","رسمية","المجتمع","متعارضة","قديمة","آخر تحديث"],"en":["source","official","community","conflicting","updated"]},"en":[],"r":{"ar":["EyeMakkah يوضح مصدر المعلومة عندما يكون متاحًا: رسمي، من مقدم الخدمة، أو من المجتمع، ويعرض حداثتها أو وجود تعارض بدل ما يخفيه.","إذا اختلفت المصادر، التطبيق يقدر يعرض الادعاءات والتواريخ جنب بعض بدل ما يدّعي أن واحدًا منها صحيح بدون دليل."],"en":["EyeMakkah can show whether information comes from an official source, provider, or community, and indicate freshness or conflicts instead of hiding them.","When sources disagree, the app can show the claims and dates side by side rather than pretending one is true without evidence."]},"req":null,"fk":[]},{"id":"app_resident_visitor_help","c":"app_help","p":88,"t":"fixed","h":null,"s":null,"ex":{"ar":["وش الفرق بين مقيم وزائر","ليش تختارون مقيم أو زائر","أنا من مكة وش أختار","أنا زائر وش أختار","هل التوصيات تختلف للمقيم والزائر"],"en":["what is the difference between resident and visitor","why choose resident or visitor","I'm from Makkah what should I choose","I'm visiting what should I choose","do recommendations differ"]},"kw":{"ar":["مقيم","زائر","سكان مكة","التوصيات تختلف"],"en":["resident","visitor","recommendations"]},"en":[],"r":{"ar":["اختيار «مقيم» أو «زائر» يعطي EyeMakkah سياقًا أفضل. المقيم غالبًا يحتاج اكتشافًا متجددًا وحياة يومية ومجتمعات محلية، والزائر قد يحتاج تجربة أوضح حسب الوقت والزيارة والخطة.","الاختيار يساعد في الترتيب فقط، وما يمنعك من اكتشاف أي نوع محتوى داخل التطبيق."],"en":["Choosing resident or visitor gives EyeMakkah better context. Residents may benefit more from ongoing local discovery and communities, while visitors may need clearer time-based experiences and planning.","The choice helps ranking; it does not block you from discovering other content."]},"req":null,"fk":[]},{"id":"app_personalization_help","c":"app_help","p":95,"t":"fixed","h":null,"s":null,"ex":{"ar":["كيف التخصيص","ليش تطلع لي هذي الاقتراحات","كيف تعرفون اهتماماتي","هل تتعلمون مني","أقدر أغير اهتماماتي","كيف أحذف اهتمام","وش يعني مخصص لي"],"en":["how does personalization work","why am I seeing these suggestions","how do you know my interests","does the app learn from me","can I change my interests","what does personalized mean"]},"kw":{"ar":["التخصيص","ليش تطلع","اهتماماتي","تتعلم","مخصص"],"en":["personalization","why am I seeing","interests","learn","personalized"]},"en":[],"r":{"ar":["التخصيص يعتمد على سياق صريح وسلوك مفيد داخل التطبيق مثل ما حفظته أو أضفته لخطتك أو أكملته، بدون افتراض صفات حساسة عنك. وتقدر تصحح اهتماماتك من الحساب.","EyeMakkah ما يفترض أن كل مشاهدة تعني اهتمام قوي، وما يحول رفضًا واحدًا إلى كراهية دائمة."],"en":["Personalization uses explicit context and meaningful in-app actions such as saving, planning, joining, or completing, without inferring sensitive traits. You can correct your interests from Profile.","EyeMakkah does not treat every view as a strong preference or one dismissal as a permanent dislike."]},"req":null,"fk":[]},{"id":"app_location_help","c":"app_help","p":100,"t":"fixed","h":null,"s":null,"ex":{"ar":["ليش تبغون الموقع","هل لازم أفعل الموقع","بدون موقع يشتغل","وش تستفيدون من الموقع","هل تشوفون موقعي بالضبط","هل الناس يشوفون موقعي"],"en":["why do you need location","do I have to enable location","does it work without location","what do you use location for","do you see my exact location","can other people see my location"]},"kw":{"ar":["الموقع","أفعل الموقع","بدون موقع","موقعي بالضبط","الناس يشوفون"],"en":["location","enable location","without location","exact location","people see"]},"en":[],"r":{"ar":["الموقع اختياري. EyeMakkah يقدر يشتغل بدون موقع دقيق باستخدام الحي أو المنطقة التي تختارها. إذا شاركت الموقع يمكن استخدامه لتحسين القرب، لكن ما المفروض يعرض موقعك الدقيق للناس أو يبني اكتشاف مستخدمين قريبين.","تقدر تستخدم التطبيق بدون إذن الموقع، وتختار منطقتك يدويًا."],"en":["Location is optional. EyeMakkah can work without precise location using the area or neighborhood you choose. If location is shared, it can improve proximity results, but it should not expose your exact location to other users or power nearby-person discovery.","You can use the app without location permission and choose your area manually."]},"req":null,"fk":[]},{"id":"app_offers_help","c":"app_help","p":90,"t":"fixed","h":null,"s":null,"ex":{"ar":["وين العروض","هل فيه خصومات","وش يعني عرض","هل عندكم باقات","العروض تشمل ايش","هل فيه خصم من التطبيق","وين أشوف الخصومات"],"en":["where are the offers","are there discounts","what is an offer","do you have packages","what do offers cover","are there app discounts","where can I see discounts"]},"kw":{"ar":["العروض","خصومات","باقات","خصم"],"en":["offers","discounts","packages","app discount"]},"en":[],"r":{"ar":["EyeMakkah يقدر يعرض عروضًا وخصومات مرتبطة بالمطاعم والمقاهي والإقامة والتجارب والأنشطة والمتاجر والخدمات، مثل خصم مباشر أو باقة عائلية أو سعر خاص عبر التطبيق، مع إظهار شروط العرض وحالته بوضوح.","العرض المفروض يظهر في المكان المناسب أثناء الاكتشاف وصفحة التفاصيل وداخل النتائج، مو كقسم منفصل مخفي فقط."],"en":["EyeMakkah can surface offers and discounts across restaurants, cafés, stays, experiences, activities, shops, and services, such as direct discounts, family packages, or app-only prices, with clear terms and status.","Offers should appear where they matter during discovery and on detail/results surfaces, not only in a hidden standalone section."]},"req":null,"fk":[]},{"id":"context_explain_all","c":"user_context","p":90,"t":"fixed","h":null,"s":null,"ex":{"ar":["وش السياق اللي تستخدمه","على ايش تعتمد بالتوصيات","وش الأشياء اللي تاخذها بالحسبان","وش تعرف عن احتياجي","كيف تختار لي","وش البيانات اللي تأثر على اقتراحاتك"],"en":["what context do you use","what do recommendations depend on","what do you take into account","how do you choose for me","what affects your suggestions"]},"kw":{"ar":["السياق","تعتمد","بالحسبان","كيف تختار","اقتراحاتك"],"en":["context","depend on","take into account","choose","suggestions"]},"en":[],"r":{"ar":["أستخدم فقط السياق المتاح داخل EyeMakkah مثل مقيم/زائر، الحي المختار، الوقت المتاح، فرد/عائلة/أطفال/مجموعة، الاهتمامات، متطلبات الوصول، وما عندك في «خطتي».","السياق يساعدني أرتب الخيارات، لكنه ما يخليني أفترض معلومات حساسة غير موجودة."],"en":["I use context available inside EyeMakkah such as resident/visitor mode, selected area, available time, solo/family/kids/group, interests, accessibility preferences, and My Plan.","Context helps rank options, but it does not justify inferring sensitive information that is not provided."]},"req":null,"fk":[]},{"id":"context_current","c":"user_context","p":100,"t":"dynamic","h":"describe_current_user_context","s":null,"ex":{"ar":["وش سياقي الحالي","وش مختار الحين","وش تعرف عني هنا","وش محدد عندي","أنا داخل بأي وضع","وش الوقت المحدد","وش الحي الحالي"],"en":["what is my current context","what is selected right now","what do you know about my current setup","what mode am I in","what area is selected","what time is selected"]},"kw":{"ar":["سياقي","مختار","محدد","الوضع","الحي الحالي","الوقت المحدد"],"en":["current context","selected","mode","area","time"]},"en":[],"r":{"ar":["سياقك الحالي: {{mode}} · {{neighborhood}} · {{party}} · الوقت المتاح {{time_available}} · الاهتمامات {{interests}} · اللغة {{language}}.","حاليًا أتعامل معك على أساس: {{mode}}، المنطقة {{neighborhood}}، {{party}}، والوقت المتاح {{time_available}}."],"en":["Your current context is: {{mode}} · {{neighborhood}} · {{party}} · {{time_available}} available · interests {{interests}} · language {{language}}.","Right now I'm using: {{mode}}, area {{neighborhood}}, {{party}}, and {{time_available}} available."]},"req":null,"fk":[]},{"id":"context_mode_options","c":"user_context","p":80,"t":"fixed","h":null,"s":null,"ex":{"ar":["وش خيارات المستخدم","وش خيارات مقيم وزائر","أقدر أغير لمقيم","أقدر أغير لزائر","وش أنواع الحساب هنا","وش يعني resident visitor"],"en":["what user modes are there","what are resident and visitor options","can I switch to resident","can I switch to visitor","what user types are there"]},"kw":{"ar":["مقيم","زائر","خيارات المستخدم","أنواع الحساب"],"en":["resident","visitor","user modes","user types"]},"en":[],"r":{"ar":["السياق الأساسي هنا خياران: «مقيم» أو «زائر». وتقدر تغيّره حسب وضعك الحالي بدون ما يغيّر هوية حسابك.","مقيم/زائر سياق للتخصيص والترتيب، مو بوابتين منفصلتين للتطبيق."],"en":["The primary context options are Resident and Visitor. You can switch based on your current situation without changing your account identity.","Resident/Visitor is a personalization context, not two separate app portals."]},"req":null,"fk":[]},{"id":"context_neighborhood_options","c":"user_context","p":85,"t":"fixed","h":null,"s":null,"ex":{"ar":["وش الأحياء الموجودة","وش المناطق اللي أقدر أختارها","ايش خيارات الحي","وش الأحياء المدعومة","أقدر أختار العوالي","وش المناطق الموجودة"],"en":["what neighborhoods are available","what areas can I choose","what neighborhood options are there","which areas are supported","can I choose Al Awali"]},"kw":{"ar":["الأحياء","المناطق","خيارات الحي","مدعومة"],"en":["neighborhoods","areas","options","supported"]},"en":[],"r":{"ar":["المناطق المتاحة في النموذج الحالي تشمل: العوالي، العزيزية، الششة، الشوقية، النسيم، بطحاء قريش، المسفلة، أجياد، الهجرة، الزاهر، الكعكية، جرول، الرصيفة، التنعيم، ومحيط الحرم.","تقدر تختار الحي يدويًا حتى لو ما فعّلت الموقع الدقيق."],"en":["The current prototype includes Al Awali, Al Aziziyah, Al Shisha, Al Shawqiyah, An Naseem, Batha Quraysh, Al Misfalah, Ajyad, Al Hijrah, Az Zahir, Al Kakiyah, Jarwal, Ar Rusayfah, At Tanim, and the Haram area.","You can choose an area manually even without precise location."]},"req":null,"fk":[]},{"id":"context_party_options","c":"user_context","p":80,"t":"fixed","h":null,"s":null,"ex":{"ar":["وش خيارات العائلة","أقدر أقول لحالي","كيف أحدد مع أطفال","وش يعني فرد أو عائلة","أقدر أقول مجموعة","وش خيارات المجموعة"],"en":["what party options are there","can I say I'm solo","how do I set kids","what does solo or family mean","can I choose group"]},"kw":{"ar":["العائلة","لحالي","أطفال","فرد","مجموعة"],"en":["party","solo","family","kids","group"]},"en":[],"r":{"ar":["سياق المجموعة في النموذج الحالي يشمل: لوحدك، عائلة، مع أطفال، أو مجموعة. هذا يساعد في ترتيب الخيارات المناسبة.","هذا مجرد سياق للتوصيات، وما يعني أن التطبيق ينشر مع من أنت أو هويات الحضور."],"en":["The current party context includes solo, family, with kids, or group. This helps rank suitable options.","It is only recommendation context; it does not publish who you are with or attendee identities."]},"req":null,"fk":[]},{"id":"context_time_options","c":"user_context","p":85,"t":"fixed","h":null,"s":null,"ex":{"ar":["وش خيارات الوقت","كم أقدر أحدد وقت","وش يعني ساعة ساعتين","أقدر أقول عندي المساء كله","كيف أحدد الوقت المتاح","وش أوقات الاقتراح"],"en":["what time options are there","how much time can I set","what does one hour or two hours mean","can I say I have the whole evening","how do I set available time"]},"kw":{"ar":["خيارات الوقت","ساعة","ساعتين","المساء كله","الوقت المتاح"],"en":["time options","one hour","two hours","whole evening","available time"]},"en":[],"r":{"ar":["تقدر تحدد وقتك المتاح مثل ساعة، ساعتين، أو مساحة أطول للمساء. المساعد يستخدمه عشان ما يقترح تجربة أطول من وقتك قدر الإمكان.","الوقت المتاح سياق مباشر لبناء اقتراح واحد أو طلعة مركبة."],"en":["You can set available time such as one hour, two hours, or a longer evening window. The assistant uses it to avoid suggesting something longer than your available time where possible.","Available time can guide a single recommendation or a composed outing."]},"req":null,"fk":[]},{"id":"context_change_mode","c":"user_context","p":100,"t":"action","h":"set_user_mode_from_query","s":null,"ex":{"ar":["خلني مقيم","أنا من سكان مكة","غيرني لمقيم","خلني زائر","أنا زائر","حولني لزائر","اعتبرني زائر","اعتبرني مقيم"],"en":["set me as resident","I'm a Makkah resident","switch me to resident","set me as visitor","I'm visiting","switch me to visitor","treat me as a visitor"]},"kw":{"ar":["مقيم","سكان مكة","زائر","حولني","اعتبرني"],"en":["resident","visitor","switch","set me"]},"en":["mode"],"r":{"ar":["تمام، أغيّر السياق إلى {{mode}} وأبقي باقي تفضيلاتك كما هي."],"en":["Okay. I'll switch your context to {{mode}} and keep the rest of your preferences unchanged."]},"req":null,"fk":[]},{"id":"context_change_neighborhood","c":"user_context","p":100,"t":"action","h":"set_neighborhood_from_query","s":null,"ex":{"ar":["خلني على العوالي","غير الحي للعزيزية","شوف لي النسيم","خل المنطقة أجياد","حولني لمحيط الحرم","أبغى نتائج جرول","غيرها للشوقية"],"en":["set the area to Al Awali","switch to Al Aziziyah","show me An Naseem","set the neighborhood to Ajyad","switch to the Haram area","show results for Jarwal"]},"kw":{"ar":["غير الحي","خل المنطقة","حولني","نتائج"],"en":["set area","switch to","neighborhood","show results"]},"en":["neighborhood"],"r":{"ar":["تمام، أغيّر المنطقة إلى {{neighborhood}} وأبقي باقي السياق كما هو."],"en":["Okay. I'll switch the area to {{neighborhood}} and keep the rest of the context unchanged."]},"req":null,"fk":[]},{"id":"context_change_party","c":"user_context","p":100,"t":"action","h":"set_party_from_query","s":null,"ex":{"ar":["خلها للعائلة","أنا لحالي","معي أطفال","نحن مجموعة","اعتبرني مع العائلة","أبغى اقتراحات لشخص واحد","غيرها لأطفال"],"en":["set it for family","I'm on my own","I'm with kids","we are a group","treat me as family","show options for one person","switch to kids"]},"kw":{"ar":["للعائلة","لحالي","أطفال","مجموعة","شخص واحد"],"en":["family","solo","kids","group","one person"]},"en":["party"],"r":{"ar":["تمام، أغيّر سياق المجموعة إلى {{party}} وأستخدمه في الاقتراحات القادمة."],"en":["Okay. I'll switch the party context to {{party}} and use it for upcoming suggestions."]},"req":null,"fk":[]},{"id":"context_change_time","c":"user_context","p":100,"t":"action","h":"set_time_available_from_query","s":null,"ex":{"ar":["عندي ساعة","عندي ساعتين","المساء كله","خلها ساعة","خل الوقت ساعتين","أبغى شي خلال ساعة","عندي أربع ساعات","عندي نص يوم"],"en":["I have one hour","I have two hours","I have the whole evening","set it to one hour","set my time to two hours","I need something within an hour","I have four hours","I have half a day"]},"kw":{"ar":["عندي ساعة","ساعتين","المساء كله","خلال ساعة","أربع ساعات","نص يوم"],"en":["one hour","two hours","whole evening","within an hour","four hours","half a day"]},"en":["time_available"],"r":{"ar":["تمام، أخلي وقتك المتاح {{time_available}} وأبني الاقتراحات على هذا الأساس."],"en":["Okay. I'll set your available time to {{time_available}} and use it for recommendations."]},"req":null,"fk":[]},{"id":"context_change_language","c":"user_context","p":100,"t":"action","h":"set_language_from_query","s":null,"ex":{"ar":["خلها عربي","تكلم عربي","حول للإنجليزي","خلها إنجليزي","English please","رد علي بالإنجليزي","رد عربي"],"en":["switch to Arabic","Arabic please","switch to English","English please","reply in English","reply in Arabic"]},"kw":{"ar":["عربي","إنجليزي","حول","تكلم","رد"],"en":["Arabic","English","switch","reply"]},"en":["language"],"r":{"ar":["تمام، أغيّر اللغة إلى {{language}}."],"en":["Okay. I'll switch the language to {{language}}."]},"req":null,"fk":[]},{"id":"fallback_unclear","c":"fallback","p":10,"t":"fixed","h":null,"s":null,"ex":{"ar":["وش","طيب","ايش","كيف","ممكن","ساعدني","ما أدري وش أسأل","وش تنصح","ابي مساعدة","ما أدري"],"en":["what","okay then","help me","I don't know what to ask","can you help","what do you suggest","I need help"]},"kw":{"ar":["ساعدني","ما أدري","مساعدة","وش تنصح"],"en":["help","don't know","suggest","need help"]},"en":[],"r":{"ar":["أكيد. اكتب اللي تحتاجه بطريقتك: مكان، مطعم، نشاط، عرض، مجتمع، أو شيء ترتبه في «خطتي».","قل لي وش ودك تسوي أو وش نوع الشيء اللي تبحث عنه، حتى لو بجملة بسيطة، وأنا أحاول أفهم المقصود."],"en":["Sure. Ask naturally about a place, restaurant, activity, offer, community, or something you want to organize in My Plan.","Tell me what you'd like to do or what kind of thing you're looking for, even in a simple sentence, and I'll try to understand."]},"req":null,"fk":[]},{"id":"fallback_ambiguous_entity","c":"fallback","p":92,"t":"fixed","h":null,"s":null,"ex":{"ar":["هذا المكان","ذاك النشاط","هو نفسه","الثاني هناك","هذاك","المكان اللي قلت","النشاط اللي قبل"],"en":["this place","that activity","the same one","the second one there","that one","the place you mentioned","the previous activity"]},"kw":{"ar":["هذا","ذاك","المكان","النشاط","اللي قلت"],"en":["this","that","place","activity","mentioned"]},"en":[],"r":{"ar":["أقدر أكمل، لكن عندي أكثر من شيء ممكن تقصده. اكتب اسم المكان أو النشاط، أو وصف قصير له.","عندي أكثر من مرجع محتمل. حدّد لي أي واحد تقصد وما أحتاج تعيد السؤال كاملًا."],"en":["I can continue, but more than one item could match. Give me the place/activity name or a short description.","I have multiple possible references. Tell me which one you mean; you don't need to repeat the whole question."]},"req":null,"fk":[]},{"id":"fallback_spelling_noise","c":"fallback","p":20,"t":"fixed","h":null,"s":null,"ex":{"ar":["ابغا مطعم للعائله","وش في فعاليات الليله","ابي شي قرييب","وين اروحع","ابغى خصم مطعم","ايش فيه بلعوالي","وش في للاطفااال"],"en":["restarant for famly","whats on tonite","somthing closr","wher shud i go","discount resturant","things in awali","for kidss"]},"kw":{"ar":["ابغا","العائله","الليله","قرييب","اروحع","للاطفااال"],"en":["restarant","famly","tonite","closr","kidss"]},"en":[],"r":{"ar":["أفهم الأخطاء البسيطة عادةً. اكتب بطريقتك، وإذا كان فيه أكثر من معنى محتمل بسألك توضيحًا واحدًا بدل ما أخمّن.","مو لازم تكتب رسمي. أحاول أطبّع الأخطاء الشائعة واللهجة، وإذا المعنى مو واضح بحدد لك وش أحتاج أعرف."],"en":["I can usually handle common typos. Write naturally; if more than one meaning is plausible, I'll ask one clarification instead of guessing.","You don't need perfect spelling. I normalize common mistakes and informal wording, and I'll clarify only when needed."]},"req":null,"fk":[]},{"id":"out_of_scope_general_knowledge","c":"out_of_scope","p":35,"t":"fixed","h":null,"s":null,"ex":{"ar":["من هو رئيس أمريكا","وش عاصمة فرنسا","كم عدد سكان العالم","من اخترع الإنترنت","اعطني معلومات عن الفضاء","من فاز بكأس العالم","احسب لي مسألة رياضيات"],"en":["who is the president of the US","what is the capital of France","what is the world population","who invented the internet","tell me about space","who won the world cup","solve a math problem"]},"kw":{"ar":["رئيس","عاصمة","العالم","الفضاء","كأس العالم"],"en":["president","capital","world population","space","world cup"]},"en":[],"r":{"ar":["هذا خارج نطاق مساعد EyeMakkah داخل التطبيق. أقدر أساعدك في مكة من خلال الأماكن والتجارب والمطاعم والعروض والمجتمعات و«خطتي».","سؤالك عام وخارج نطاق تجربة EyeMakkah الحالية."],"en":["That's outside the EyeMakkah app assistant scope. I can help with Makkah places, experiences, restaurants, offers, communities, and My Plan.","That's a general question outside the current EyeMakkah experience."]},"req":null,"fk":[]},{"id":"out_of_scope_live_news","c":"out_of_scope","p":50,"t":"fixed","h":null,"s":null,"ex":{"ar":["وش آخر الأخبار","وش صار اليوم في الأخبار","عطني أخبار مكة الآن","في خبر عاجل","وش ترند اليوم","وش الأخبار السياسية"],"en":["what's the latest news","what happened in the news today","give me Makkah news now","is there breaking news","what is trending today","political news"]},"kw":{"ar":["الأخبار","خبر عاجل","ترند","السياسية"],"en":["news","breaking news","trending","political"]},"en":[],"r":{"ar":["الأخبار الحية مو ضمن بيانات مساعد EyeMakkah في هذا النموذج. إذا فيه فعالية أو تحديث موجود داخل محتوى التطبيق أقدر أساعدك فيه.","ما عندي feed أخبار حي في النسخة الحالية."],"en":["Live news is not part of the EyeMakkah assistant data in this prototype. I can help with events or updates represented inside the app.","There is no live news feed in the current prototype."]},"req":null,"fk":[]},{"id":"out_of_scope_live_operational_certainty","c":"out_of_scope","p":100,"t":"fixed","h":null,"s":null,"ex":{"ar":["الحرم زحمة الحين","كم الانتظار الآن","هل فيه مواقف الآن","هل فيه مقاعد متاحة الآن","هل العرض متوفر الآن","كم عدد الناس الآن","هل النشاط فل"],"en":["is the Haram crowded right now","what is the wait time now","are there parking spaces now","are seats available now","is the offer available right now","how many people are there now","is the activity full"]},"kw":{"ar":["زحمة الحين","الانتظار الآن","مواقف الآن","متاحة الآن","عدد الناس","فل"],"en":["crowded right now","wait time now","parking now","available right now","how many people","full"]},"en":[],"r":{"ar":["ما أقدر أؤكد حالة حية إذا EyeMakkah ما عنده مصدر تشغيلي فعلي لها. أقدر أعرض لك آخر معلومة متاحة ومصدرها أو أحولك للمصدر الرسمي/مقدم الخدمة إذا كان موجودًا.","الحالة اللحظية مثل الزحام والتوفر تحتاج مصدرًا حيًا؛ ما راح أخمّنها."],"en":["I can't confirm live operational status unless EyeMakkah has a real live source for it. I can show the latest available information and its source, or direct you to the official/provider source when available.","Real-time crowding or availability requires a live source; I won't guess it."]},"req":null,"fk":[]},{"id":"out_of_scope_sensitive_personal_data","c":"out_of_scope","p":100,"t":"fixed","h":null,"s":null,"ex":{"ar":["مين قريب مني من المستخدمين","عطني أسماء اللي رايحين","وين فلان الآن","مين سجل في النشاط","ورني مواقع الناس","أعطني أرقام المشاركين","وش ديانة المستخدمين","مين النساء المسجلات"],"en":["who are the users near me","show me names of people going","where is this person now","who registered for the activity","show people's locations","give me participant phone numbers","what religion are the users","which women are registered"]},"kw":{"ar":["مين قريب","أسماء","وين فلان","مواقع الناس","أرقام المشاركين","ديانة","المسجلات"],"en":["users near me","names","where is","people's locations","phone numbers","religion","registered women"]},"en":[],"r":{"ar":["ما أقدر أكشف مواقع المستخدمين أو هويات الحضور أو بيانات شخصية/حساسة. EyeMakkah مصمم للمجتمع والمشاركة بدون تحويله لتتبع أشخاص.","أقدر أساعدك بمعلومات النشاط أو المجتمع نفسه، لكن مو ببيانات خاصة عن أشخاص آخرين."],"en":["I can't expose user locations, attendee identities, or personal/sensitive data. EyeMakkah is designed for community participation without turning into people tracking.","I can help with information about the activity or community itself, not private data about other people."]},"req":null,"fk":[]},{"id":"out_of_scope_external_confirmation_or_authority","c":"out_of_scope","p":100,"t":"fixed","h":null,"s":null,"ex":{"ar":["أكد لي حجزي","هل حجزي تم أكيد","قول لي رسميًا أقدر أدخل","هل هذا الحكم الشرعي صحيح","افتي لي","ضمن لي أني بدخل","أكد لي التذكرة من الجهة"],"en":["confirm my booking","is my booking definitely confirmed","officially tell me I can enter","is this religious ruling correct","give me a fatwa","guarantee I can enter","confirm my ticket from the authority"]},"kw":{"ar":["أكد حجزي","رسميًا","الحكم الشرعي","افتي","ضمن لي","التذكرة"],"en":["confirm my booking","officially","religious ruling","fatwa","guarantee","ticket"]},"en":[],"r":{"ar":["EyeMakkah ما يقدر يصدر تأكيدًا رسميًا أو دينيًا من نفسه. للحجز أو الدخول أو الحكم الشرعي، أعرض لك ما هو موجود في التطبيق وأوجهك للمصدر المختص عند الحاجة.","إذا كان الشيء يحتاج تأكيد جهة رسمية أو مقدم خدمة أو مرجع ديني مختص، ما راح أستبدل ذلك بتخمين من المساعد."],"en":["EyeMakkah cannot issue an official or religious confirmation on its own. For bookings, access, or religious rulings, I can show what the app has and direct you to the appropriate source when needed.","If something requires confirmation from an authority, provider, or qualified religious source, the assistant should not replace that with a guess."]},"req":null,"fk":[]},{"id":"discover_what_to_do_now","c":"discovery","p":100,"t":"dynamic","h":"recommend_now","s":"ranked_list","ex":{"ar":["وش أسوي الحين","وش أسوي الآن","وش فيه الحين","وين أروح الآن","اقترح لي شي الحين","أنا فاضي الحين وش أسوي","وش متاح لي الآن","عطني شي أسويه الحين"],"en":["what should I do now","what can I do right now","what's on now","where should I go now","suggest something now","I'm free right now","what is available now"]},"kw":{"ar":["الحين","الآن","وش أسوي","وين أروح","متاح"],"en":["now","right now","what should I do","where should I go","available"]},"en":["time","neighborhood","party","interest"],"r":{"ar":["بناءً على وقتك الحالي وسياقك، هذه أفضل الخيارات المتاحة الآن: {{recommendations}}.","أقرب اقتراحات مناسبة الآن: {{recommendations}}."],"en":["Based on your current time and context, the best options right now are: {{recommendations}}.","The strongest options available now are: {{recommendations}}."]},"req":null,"fk":["followup_closer","followup_quieter","followup_with_offer","followup_second_result"]},{"id":"discover_what_to_do_tonight","c":"discovery","p":100,"t":"dynamic","h":"recommend_tonight","s":"ranked_list","ex":{"ar":["وش أسوي الليلة","وش فيه الليلة","وين أروح الليلة","اقترح لي شي للمساء","وش فيه هذا المساء","أبغى طلعة الليلة","وش تسوي الليلة بمكة","عطني خيارات للمساء"],"en":["what should I do tonight","what's on tonight","where should I go tonight","suggest something for this evening","what is there this evening","I want something to do tonight"]},"kw":{"ar":["الليلة","المساء","هذا المساء","طلعة"],"en":["tonight","evening","this evening"]},"en":["time","neighborhood","party","interest"],"r":{"ar":["لليلة، أقوى الخيارات المناسبة لسياقك هي: {{recommendations}}.","هذا المساء، هذه الخيارات تبدو الأنسب لك: {{recommendations}}."],"en":["For tonight, the strongest matches for your context are: {{recommendations}}.","This evening, these options look most suitable: {{recommendations}}."]},"req":null,"fk":["followup_quieter","followup_closer","followup_with_offer","followup_make_it_family"]},{"id":"discover_weekend","c":"discovery","p":96,"t":"dynamic","h":"recommend_weekend","s":"ranked_list","ex":{"ar":["وش فيه الويكند","وش فيه نهاية الأسبوع","اقترح لي شي للويكند","وين نروح الجمعة","وش أسوي نهاية الأسبوع","عطني فعاليات الويكند","وش عندكم للجمعة والسبت"],"en":["what is there this weekend","what should I do this weekend","suggest something for the weekend","where should we go Friday","weekend activities","what's on Friday and Saturday"]},"kw":{"ar":["الويكند","نهاية الأسبوع","الجمعة","السبت","فعاليات"],"en":["weekend","Friday","Saturday","activities"]},"en":["date","time","party","neighborhood"],"r":{"ar":["لنهاية الأسبوع، هذه الخيارات الحالية الأنسب: {{recommendations}}.","أبرز ما يناسبك في الويكند: {{recommendations}}."],"en":["For the weekend, these are the strongest current matches: {{recommendations}}.","The best weekend options for your context are: {{recommendations}}."]},"req":null,"fk":["followup_family_only","followup_free_only","followup_with_offer","followup_second_result"]},{"id":"discover_something_new","c":"discovery","p":97,"t":"dynamic","h":"recommend_novel","s":"ranked_list","ex":{"ar":["أبغى شي جديد","اقترح لي شي مختلف","شي ما جربته","طفشت من نفس الأماكن","أبغى تجربة جديدة","وش فيه غير المعتاد","شي مو معروف مرة","أبغى أغير"],"en":["I want something new","suggest something different","something I haven't tried","I'm tired of the same places","I want a new experience","something less obvious","show me something different"]},"kw":{"ar":["جديد","مختلف","ما جربته","غير المعتاد","أغير"],"en":["new","different","haven't tried","less obvious"]},"en":["interest","completed","seen","neighborhood"],"r":{"ar":["هذه خيارات أقل تكرارًا وجديدة عليك نسبيًا: {{recommendations}}.","إذا تبغى تكسر الروتين، جرّب: {{recommendations}}."],"en":["These options are less repetitive and relatively new for you: {{recommendations}}.","If you want something different, try: {{recommendations}}."]},"req":null,"fk":["followup_more_local","followup_closer","followup_second_result"]},{"id":"discover_nearby","c":"discovery","p":100,"t":"dynamic","h":"recommend_nearby","s":"ranked_list","ex":{"ar":["وش فيه قريب","وش قريب مني","أبغى شي قريب","وين أقرب مكان","وش فيه حولي","عطني أماكن قريبة","وش أقرب نشاط","أبغى شي في نفس الحي"],"en":["what is nearby","what's close to me","I want something close","what is the nearest place","what is around me","show nearby places","what is the closest activity","something in the same neighborhood"]},"kw":{"ar":["قريب","قريب مني","أقرب","حولي","نفس الحي"],"en":["nearby","close to me","nearest","around me","same neighborhood"]},"en":["neighborhood","location"],"r":{"ar":["بناءً على منطقتك الحالية، هذه أقرب الخيارات المناسبة: {{recommendations}}.","الأقرب لسياقك الحالي: {{recommendations}}."],"en":["Based on your current area, these are the nearest suitable options: {{recommendations}}.","The closest matches for your current context are: {{recommendations}}."]},"req":null,"fk":["followup_with_offer","followup_quieter","followup_second_result"]},{"id":"discover_free","c":"discovery","p":96,"t":"dynamic","h":"recommend_free","s":"ranked_list","ex":{"ar":["وش فيه مجاني","أبغى شي بدون رسوم","فيه شي ببلاش","عطني نشاط مجاني","وش التجارب المجانية","وين أروح بدون ما أدفع","شي مجاني الليلة"],"en":["what is free","I want something with no fee","any free activities","show me free things","what experiences are free","where can I go without paying","free tonight"]},"kw":{"ar":["مجاني","بدون رسوم","ببلاش","ما أدفع"],"en":["free","no fee","without paying"]},"en":["price","time","party","neighborhood"],"r":{"ar":["هذه أبرز الخيارات التي تظهر بدون رسوم في بيانات EyeMakkah الحالية: {{recommendations}}.","إذا تبغى خيارات مجانية، هذه الأنسب: {{recommendations}}."],"en":["These are the strongest options currently represented as no-fee in EyeMakkah: {{recommendations}}.","If you want free options, these are the best matches: {{recommendations}}."]},"req":null,"fk":["followup_nearby","followup_family_only","followup_second_result"]},{"id":"discover_no_booking","c":"discovery","p":96,"t":"dynamic","h":"recommend_no_booking","s":"ranked_list","ex":{"ar":["أبغى شي بدون حجز","وش فيه ما يحتاج حجز","وين أروح مباشرة","شي أقدر أروح له بدون تسجيل","أبغى نشاط بدون حجز","وش الخيارات السهلة بدون ترتيب"],"en":["I want something without booking","what doesn't need booking","where can I just go","something I can do without registration","an activity with no booking","easy options with no booking"]},"kw":{"ar":["بدون حجز","ما يحتاج حجز","أروح مباشرة","بدون تسجيل"],"en":["without booking","no booking","just go","without registration"]},"en":["action_type","time","neighborhood"],"r":{"ar":["هذه خيارات ما تحتاج حجز/تسجيل في النموذج الحالي: {{recommendations}}.","إذا تبغى شيء قليل الاحتكاك وبدون حجز، جرّب: {{recommendations}}."],"en":["These options do not require booking/registration in the current model: {{recommendations}}.","If you want low-friction options with no booking, try: {{recommendations}}."]},"req":null,"fk":["followup_nearby","followup_with_offer","followup_second_result"]},{"id":"discover_build_outing","c":"discovery","p":100,"t":"dynamic","h":"build_contextual_outing","s":"composed_plan","ex":{"ar":["رتب لي طلعة","سوي لي خطة للمساء","رتب لي يومي","أبغى برنامج بسيط","رتب لي قهوة وبعدها عشاء","سوي لي طلعة ساعتين","ابني لي مشوار","وش أسوي خطوة خطوة"],"en":["build me an outing","plan my evening","plan my day","give me a simple itinerary","coffee then dinner","make me a two-hour outing","build me a route","what should I do step by step"]},"kw":{"ar":["رتب","خطة","برنامج","قهوة وبعدها","طلعة","خطوة خطوة"],"en":["build","plan","itinerary","coffee then","outing","step by step"]},"en":["time_available","party","neighborhood","interest"],"r":{"ar":["رتبت لك طلعة مناسبة لسياقك الحالي: {{outing_steps}}. المدة التقريبية {{total_time}}.","هذا مسار مقترح لك: {{outing_steps}}."],"en":["I built an outing for your current context: {{outing_steps}}. Approximate duration: {{total_time}}.","Here is a suggested route for you: {{outing_steps}}."]},"req":null,"fk":["followup_make_shorter","followup_with_offer","followup_swap_step","followup_add_to_plan"]},{"id":"food_restaurant_general","c":"food_cafe","p":100,"t":"dynamic","h":"recommend_restaurants","s":"ranked_list","ex":{"ar":["أبغى مطعم","وين آكل","اقترح لي مطعم","وش مطعم كويس","عطني مكان أتعشى","أبغى مكان للغدا","وين نروح ناكل","مطعم قريب"],"en":["I want a restaurant","where should I eat","suggest a restaurant","what is a good restaurant","where should I have dinner","I need lunch","where should we eat","a nearby restaurant"]},"kw":{"ar":["مطعم","آكل","أتعشى","الغدا","ناكل"],"en":["restaurant","eat","dinner","lunch"]},"en":["neighborhood","party","time","price"],"r":{"ar":["هذه المطاعم الأنسب لسياقك الحالي: {{recommendations}}.","إذا تبغى مطعم الآن، جرّب: {{recommendations}}."],"en":["These restaurants best match your current context: {{recommendations}}.","If you want a restaurant now, try: {{recommendations}}."]},"req":null,"fk":["followup_with_offer","followup_cheaper","followup_family_only","followup_second_result"]},{"id":"food_hijazi_local","c":"food_cafe","p":98,"t":"dynamic","h":"recommend_local_food","s":"ranked_list","ex":{"ar":["أبغى أكل مكي","وين ألقى أكل حجازي","وش أجرب من الأكل المحلي","أبغى أكل شعبي","مطعم حجازي","وش تنصحني آكل في مكة","أبغى شي من أكل أهل مكة"],"en":["I want Makkah food","where can I find Hijazi food","what local food should I try","I want traditional food","a Hijazi restaurant","what should I eat in Makkah","local Makkah food"]},"kw":{"ar":["أكل مكي","حجازي","محلي","شعبي","أهل مكة"],"en":["Makkah food","Hijazi","local food","traditional food"]},"en":["neighborhood","party","time"],"r":{"ar":["إذا تبغى أكل مكي/حجازي، هذه أبرز الخيارات المرتبطة بالمحتوى الحالي: {{recommendations}}.","للتجربة المحلية، جرّب: {{recommendations}}."],"en":["For Makkah/Hijazi food, these are the strongest matches in the current content: {{recommendations}}.","For a local food experience, try: {{recommendations}}."]},"req":null,"fk":["followup_what_to_order","followup_with_offer","followup_second_result"]},{"id":"food_breakfast","c":"food_cafe","p":94,"t":"dynamic","h":"recommend_breakfast","s":"ranked_list","ex":{"ar":["وين أفطر","أبغى فطور","وش فيه فطور بدري","مطعم فطور","أبغى فول ومعصوب","وين آكل الصباح","وش يفتح للفطور"],"en":["where should I have breakfast","I want breakfast","what opens early for breakfast","breakfast restaurant","I want foul and masoob","where can I eat in the morning","what is open for breakfast"]},"kw":{"ar":["أفطر","فطور","بدري","فول","معصوب","الصباح"],"en":["breakfast","early","morning"]},"en":["time","neighborhood","party"],"r":{"ar":["للفطور، هذه الخيارات المناسبة في السياق الحالي: {{recommendations}}.","إذا تبغى تبدأ يومك بفطور، جرّب: {{recommendations}}."],"en":["For breakfast, these options fit the current context: {{recommendations}}.","If you want to start with breakfast, try: {{recommendations}}."]},"req":null,"fk":["followup_nearby","followup_cheaper","followup_second_result"]},{"id":"food_family_restaurant","c":"food_cafe","p":100,"t":"dynamic","h":"recommend_family_food","s":"ranked_list","ex":{"ar":["أبغى مطعم للعائلة","مطعم مناسب للأطفال","وين نتعشى مع العيال","أبغى جلسة عائلية","مطعم عائلي","وين أروح مع الأسرة للأكل","أبغى مكان أكل للعائلة"],"en":["I want a family restaurant","restaurant suitable for kids","where should we have dinner with the kids","family seating","family-friendly restaurant","where can the family eat"]},"kw":{"ar":["مطعم للعائلة","الأطفال","العيال","جلسة عائلية","الأسرة"],"en":["family restaurant","kids","family seating","family-friendly"]},"en":["party","kids","neighborhood","time"],"r":{"ar":["هذه المطاعم/خيارات الأكل الأنسب للعائلة حسب السياق الحالي: {{recommendations}}.","للعائلة، هذه الخيارات أوضح من ناحية الملاءمة: {{recommendations}}."],"en":["These restaurant/food options best fit a family context: {{recommendations}}.","For a family, these options have the clearest suitability signals: {{recommendations}}."]},"req":null,"fk":["followup_with_offer","followup_quieter","followup_second_result"]},{"id":"cafe_general","c":"food_cafe","p":100,"t":"dynamic","h":"recommend_cafes","s":"ranked_list","ex":{"ar":["أبغى قهوة","وين أشرب قهوة","اقترح لي مقهى","أبغى كوفي","وين أقرب كوفي","أبغى جلسة قهوة","وش فيه مقاهي"],"en":["I want coffee","where should I get coffee","suggest a cafe","I want a café","where is a nearby coffee shop","I want a coffee spot","what cafes are there"]},"kw":{"ar":["قهوة","مقهى","كوفي","مقاهي"],"en":["coffee","cafe","café","coffee shop"]},"en":["neighborhood","time","party","quiet"],"r":{"ar":["هذه المقاهي الأنسب لسياقك الحالي: {{recommendations}}.","إذا تبغى قهوة، هذه الخيارات الأقوى: {{recommendations}}."],"en":["These cafés best match your current context: {{recommendations}}.","If you want coffee, these are the strongest matches: {{recommendations}}."]},"req":null,"fk":["followup_quieter","followup_nearby","followup_with_offer","followup_second_result"]},{"id":"cafe_quiet","c":"food_cafe","p":99,"t":"dynamic","h":"recommend_quiet_cafes","s":"ranked_list","ex":{"ar":["أبغى قهوة هادية","مقهى هادي","وين أقدر أجلس بهدوء","أبغى مكان دراسة","كوفي للمذاكرة","أبغى جلسة لحالي","وين مكان هادي"],"en":["I want a quiet cafe","a calm coffee shop","where can I sit quietly","I need a study place","cafe for studying","I want somewhere on my own","a quiet place"]},"kw":{"ar":["قهوة هادية","مقهى هادي","دراسة","مذاكرة","جلسة لحالي","مكان هادي"],"en":["quiet cafe","calm","study place","studying","on my own","quiet place"]},"en":["quiet","students","solo","neighborhood","time"],"r":{"ar":["لجلسة هادئة أو دراسة، هذه الخيارات الأنسب: {{recommendations}}.","إذا الهدوء أهم شيء عندك، جرّب: {{recommendations}}."],"en":["For a quiet session or study, these are the best matches: {{recommendations}}.","If calm is your priority, try: {{recommendations}}."]},"req":null,"fk":["followup_nearby","followup_with_offer","followup_second_result"]},{"id":"food_late_open","c":"food_cafe","p":96,"t":"dynamic","h":"recommend_late_open","s":"ranked_list","ex":{"ar":["وش يفتح متأخر","أبغى مطعم آخر الليل","كوفي يفتح متأخر","وين آكل بعد ١١","وش فيه مفتوح متأخر","أبغى مكان بعد منتصف الليل"],"en":["what is open late","I need a late-night restaurant","a cafe open late","where can I eat after 11","what stays open late","somewhere after midnight"]},"kw":{"ar":["يفتح متأخر","آخر الليل","بعد ١١","منتصف الليل","مفتوح متأخر"],"en":["open late","late-night","after 11","midnight","stays open late"]},"en":["time","hours","neighborhood"],"r":{"ar":["حسب ساعات التشغيل الموجودة في النموذج، هذه الخيارات الأنسب لوقت متأخر: {{recommendations}}.","لآخر الليل، جرّب: {{recommendations}}."],"en":["Based on the operating hours represented in the prototype, these are the strongest late options: {{recommendations}}.","For late night, try: {{recommendations}}."]},"req":null,"fk":["followup_nearby","followup_with_offer","followup_second_result"]},{"id":"food_what_to_order","c":"food_cafe","p":98,"t":"dynamic","h":"food_order_recommendation","s":"ranked_list","ex":{"ar":["وش أطلب","وش تنصحني أطلب","ايش أفضل شي عندهم","وش الناس تطلب","وش أطلب من هذا المطعم","وش مشهورين فيه","وش أجرب عندهم"],"en":["what should I order","what do you recommend I order","what is best there","what do people order","what should I get at this restaurant","what are they known for"]},"kw":{"ar":["وش أطلب","أفضل شي","الناس تطلب","مشهورين فيه","أجرب"],"en":["what should I order","best there","people order","known for"]},"en":["object","community_contribution"],"r":{"ar":["من مساهمات المجتمع المرتبطة بـ{{object}}، أبرز ما يُنصح به: {{order_suggestions}}.","للـ{{object}}، الناس ذكروا: {{order_suggestions}}."],"en":["From community contributions linked to {{object}}, the strongest ordering suggestions are: {{order_suggestions}}.","For {{object}}, people mentioned: {{order_suggestions}}."]},"req":null,"fk":["followup_more_detail","followup_second_result"]},{"id":"family_general","c":"family_party","p":100,"t":"dynamic","h":"recommend_family","s":"ranked_list","ex":{"ar":["وين أروح مع العائلة","وش نسوي كعائلة","أبغى طلعة عائلية","وش فيه للعوائل","اقترح شي للأسرة","وين نطلع كلنا","أبغى شي عائلي"],"en":["where should I go with family","what can we do as a family","I want a family outing","what is there for families","suggest something for the family","where can we all go","family-friendly activity"]},"kw":{"ar":["العائلة","عائلية","العوائل","الأسرة","كلنا"],"en":["family","family outing","families","family-friendly"]},"en":["party","kids","time","neighborhood"],"r":{"ar":["للعائلة، هذه الخيارات الأنسب حسب الوقت والمنطقة: {{recommendations}}.","هذه اقتراحات عائلية مناسبة لسياقك: {{recommendations}}."],"en":["For a family, these are the best matches for your time and area: {{recommendations}}.","These family-friendly suggestions fit your context: {{recommendations}}."]},"req":null,"fk":["followup_with_offer","followup_kids_only","followup_nearby","followup_second_result"]},{"id":"family_kids","c":"family_party","p":100,"t":"dynamic","h":"recommend_kids","s":"ranked_list","ex":{"ar":["وش فيه للأطفال","أبغى نشاط للأطفال","وين أودي العيال","شي للصغار","فعالية للأطفال","أبغى شي يناسب الأطفال","وش يسوون الأطفال"],"en":["what is there for kids","I want an activity for children","where can I take the kids","something for children","kids event","something suitable for kids"]},"kw":{"ar":["للأطفال","العيال","الصغار","الأطفال"],"en":["kids","children","child"]},"en":["kids","party","time","neighborhood"],"r":{"ar":["للأطفال، هذه الخيارات اللي عندها ملاءمة واضحة للصغار: {{recommendations}}.","إذا معك أطفال، هذه أبرز الخيارات المناسبة: {{recommendations}}."],"en":["For children, these options have explicit kid-suitability signals: {{recommendations}}.","If you're with kids, these are the strongest matches: {{recommendations}}."]},"req":null,"fk":["followup_with_offer","followup_indoor_only","followup_second_result"]},{"id":"party_solo","c":"family_party","p":99,"t":"dynamic","h":"recommend_solo","s":"ranked_list","ex":{"ar":["أنا لحالي وش أسوي","أبغى شي أروح له لحالي","وش يناسب شخص واحد","وين أروح بدون أحد","نشاط للحضور منفردًا","ما أبغى شي يحتاج مجموعة"],"en":["I'm alone what can I do","I want something I can do on my own","what suits one person","where can I go alone","an activity for solo attendance","I don't want something that needs a group"]},"kw":{"ar":["لحالي","شخص واحد","بدون أحد","منفردًا","ما يحتاج مجموعة"],"en":["alone","on my own","one person","solo","doesn't need a group"]},"en":["solo","time","neighborhood"],"r":{"ar":["إذا بتروح لحالك، هذه الخيارات عندها ملاءمة واضحة للحضور المنفرد: {{recommendations}}.","لشخص واحد، جرّب: {{recommendations}}."],"en":["If you're going solo, these options have clear solo-suitability signals: {{recommendations}}.","For one person, try: {{recommendations}}."]},"req":null,"fk":["followup_quieter","followup_nearby","followup_second_result"]},{"id":"party_women","c":"family_party","p":100,"t":"dynamic","h":"recommend_women_only","s":"ranked_list","ex":{"ar":["أبغى نشاط نسائي","وش فيه للنساء فقط","فيه شي مخصص للنساء","أبغى مجموعة نسائية","وين فيه نشاط للنساء","أبغى سباحة نسائية"],"en":["I want a women-only activity","what is there for women only","anything specifically for women","I want a women's group","where is there a women-only activity","women-only swimming"]},"kw":{"ar":["نسائي","للنساء فقط","مخصص للنساء","مجموعة نسائية","سباحة نسائية"],"en":["women-only","for women","women's group"]},"en":["women_only","time","neighborhood"],"r":{"ar":["هذه الخيارات مذكور عليها صراحةً أنها مخصصة للنساء في بيانات التطبيق: {{recommendations}}.","للخيارات النسائية فقط، هذه النتائج المتاحة: {{recommendations}}."],"en":["These options are explicitly marked women-only in the app data: {{recommendations}}.","For women-only options, these are the available matches: {{recommendations}}."]},"req":null,"fk":["followup_nearby","followup_second_result"]},{"id":"party_beginners","c":"family_party","p":99,"t":"dynamic","h":"recommend_beginner_friendly","s":"ranked_list","ex":{"ar":["أبغى شي للمبتدئين","نشاط ما يحتاج خبرة","أنا أول مرة أجرب","ورشة سهلة للمبتدئ","شي بسيط أبدأ فيه","أبغى نشاط بدون خبرة"],"en":["I want something for beginners","an activity that needs no experience","it's my first time trying","an easy beginner workshop","something simple to start with","an activity with no experience needed"]},"kw":{"ar":["للمبتدئين","ما يحتاج خبرة","أول مرة أجرب","سهلة","بدون خبرة"],"en":["beginners","no experience","first time","easy","beginner"]},"en":["beginners","noexp","time","neighborhood"],"r":{"ar":["للمبتدئين، هذه الخيارات تذكر بوضوح أنك ما تحتاج خبرة سابقة: {{recommendations}}.","إذا أول مرة تجرب، ابدأ بـ: {{recommendations}}."],"en":["For beginners, these options explicitly indicate that no prior experience is needed: {{recommendations}}.","If it's your first time, start with: {{recommendations}}."]},"req":null,"fk":["followup_shorter","followup_nearby","followup_second_result"]},{"id":"party_small_group","c":"family_party","p":95,"t":"dynamic","h":"recommend_small_group","s":"ranked_list","ex":{"ar":["أبغى مجموعة صغيرة","نشاط بعدد قليل","ما أبغى زحمة ناس","أبغى شي اجتماعي خفيف","مجموعة بسيطة","وش فيه نشاط صغير"],"en":["I want a small group","an activity with few people","I don't want a big crowd","a light social activity","a small group","what small-group activities are there"]},"kw":{"ar":["مجموعة صغيرة","عدد قليل","زحمة ناس","اجتماعي خفيف","مجموعة بسيطة"],"en":["small group","few people","big crowd","light social","small-group"]},"en":["small","party","time"],"r":{"ar":["إذا تفضّل مجموعة صغيرة، هذه الخيارات عندها إشارة ملاءمة لذلك: {{recommendations}}.","لجو اجتماعي أخف، جرّب: {{recommendations}}."],"en":["If you prefer a small group, these options have explicit suitability signals for that: {{recommendations}}.","For a lighter social setting, try: {{recommendations}}."]},"req":null,"fk":["followup_solo_ok","followup_nearby","followup_second_result"]},{"id":"visitor_first_time","c":"visitor_resident","p":100,"t":"dynamic","h":"recommend_first_visit","s":"ranked_list","ex":{"ar":["أول مرة أزور مكة وش أسوي","أنا أول زيارة","وش تنصحني أول مرة","أول يوم لي بمكة","وين أبدأ كزائر جديد","أبغى أهم تجارب أول زيارة"],"en":["it's my first time in Makkah what should I do","this is my first visit","what do you recommend for a first visit","my first day in Makkah","where should I start as a new visitor","best first-visit experiences"]},"kw":{"ar":["أول مرة","أول زيارة","أول يوم","زائر جديد","أبدأ"],"en":["first time","first visit","first day","new visitor","where should I start"]},"en":["first_time","visitor","time","party"],"r":{"ar":["لأول زيارة، هذه الخيارات عندها ملاءمة واضحة للزائر لأول مرة: {{recommendations}}.","إذا هذه أول مرة لك، ابدأ بـ: {{recommendations}}."],"en":["For a first visit, these options have explicit first-time suitability signals: {{recommendations}}.","If this is your first time, start with: {{recommendations}}."]},"req":null,"fk":["followup_half_day","followup_family_only","followup_second_result"]},{"id":"visitor_half_day","c":"visitor_resident","p":100,"t":"dynamic","h":"visitor_half_day_plan","s":"composed_plan","ex":{"ar":["عندي نص يوم بمكة","وش أسوي في نصف يوم","أنا زائر وعندي ٤ ساعات","رتب لي نصف يوم","أبغى برنامج قصير للزائر","عندي كم ساعة قبل أمشي"],"en":["I have half a day in Makkah","what should I do in half a day","I'm visiting and have four hours","plan a half day","short visitor plan","I have a few hours before I leave"]},"kw":{"ar":["نص يوم","نصف يوم","٤ ساعات","برنامج قصير","كم ساعة"],"en":["half a day","four hours","short visitor plan","few hours"]},"en":["visitor","time_available","party","neighborhood"],"r":{"ar":["لنصف يوم، هذا ترتيب مناسب من محتوى EyeMakkah الحالي: {{outing_steps}}.","إذا معك عدة ساعات فقط، جرّب هذا المسار: {{outing_steps}}."],"en":["For half a day, this is a suitable plan from current EyeMakkah content: {{outing_steps}}.","If you only have a few hours, try this route: {{outing_steps}}."]},"req":null,"fk":["followup_make_shorter","followup_with_offer","followup_swap_step"]},{"id":"visitor_after_umrah","c":"visitor_resident","p":98,"t":"dynamic","h":"recommend_after_umrah","s":"ranked_list","ex":{"ar":["خلصت العمرة وش أسوي","وش أسوي بعد العمرة","بعد العمرة وين أروح","باقي اليوم بعد العمرة","اقترح لي شي بعد العمرة","وش فيه للزائر بعد ما يخلص العمرة"],"en":["I finished Umrah what can I do","what should I do after Umrah","where can I go after Umrah","I have the rest of the day after Umrah","suggest something after Umrah"]},"kw":{"ar":["بعد العمرة","خلصت العمرة","باقي اليوم"],"en":["after Umrah","finished Umrah","rest of the day"]},"en":["visitor","time","party"],"r":{"ar":["بعد العمرة، أقدر أقترح لك تجارب ومطاعم وأماكن من EyeMakkah تناسب الوقت المتبقي: {{recommendations}}.","لبقية يومك بعد العمرة: {{recommendations}}."],"en":["After Umrah, I can suggest EyeMakkah experiences, food, and places that fit your remaining time: {{recommendations}}.","For the rest of your day after Umrah: {{recommendations}}."]},"req":null,"fk":["followup_quieter","followup_food_only","followup_second_result"]},{"id":"visitor_less_obvious","c":"visitor_resident","p":97,"t":"dynamic","h":"recommend_repeat_visitor","s":"ranked_list","ex":{"ar":["زرت الأماكن المعروفة وش بعد","أنا زائر متكرر","أبغى شي أقل شهرة","وش فيه غير الأماكن المشهورة","أبغى مكة بطريقة مختلفة","وش تنصح للي زار قبل"],"en":["I've seen the obvious places what next","I'm a repeat visitor","I want something less famous","what is there beyond the famous places","I want a different side of Makkah","what do you recommend for someone who has visited before"]},"kw":{"ar":["زائر متكرر","أقل شهرة","غير الأماكن المشهورة","بطريقة مختلفة","زار قبل"],"en":["repeat visitor","less famous","beyond famous places","different side","visited before"]},"en":["visitor","repeat","completed","novelty"],"r":{"ar":["بما أنك تبغى شيء أقل وضوحًا، هذه خيارات فيها novelty أعلى وأقل تكرارًا: {{recommendations}}.","للزيارة المتكررة، جرّب: {{recommendations}}."],"en":["Since you want something less obvious, these options have higher novelty and less repetition: {{recommendations}}.","For a repeat visit, try: {{recommendations}}."]},"req":null,"fk":["followup_more_local","followup_nearby","followup_second_result"]},{"id":"resident_local_life","c":"visitor_resident","p":97,"t":"dynamic","h":"recommend_resident_local","s":"ranked_list","ex":{"ar":["أنا من مكة وش تقترح","أبغى شي لأهل مكة","وش فيه للسكان مو للزوار بس","أبغى أكتشف الحي","وش فعاليات الحياة اليومية","أبغى شي محلي"],"en":["I'm from Makkah what do you suggest","I want something for locals","what is there for residents not just visitors","I want to discover the neighborhood","local daily-life activities","I want something local"]},"kw":{"ar":["من مكة","لأهل مكة","للسكان","أكتشف الحي","الحياة اليومية","محلي"],"en":["from Makkah","locals","residents","discover the neighborhood","local"]},"en":["resident","neighborhood","interest","novelty"],"r":{"ar":["كمقيم، هذه خيارات أقرب للحياة المحلية والمجتمعات والأنشطة المتكررة: {{recommendations}}.","إذا تبغى شيء محلي أكثر من السياحي، جرّب: {{recommendations}}."],"en":["As a resident, these options lean more toward local life, communities, and recurring activities: {{recommendations}}.","If you want something more local than tourist-oriented, try: {{recommendations}}."]},"req":null,"fk":["followup_neighborhood_only","followup_with_offer","followup_second_result"]},{"id":"places_cultural","c":"places_activities","p":100,"t":"dynamic","h":"recommend_culture","s":"ranked_list","ex":{"ar":["أبغى شي ثقافي","وش فيه ثقافة وتاريخ","أبغى متحف","وين أروح لتجربة ثقافية","أبغى شي عن تاريخ مكة","وش المعارض الموجودة","أبغى تراث"],"en":["I want something cultural","what culture and history is there","I want a museum","where can I go for a cultural experience","something about Makkah history","what exhibitions are there","I want heritage"]},"kw":{"ar":["ثقافي","تاريخ","متحف","معرض","تراث"],"en":["cultural","history","museum","exhibition","heritage"]},"en":["category","time","neighborhood"],"r":{"ar":["للثقافة والتاريخ، هذه أقوى الخيارات الحالية: {{recommendations}}.","إذا تبغى تجربة ثقافية، جرّب: {{recommendations}}."],"en":["For culture and history, these are the strongest current matches: {{recommendations}}.","If you want a cultural experience, try: {{recommendations}}."]},"req":null,"fk":["followup_first_time","followup_nearby","followup_second_result"]},{"id":"places_nature_mountains","c":"places_activities","p":96,"t":"dynamic","h":"recommend_nature","s":"ranked_list","ex":{"ar":["أبغى جبل","وش فيه طبيعة","أبغى طلعة برية","وين أروح لمشي جبلي","أبغى مكان مفتوح","وش فيه مسارات جبلية","أبغى شي خارجي"],"en":["I want a mountain","what nature options are there","I want an outdoor trip","where can I do a mountain walk","I want an open-air place","what mountain trails are there","I want something outdoors"]},"kw":{"ar":["جبل","طبيعة","برية","مشي جبلي","مكان مفتوح","خارجي"],"en":["mountain","nature","outdoor","mountain walk","open-air"]},"en":["category","outdoor","time","access"],"r":{"ar":["للطبيعة والأنشطة الخارجية، هذه الخيارات المتاحة في المحتوى الحالي: {{recommendations}}.","إذا تبغى شي خارجي، جرّب: {{recommendations}}."],"en":["For nature and outdoor activities, these are the current content matches: {{recommendations}}.","If you want something outdoors, try: {{recommendations}}."]},"req":null,"fk":["followup_shorter","followup_easier_access","followup_second_result"]},{"id":"activities_workshop","c":"places_activities","p":99,"t":"dynamic","h":"recommend_workshops","s":"ranked_list","ex":{"ar":["أبغى ورشة","وش فيه ورش اليوم","أبغى شي أتعلمه","نشاط عملي","ورشة خط","ورشة حرف","أبغى تجربة بيدي"],"en":["I want a workshop","what workshops are on today","I want something to learn","a hands-on activity","calligraphy workshop","craft workshop","I want a hands-on experience"]},"kw":{"ar":["ورشة","أتعلمه","عملي","خط","حرف","بيدي"],"en":["workshop","learn","hands-on","calligraphy","craft"]},"en":["category","beginners","time"],"r":{"ar":["للورش والتجارب العملية، هذه الخيارات الأنسب: {{recommendations}}.","إذا تبغى شي تتعلمه بيدك، جرّب: {{recommendations}}."],"en":["For workshops and hands-on experiences, these are the best matches: {{recommendations}}.","If you want something hands-on, try: {{recommendations}}."]},"req":null,"fk":["followup_beginner_only","followup_with_offer","followup_second_result"]},{"id":"activities_volunteering","c":"places_activities","p":100,"t":"dynamic","h":"recommend_volunteering","s":"ranked_list","ex":{"ar":["أبغى أتطوع","وش فيه تطوع","فيه فرصة خدمة زوار","أبغى مبادرة حي","وين أشارك بالتطوع","وش الفرص التطوعية"],"en":["I want to volunteer","what volunteering is there","any visitor-service opportunity","I want a neighborhood initiative","where can I volunteer","what volunteering opportunities exist"]},"kw":{"ar":["أتطوع","تطوع","خدمة زوار","مبادرة حي","تطوعية"],"en":["volunteer","volunteering","visitor service","neighborhood initiative"]},"en":["category","time","neighborhood","provider"],"r":{"ar":["للتطوع والمبادرات، هذه الفرص الموجودة في المحتوى الحالي: {{recommendations}}.","إذا تبغى تشارك، جرّب: {{recommendations}}."],"en":["For volunteering and initiatives, these are the current opportunities represented in EyeMakkah: {{recommendations}}.","If you want to participate, try: {{recommendations}}."]},"req":null,"fk":["followup_nearby","followup_this_week","followup_second_result"]},{"id":"activities_sport_walk","c":"places_activities","p":98,"t":"dynamic","h":"recommend_sport","s":"ranked_list","ex":{"ar":["أبغى أمشي","وش فيه مشي","نشاط رياضي","أبغى نادي مشي","فيه دراجات","وين أتمرن","أبغى جري"],"en":["I want to walk","what walking activities are there","sports activity","I want a walking club","any cycling","where can I exercise","I want to run"]},"kw":{"ar":["أمشي","مشي","رياضي","نادي مشي","دراجات","أتمرن","جري"],"en":["walk","walking","sports","walking club","cycling","exercise","run"]},"en":["category","club","time","neighborhood"],"r":{"ar":["للرياضة والمشي، هذه الخيارات الأنسب حاليًا: {{recommendations}}.","إذا تبغى حركة ونشاط، جرّب: {{recommendations}}."],"en":["For sports and walking, these are the strongest current matches: {{recommendations}}.","If you want something active, try: {{recommendations}}."]},"req":null,"fk":["followup_group_small","followup_women_only","followup_second_result"]},{"id":"activities_event","c":"places_activities","p":100,"t":"dynamic","h":"recommend_events","s":"ranked_list","ex":{"ar":["وش فيه فعاليات","ايش الفعاليات الحالية","أبغى فعالية اليوم","وش يبدأ قريب","فيه حدث هذا الأسبوع","عطني فعاليات","وش فيه event"],"en":["what events are there","what events are current","I want an event today","what starts soon","any event this week","show me events"]},"kw":{"ar":["فعاليات","فعالية اليوم","يبدأ قريب","حدث","event"],"en":["events","event today","starts soon","event this week"]},"en":["time","lifecycle","neighborhood"],"r":{"ar":["هذه الفعاليات الأنسب ضمن حالتها الحالية ووقتك: {{recommendations}}.","أبرز الفعاليات المناسبة الآن: {{recommendations}}."],"en":["These events best fit their current lifecycle state and your timing: {{recommendations}}.","The strongest relevant events right now are: {{recommendations}}."]},"req":null,"fk":["followup_family_only","followup_free_only","followup_second_result"]},{"id":"activities_club_recurring","c":"places_activities","p":99,"t":"dynamic","h":"recommend_active_clubs","s":"ranked_list","ex":{"ar":["أبغى نادي","وش فيه أندية","أبغى مجموعة مستمرة","فيه نادي مشي أسبوعي","أبغى شي يتكرر","مجموعة أقدر أرجع لها كل أسبوع","وش الأندية النشطة"],"en":["I want a club","what clubs are there","I want a recurring group","is there a weekly walking club","I want something recurring","a group I can return to every week","what active clubs are there"]},"kw":{"ar":["نادي","أندية","مجموعة مستمرة","أسبوعي","يتكرر","الأندية النشطة"],"en":["club","clubs","recurring group","weekly","recurring","active clubs"]},"en":["club","community","recurrence","state"],"r":{"ar":["هذه الأندية/المجموعات المتكررة النشطة حاليًا: {{recommendations}}.","إذا تبغى شيء مستمر مو فعالية مرة واحدة، جرّب: {{recommendations}}."],"en":["These are the currently active recurring clubs/groups: {{recommendations}}.","If you want something ongoing rather than one-off, try: {{recommendations}}."]},"req":null,"fk":["followup_nearby","followup_community_link","followup_second_result"]},{"id":"places_market_shopping","c":"places_activities","p":98,"t":"dynamic","h":"recommend_markets","s":"ranked_list","ex":{"ar":["أبغى سوق","وين أتسوق","وش فيه أسواق","أبغى سوق شعبي","وين سوق الحرف","أبغى تسوق محلي","وش الأسواق الموجودة"],"en":["I want a market","where can I shop","what markets are there","I want a traditional market","where is the craft market","local shopping","what shopping places are there"]},"kw":{"ar":["سوق","أتسوق","أسواق","سوق شعبي","سوق الحرف","تسوق"],"en":["market","shop","markets","traditional market","craft market","shopping"]},"en":["category","neighborhood","time"],"r":{"ar":["للأسواق والتسوق، هذه الخيارات الأنسب: {{recommendations}}.","إذا تبغى سوق أو تجربة تسوق محلية، جرّب: {{recommendations}}."],"en":["For markets and shopping, these are the strongest matches: {{recommendations}}.","If you want a market or local shopping experience, try: {{recommendations}}."]},"req":null,"fk":["followup_with_offer","followup_nearby","followup_second_result"]},{"id":"access_wheelchair","c":"access_practical","p":100,"t":"dynamic","h":"recommend_accessible","s":"ranked_list","ex":{"ar":["أبغى مكان مناسب للكرسي المتحرك","وش فيه وصول للكراسي","هل فيه مسار مناسب للكراسي","وين أروح بكرسي متحرك","أبغى مكان بدون عوائق قدر الإمكان"],"en":["I need somewhere wheelchair-friendly","what has wheelchair access","is there a wheelchair-friendly route","where can I go with a wheelchair","I want a place with easier access"]},"kw":{"ar":["كرسي متحرك","للكراسي","وصول","بدون عوائق"],"en":["wheelchair","wheelchair access","accessible","easier access"]},"en":["accessible","stepfree","access"],"r":{"ar":["هذه الخيارات عندها معلومات وصول أو ملاءمة للكراسي بشكل واضح: {{recommendations}}.","إذا سهولة الوصول أولوية، هذه النتائج الأقوى: {{recommendations}}."],"en":["These options have explicit accessibility or wheelchair-related information: {{recommendations}}.","If ease of access is a priority, these are the strongest matches: {{recommendations}}."]},"req":null,"fk":["followup_stepfree_only","followup_nearby","followup_second_result"]},{"id":"access_stepfree","c":"access_practical","p":100,"t":"dynamic","h":"recommend_stepfree","s":"ranked_list","ex":{"ar":["أبغى بدون درج","وين مدخل بدون درج","مكان step free","وش الأماكن اللي ما فيها درج","أبغى وصول أسهل بدون سلالم"],"en":["I want step-free","where has a step-free entrance","a step-free place","what places have no stairs","I need easier access without stairs"]},"kw":{"ar":["بدون درج","ما فيها درج","سلالم","وصول أسهل"],"en":["step-free","no stairs","without stairs","easier access"]},"en":["stepfree","access"],"r":{"ar":["هذه الخيارات مذكور عليها صراحةً «بدون درج» أو عندها معلومة وصول مكافئة: {{recommendations}}.","للوصول بدون درج، هذه النتائج المتاحة: {{recommendations}}."],"en":["These options are explicitly marked step-free or have equivalent access information: {{recommendations}}.","For step-free access, these are the available matches: {{recommendations}}."]},"req":null,"fk":["followup_nearby","followup_second_result"]},{"id":"practical_duration","c":"access_practical","p":99,"t":"dynamic","h":"object_duration_fit","s":"single_entity","ex":{"ar":["كم يحتاج وقت","كم مدة الزيارة","قد ايش ياخذ","ينفع بساعة","هل يكفي ساعتين","كم أجلس هناك","كم وقت النشاط"],"en":["how long does it take","what is the visit duration","how much time does it need","can I do it in an hour","are two hours enough","how long should I stay","how long is the activity"]},"kw":{"ar":["كم يحتاج","مدة","ياخذ","يكفي","كم أجلس","وقت النشاط"],"en":["how long","duration","time needed","enough","stay"]},"en":["object","duration","time_available"],"r":{"ar":["مدة {{object}} في بيانات EyeMakkah تقريبًا {{duration}}. بالنسبة لوقتك الحالي {{time_available}}، {{fit_note}}.","{{object}} يحتاج تقريبًا {{duration}}، و{{fit_note}}."],"en":["The represented duration for {{object}} is about {{duration}}. Against your current {{time_available}} window, {{fit_note}}.","{{object}} takes about {{duration}}, and {{fit_note}}."]},"req":null,"fk":["followup_build_around_it","followup_add_to_plan"]},{"id":"practical_booking_requirement","c":"access_practical","p":100,"t":"dynamic","h":"object_action_requirement","s":"single_entity","ex":{"ar":["هل يحتاج حجز","لازم أسجل","أقدر أروح مباشرة","وش طريقة الدخول","هل لازم تذكرة","هل النشاط يحتاج انضمام","كيف أحجز هذا"],"en":["does it need booking","do I have to register","can I just go","how do I enter","does it need a ticket","does the activity require joining","how do I book this"]},"kw":{"ar":["يحتاج حجز","أسجل","أروح مباشرة","تذكرة","انضمام","أحجز"],"en":["need booking","register","just go","ticket","joining","book"]},"en":["object","action_type"],"r":{"ar":["بالنسبة لـ{{object}}، الإجراء الحالي في EyeMakkah هو {{action_label}}. {{action_note}}.","{{object}} يستخدم مسار {{action_label}} في التطبيق. {{action_note}}."],"en":["For {{object}}, the current EyeMakkah action is {{action_label}}. {{action_note}}.","{{object}} uses the {{action_label}} path in the app. {{action_note}}."]},"req":null,"fk":["followup_with_offer","followup_add_to_plan"]},{"id":"practical_source_freshness","c":"access_practical","p":100,"t":"dynamic","h":"object_trust_summary","s":"single_entity","ex":{"ar":["هل المعلومة حديثة","متى آخر تحديث","مين مصدرها","هل فيه تعارض","هل ساعات العمل أكيدة","وش يقول المصدر","المعلومة قديمة؟"],"en":["is the information recent","when was it last updated","who is the source","is there a conflict","are the hours reliable","what does the source say","is the information old"]},"kw":{"ar":["حديثة","آخر تحديث","مصدرها","تعارض","ساعات العمل","قديمة"],"en":["recent","last updated","source","conflict","hours","old"]},"en":["object","field","source_claim","freshness"],"r":{"ar":["حالة المعلومة لـ{{object}}: {{trust_summary}}. المصدر/المصادر: {{sources}}.","بالنسبة لـ{{field_or_general}} في {{object}}: {{trust_summary}}."],"en":["Information status for {{object}}: {{trust_summary}}. Source(s): {{sources}}.","For {{field_or_general}} on {{object}}: {{trust_summary}}."]},"req":null,"fk":["followup_show_sources","followup_compare_claims"]},{"id":"time_one_hour","c":"time_area","p":100,"t":"dynamic","h":"recommend_within_one_hour","s":"ranked_list","ex":{"ar":["عندي ساعة وش أسوي","أبغى شي خلال ساعة","وش يناسب ساعة","ما عندي إلا ساعة","اقترح شي سريع","نشاط قصير"],"en":["I have one hour what should I do","I need something within an hour","what fits in one hour","I only have an hour","suggest something quick","a short activity"]},"kw":{"ar":["عندي ساعة","خلال ساعة","يناسب ساعة","شي سريع","قصير"],"en":["one hour","within an hour","fits in one hour","quick","short"]},"en":["time_available","duration","neighborhood"],"r":{"ar":["إذا معك ساعة، هذه الخيارات الأقرب للمدة المتاحة: {{recommendations}}.","لوقت قصير، جرّب: {{recommendations}}."],"en":["If you have one hour, these options fit the time window best: {{recommendations}}.","For a short window, try: {{recommendations}}."]},"req":null,"fk":["followup_nearby","followup_with_offer","followup_second_result"]},{"id":"time_two_hours","c":"time_area","p":100,"t":"dynamic","h":"recommend_for_two_hours","s":"ranked_list","ex":{"ar":["عندي ساعتين وش أسوي","أبغى طلعة ساعتين","وش يناسب ساعتين","رتب لي ساعتين","عندي ساعتين قبل أمشي","شي يكفي ساعتين"],"en":["I have two hours what should I do","I want a two-hour outing","what fits in two hours","plan two hours for me","I have two hours before I leave","something that fits two hours"]},"kw":{"ar":["ساعتين","طلعة ساعتين","رتب لي ساعتين","قبل أمشي"],"en":["two hours","two-hour outing","plan two hours","before I leave"]},"en":["time_available","duration","neighborhood","party"],"r":{"ar":["لساعتين، هذه أفضل الخيارات/التركيبات المناسبة: {{recommendations}}.","إذا معك ساعتين، جرّب: {{recommendations}}."],"en":["For two hours, these are the strongest fitting options/combinations: {{recommendations}}.","If you have two hours, try: {{recommendations}}."]},"req":null,"fk":["followup_build_outing","followup_with_offer","followup_second_result"]},{"id":"time_whole_evening","c":"time_area","p":100,"t":"dynamic","h":"build_evening_outing","s":"composed_plan","ex":{"ar":["عندي المساء كله","رتب لي المساء كامل","أبغى خطة للمساء","من المغرب لين الليل وش أسوي","عندي وقت طويل الليلة","سوي لي طلعة كاملة"],"en":["I have the whole evening","plan my full evening","I want an evening plan","what should I do from evening to night","I have a long evening","build me a full outing"]},"kw":{"ar":["المساء كله","المساء كامل","من المغرب","وقت طويل الليلة","طلعة كاملة"],"en":["whole evening","full evening","evening to night","long evening","full outing"]},"en":["time_available","party","neighborhood","interest"],"r":{"ar":["بما أن عندك المساء كله، هذا مسار مقترح متكامل: {{outing_steps}}. المدة {{total_time}}.","للمساء كامل، أقترح: {{outing_steps}}."],"en":["Since you have the whole evening, here is a fuller suggested route: {{outing_steps}}. Duration: {{total_time}}.","For the full evening, I suggest: {{outing_steps}}."]},"req":null,"fk":["followup_with_offer","followup_make_shorter","followup_swap_step","followup_add_to_plan"]},{"id":"area_specific_discovery","c":"time_area","p":100,"t":"dynamic","h":"recommend_in_area","s":"ranked_list","ex":{"ar":["وش فيه بالعوالي","وش أسوي في العزيزية","عطني شي في النسيم","وش فيه بأجياد","أبغى اقتراحات في جرول","وش موجود بالمسفلة","وش فيه في حيّي"],"en":["what is there in Al Awali","what can I do in Al Aziziyah","show me something in An Naseem","what is there in Ajyad","suggestions in Jarwal","what is in Al Misfalah","what is there in my neighborhood"]},"kw":{"ar":["بالعوالي","في العزيزية","في النسيم","بأجياد","في جرول","بالمسفلة","في حيّي"],"en":["in Al Awali","in Al Aziziyah","in An Naseem","in Ajyad","in Jarwal","in my neighborhood"]},"en":["neighborhood","time","party","interest"],"r":{"ar":["في {{neighborhood}}، هذه أبرز الخيارات المناسبة لسياقك: {{recommendations}}.","إذا تبغى تبقى داخل {{neighborhood}}، جرّب: {{recommendations}}."],"en":["In {{neighborhood}}, these are the strongest matches for your context: {{recommendations}}.","If you want to stay within {{neighborhood}}, try: {{recommendations}}."]},"req":null,"fk":["followup_food_only","followup_activities_only","followup_with_offer","followup_second_result"]},{"id":"area_compare_nearby_options","c":"time_area","p":100,"t":"dynamic","h":"rank_previous_by_proximity","s":"ranked_list","ex":{"ar":["وش الأقرب بينهم","رتبهم حسب القرب","مين أقرب واحد","أبغى الأقرب أول","قارن المسافات","وش أقرب خيارين"],"en":["which is closest","rank them by proximity","which one is nearest","put the closest first","compare distances","what are the two closest options"]},"kw":{"ar":["الأقرب","حسب القرب","أقرب واحد","المسافات","أقرب خيارين"],"en":["closest","proximity","nearest","distances","two closest"]},"en":["last_ranked_results","neighborhood","location"],"r":{"ar":["حسب القرب في سياقك الحالي: {{ranked_results}}.","ترتيب الخيارات من الأقرب: {{ranked_results}}."],"en":["By proximity in your current context: {{ranked_results}}.","Ranking the options from closest: {{ranked_results}}."]},"req":null,"fk":["followup_with_offer","followup_second_result"]},{"id":"offers_all_active","c":"offers","p":100,"t":"dynamic","h":"offers_active_all","s":"ranked_list","ex":{"ar":["وش العروض الموجودة","عطني كل الخصومات","وش عندكم عروض","وين العروض الحالية","أبغى أشوف الخصومات","وش فيه عروض اليوم","عرض لي كل العروض","وش العروض المتاحة"],"en":["what offers are available","show me all discounts","what deals do you have","where are the current offers","show me discounts","what offers are on today","show all offers","what deals are available"]},"kw":{"ar":["العروض","الخصومات","العروض الحالية","متاحة"],"en":["offers","discounts","deals","available"]},"en":["offer","category","neighborhood","time"],"r":{"ar":["هذه أبرز العروض النشطة ضمن سياقك الحالي: {{offers}}.","العروض المتاحة الآن في EyeMakkah: {{offers}}."],"en":["These are the strongest active offers in your current context: {{offers}}.","The offers currently available in EyeMakkah are: {{offers}}."]},"req":null,"fk":["followup_offer_category","followup_offer_nearby","followup_offer_expiring","followup_second_result"]},{"id":"offers_restaurants","c":"offers","p":100,"t":"dynamic","h":"offers_restaurants","s":"ranked_list","ex":{"ar":["وش عروض المطاعم","فيه خصم مطاعم","أبغى مطعم عليه عرض","وش المطاعم اللي عليها خصم","عروض أكل","عطني خصومات المطاعم","فيه خصم للعشاء","مطاعم بعروض"],"en":["what restaurant offers are there","any restaurant discounts","I want a restaurant with an offer","which restaurants have discounts","food offers","show restaurant discounts","any dinner discount","restaurants with deals"]},"kw":{"ar":["عروض المطاعم","خصم مطاعم","مطعم عليه عرض","عروض أكل","خصومات المطاعم","خصم للعشاء"],"en":["restaurant offers","restaurant discounts","restaurant with an offer","food offers","dinner discount"]},"en":["offer","restaurant","category","time","party"],"r":{"ar":["هذه المطاعم عندها عروض أو خصومات نشطة ضمن السياق الحالي: {{offers}}.","إذا تبغى مطعم عليه عرض، هذه أفضل الخيارات: {{offers}}."],"en":["These restaurants currently have active offers or discounts in your context: {{offers}}.","If you want a restaurant with an offer, these are the strongest matches: {{offers}}."]},"req":null,"fk":["followup_family_only","followup_cheaper","followup_second_result"]},{"id":"offers_cafes","c":"offers","p":99,"t":"dynamic","h":"offers_cafes","s":"ranked_list","ex":{"ar":["وش عروض المقاهي","فيه خصم قهوة","أبغى كوفي عليه عرض","وش المقاهي اللي عليها خصم","عروض قهوة","خصومات الكوفيات","فيه عرض صباحي للقهوة"],"en":["what cafe offers are there","any coffee discount","I want a cafe with an offer","which cafes have discounts","coffee offers","cafe discounts","any morning coffee deal"]},"kw":{"ar":["عروض المقاهي","خصم قهوة","كوفي عليه عرض","عروض قهوة","خصومات الكوفيات"],"en":["cafe offers","coffee discount","cafe with an offer","coffee offers","cafe discounts"]},"en":["offer","cafe","time","neighborhood"],"r":{"ar":["هذه المقاهي عندها عروض أو خصومات نشطة: {{offers}}.","إذا تبغى قهوة عليها عرض، جرّب: {{offers}}."],"en":["These cafés currently have active offers or discounts: {{offers}}.","If you want coffee with an offer, try: {{offers}}."]},"req":null,"fk":["followup_nearby","followup_second_result"]},{"id":"offers_stays_hotels","c":"offers","p":100,"t":"dynamic","h":"offers_stays","s":"ranked_list","ex":{"ar":["وش عروض الفنادق","فيه خصم إقامة","أبغى فندق عليه عرض","وش عروض السكن","خصومات الإقامة","فيه باقة فندق","عروض الشقق المخدومة","أبغى إقامة بسعر خاص"],"en":["what hotel offers are there","any stay discounts","I want a hotel with an offer","what accommodation deals are there","stay discounts","any hotel package","serviced apartment offers","special stay price"]},"kw":{"ar":["عروض الفنادق","خصم إقامة","فندق عليه عرض","عروض السكن","خصومات الإقامة","باقة فندق","الشقق المخدومة"],"en":["hotel offers","stay discounts","hotel with an offer","accommodation deals","hotel package","serviced apartment offers"]},"en":["offer","stay","neighborhood","party"],"r":{"ar":["هذه عروض الإقامة النشطة في EyeMakkah: {{offers}}.","إذا تبغى إقامة عليها عرض، هذه الخيارات المتاحة: {{offers}}."],"en":["These are the active stay offers in EyeMakkah: {{offers}}.","If you want accommodation with an offer, these are the available matches: {{offers}}."]},"req":null,"fk":["followup_family_package","followup_near_haram","followup_second_result"]},{"id":"offers_experiences_activities","c":"offers","p":100,"t":"dynamic","h":"offers_experiences_activities","s":"ranked_list","ex":{"ar":["وش عروض التجارب","فيه خصم على الأنشطة","أبغى تجربة عليها عرض","وش الأنشطة اللي عليها خصم","عروض الورش","فيه خصم فعالية","أبغى نشاط بعرض"],"en":["what experience offers are there","any activity discounts","I want an experience with an offer","which activities have discounts","workshop offers","any event discount","an activity with a deal"]},"kw":{"ar":["عروض التجارب","خصم على الأنشطة","تجربة عليها عرض","عروض الورش","خصم فعالية","نشاط بعرض"],"en":["experience offers","activity discounts","experience with an offer","workshop offers","event discount","activity deal"]},"en":["offer","experience","activity","event","time"],"r":{"ar":["هذه التجارب والأنشطة عندها عروض نشطة: {{offers}}.","إذا تبغى تجربة أو نشاط عليه عرض، هذه أفضل النتائج: {{offers}}."],"en":["These experiences and activities currently have active offers: {{offers}}.","If you want an experience or activity with a deal, these are the strongest matches: {{offers}}."]},"req":null,"fk":["followup_family_only","followup_beginner_only","followup_second_result"]},{"id":"offers_family_packages","c":"offers","p":100,"t":"dynamic","h":"offers_family_packages","s":"ranked_list","ex":{"ar":["وش البكجات العائلية","فيه باقة عائلية","أبغى عرض للعائلة","وش عروض الأسرة","عطني باقات للعوائل","فيه خصم عائلي","أبغى شي للعائلة بسعر أفضل"],"en":["what family packages are there","is there a family package","I want a family offer","what family deals are there","show family packages","any family discount","something for the family at a better price"]},"kw":{"ar":["بكجات عائلية","باقة عائلية","عرض للعائلة","عروض الأسرة","خصم عائلي"],"en":["family packages","family package","family offer","family deals","family discount"]},"en":["offer","family","party","kids"],"r":{"ar":["هذه العروض والباقات الموجهة للعائلة: {{offers}}.","إذا تبغى باقة عائلية، هذه أبرز الخيارات: {{offers}}."],"en":["These offers and packages are aimed at families: {{offers}}.","If you want a family package, these are the strongest options: {{offers}}."]},"req":null,"fk":["followup_food_only","followup_stays_only","followup_activities_only","followup_second_result"]},{"id":"offers_app_exclusive","c":"offers","p":100,"t":"dynamic","h":"offers_app_exclusive","s":"ranked_list","ex":{"ar":["فيه خصم إذا حجزت من التطبيق","وش عروض التطبيق","فيه خصم حصري EyeMakkah","أبغى العروض الحصرية","وش ينقص إذا حجزت من EyeMakkah","فيه 10 بالمية من التطبيق","عروض خاصة بالتطبيق"],"en":["is there a discount if I book from the app","what app offers are there","any EyeMakkah exclusive discount","show exclusive offers","do I get a discount through EyeMakkah","is there a 10 percent app discount","app-only offers"]},"kw":{"ar":["خصم من التطبيق","عروض التطبيق","حصري EyeMakkah","العروض الحصرية","10 بالمية","خاصة بالتطبيق"],"en":["discount from the app","app offers","EyeMakkah exclusive","exclusive offers","10 percent","app-only"]},"en":["offer","app_exclusive","discount_type"],"r":{"ar":["هذه العروض المعلّمة كعروض خاصة عبر EyeMakkah: {{offers}}. كل عرض يعرض النسبة/القيمة والشروط بوضوح.","إذا تبغى خصم مرتبط باستخدام التطبيق، هذه العروض الحالية: {{offers}}."],"en":["These offers are marked as EyeMakkah app-specific: {{offers}}. Each offer should show the discount/value and terms clearly.","If you want a discount tied to using the app, these are the current matches: {{offers}}."]},"req":null,"fk":["followup_offer_terms","followup_book_now","followup_second_result"]},{"id":"offers_expiring_soon","c":"offers","p":99,"t":"dynamic","h":"offers_expiring_soon","s":"ranked_list","ex":{"ar":["وش العروض اللي بتنتهي","وش ينتهي قريب","عطني عروض آخر فرصة","فيه خصومات تنتهي اليوم","وش العرض اللي لازم ألحق عليه","عروض تنتهي الليلة","وش قرب يخلص"],"en":["which offers are ending soon","what expires soon","show last-chance offers","any discounts ending today","what offer should I use before it ends","offers ending tonight","what is about to expire"]},"kw":{"ar":["بتنتهي","ينتهي قريب","آخر فرصة","تنتهي اليوم","ألحق عليه","تنتهي الليلة","قرب يخلص"],"en":["ending soon","expires soon","last chance","ending today","before it ends","ending tonight"]},"en":["offer","lifecycle","time"],"r":{"ar":["هذه العروض النشطة الأقرب للانتهاء: {{offers}}.","إذا تبغى تلحق عرض قبل ينتهي، هذه أبرز النتائج: {{offers}}."],"en":["These are the active offers closest to expiry: {{offers}}.","If you want to catch a deal before it ends, these are the strongest matches: {{offers}}."]},"req":null,"fk":["followup_nearby","followup_book_now","followup_second_result"]},{"id":"offers_nearby","c":"offers","p":100,"t":"dynamic","h":"offers_nearby","s":"ranked_list","ex":{"ar":["وش العروض القريبة","فيه خصم قريب مني","عطني عروض في الحي","وش عليه عرض بالعوالي","خصومات قريبة","أبغى عرض قريب","وين أقرب عرض"],"en":["what offers are nearby","any discount near me","show deals in my neighborhood","what has an offer in Al Awali","nearby discounts","I want a nearby deal","where is the closest offer"]},"kw":{"ar":["العروض القريبة","خصم قريب","عروض في الحي","عليه عرض بالعوالي","خصومات قريبة","أقرب عرض"],"en":["offers nearby","discount near me","deals in my neighborhood","nearby discounts","closest offer"]},"en":["offer","neighborhood","location"],"r":{"ar":["في منطقتك الحالية، هذه أقرب العروض النشطة: {{offers}}.","أقرب عروض مناسبة لسياقك: {{offers}}."],"en":["In your current area, these are the nearest active offers: {{offers}}.","The closest offers that fit your context are: {{offers}}."]},"req":null,"fk":["followup_restaurants_only","followup_family_package","followup_second_result"]},{"id":"offers_terms_details","c":"offers","p":100,"t":"dynamic","h":"offer_terms_detail","s":"single_entity","ex":{"ar":["وش شروط العرض","اشرح لي الخصم","كم نسبة الخصم","متى ينتهي العرض","مين يستفيد من العرض","هل العرض للعائلة","كيف أستخدم الخصم","وش تفاصيل الباقة"],"en":["what are the offer terms","explain the discount","what is the discount percentage","when does the offer end","who is eligible","is the offer for families","how do I use the discount","what are the package details"]},"kw":{"ar":["شروط العرض","نسبة الخصم","ينتهي العرض","مين يستفيد","كيف أستخدم","تفاصيل الباقة"],"en":["offer terms","discount percentage","offer end","eligible","use the discount","package details"]},"en":["offer","eligibility","validity","redemption","source"],"r":{"ar":["تفاصيل {{offer}}: {{offer_value}} · الشروط {{terms}} · الصلاحية {{validity}} · طريقة الاستفادة {{redemption}} · المصدر {{source}}.","بالنسبة لـ{{offer}}: {{terms_summary}}."],"en":["Details for {{offer}}: {{offer_value}} · terms {{terms}} · validity {{validity}} · redemption {{redemption}} · source {{source}}.","For {{offer}}: {{terms_summary}}."]},"req":null,"fk":["followup_book_now","followup_add_to_plan"]},{"id":"action_save_item","c":"actions","p":100,"t":"action","h":"action_save_object","s":"action_confirmation","ex":{"ar":["احفظه","احفظ هذا","حطه بالمحفوظات","أبغى أحفظه","خلني أرجع له بعدين","save هذا","احفظ الثاني"],"en":["save it","save this","add it to saved","I want to save it","keep it for later","save this one","save the second one"]},"kw":{"ar":["احفظه","المحفوظات","أحفظه","بعدين","احفظ الثاني"],"en":["save it","saved","keep it for later","save the second"]},"en":["object","last_ranked_results"],"r":{"ar":["تم حفظ {{object}} للرجوع له لاحقًا. ما تم إضافته إلى «خطتي» ولا اعتباره حجزًا.","حفظت {{object}} فقط."],"en":["{{object}} is saved for later. It has not been added to My Plan or treated as a booking.","I saved {{object}} only."]},"req":null,"fk":["followup_add_to_plan","followup_with_offer"]},{"id":"action_unsave_item","c":"actions","p":100,"t":"action","h":"action_unsave_object","s":"action_confirmation","ex":{"ar":["شيله من الحفظ","فك الحفظ","لا تحفظه","احذفه من المحفوظات","شيل هذا من المحفوظ","unsave هذا"],"en":["remove it from saved","unsave it","don't save it","delete it from saved","remove this saved item","unsave this"]},"kw":{"ar":["شيله من الحفظ","فك الحفظ","لا تحفظه","المحفوظات"],"en":["remove from saved","unsave","don't save","saved item"]},"en":["object"],"r":{"ar":["شلت {{object}} من المحفوظات، وباقي حالاته ما تغيرت.","تم إلغاء حفظ {{object}}."],"en":["{{object}} was removed from saved items; its other states were not changed.","{{object}} is no longer saved."]},"req":null,"fk":[]},{"id":"action_join_activity","c":"actions","p":100,"t":"action","h":"action_join_activity","s":"action_confirmation","ex":{"ar":["انضم للنشاط","سجلني حضور","أنا جاي","حطني going","أبغى أنضم","انضم للثاني","خلني مع المجموعة"],"en":["join the activity","mark me as going","I'm going","set me as going","I want to join","join the second one","add me to the group"]},"kw":{"ar":["انضم","سجلني حضور","أنا جاي","going","أنضم","مع المجموعة"],"en":["join","going","I'm going","join the second","group"]},"en":["activity","club","last_ranked_results"],"r":{"ar":["سجلت نية انضمامك إلى {{object}}. هذا يعني Join/Going فقط، وليس حجزًا مؤكدًا أو إثبات حضور.","تم الانضمام إلى {{object}} كحالة مشاركة/نية حضور."],"en":["Your join/going intent for {{object}} is recorded. This is not a confirmed booking or proof of attendance.","You joined {{object}} as a participation/going state."]},"req":null,"fk":["followup_add_to_plan"]},{"id":"action_leave_activity","c":"actions","p":100,"t":"action","h":"action_leave_activity","s":"action_confirmation","ex":{"ar":["الغ انضمامي","شيلني من النشاط","ما عاد بروح","فك going","أبغى أطلع من المجموعة","الغ الثاني"],"en":["cancel my join","remove me from the activity","I'm not going anymore","remove going","leave the group","cancel the second one"]},"kw":{"ar":["الغ انضمامي","شيلني","ما عاد بروح","فك going","أطلع من المجموعة"],"en":["cancel join","remove me","not going","leave the group"]},"en":["activity","club"],"r":{"ar":["ألغيت حالة الانضمام/الذهاب لـ{{object}} فقط. الحفظ أو «خطتي» ما تتغير إلا إذا طلبت.","تم إلغاء انضمامك إلى {{object}}."],"en":["Your join/going state for {{object}} was cancelled only. Saved/My Plan state remains unless you ask to change it.","Your join state for {{object}} has been removed."]},"req":null,"fk":[]},{"id":"action_start_booking_handoff","c":"actions","p":100,"t":"action","h":"action_booking_handoff","s":"action_confirmation","ex":{"ar":["احجزه","أبغى أحجز","ودني للحجز","افتح الحجز","احجز الثاني","كيف أحجزه الحين","أبغى أكمل الحجز"],"en":["book it","I want to book","take me to booking","open booking","book the second one","how do I book it now","I want to complete booking"]},"kw":{"ar":["احجزه","أحجز","للحجز","افتح الحجز","أكمل الحجز"],"en":["book it","booking","open booking","complete booking"]},"en":["object","action_type","booking_target"],"r":{"ar":["أفتح لك مسار الحجز لـ{{object}}. بعد الانتقال أسجل فقط «انتقلت لإكمال الحجز» إلى أن يصل تأكيد فعلي أو تأكده أنت.","جاهز. الانتقال للحجز لا يعني أن {{object}} صار «مؤكد» تلقائيًا."],"en":["I'll open the booking path for {{object}}. After handoff, EyeMakkah records only 'left to complete booking' until a real confirmation arrives or you explicitly confirm it.","Ready. Opening booking does not automatically make {{object}} confirmed."]},"req":null,"fk":["followup_confirm_booking"]},{"id":"action_confirm_booking_explicit","c":"actions","p":100,"t":"action","h":"action_confirm_booking_by_user","s":"action_confirmation","ex":{"ar":["تم الحجز","أنا حجزت خلاص","أكدت الحجز برا","خلصت الحجز","الحجز تأكد","رجعت وحجزته","حجزته من الموقع"],"en":["booking is done","I booked it","I confirmed it externally","I finished booking","the booking is confirmed","I came back after booking","I booked it on the website"]},"kw":{"ar":["تم الحجز","حجزت خلاص","أكدت الحجز","خلصت الحجز","تأكد","حجزته"],"en":["booking is done","I booked it","confirmed it","finished booking","booking is confirmed"]},"en":["object","plan_state","outbound_state"],"r":{"ar":["تمام، بما أنك أكدت أنك أكملت الحجز لـ{{object}}، أقدر أنقل حالته إلى «مؤكد» كتأكيد صريح منك.","سجلت تأكيدك الصريح لحجز {{object}}."],"en":["Since you explicitly confirmed that you completed booking for {{object}}, it can move to Confirmed as a user-confirmed state.","Your explicit confirmation for {{object}} has been recorded."]},"req":null,"fk":[]},{"id":"action_open_directions","c":"actions","p":95,"t":"action","h":"action_open_directions","s":"action_confirmation","ex":{"ar":["ودني للمكان","افتح الاتجاهات","كيف أوصل","طلع لي الطريق","وين الموقع","افتح الخريطة","روح للمكان"],"en":["take me there","open directions","how do I get there","show me the route","where is it","open the map","go to the place"]},"kw":{"ar":["ودني","الاتجاهات","أوصل","الطريق","الموقع","الخريطة"],"en":["take me there","directions","get there","route","map"]},"en":["object","geo","location"],"r":{"ar":["أفتح لك الاتجاهات إلى {{object}} باستخدام موقع المكان المتاح في EyeMakkah.","جاهز، بفتح لك مسار الوصول إلى {{object}}."],"en":["I'll open directions to {{object}} using the location available in EyeMakkah.","Ready. I'll open the route to {{object}}."]},"req":null,"fk":[]},{"id":"action_open_details","c":"actions","p":95,"t":"action","h":"action_open_object_detail","s":"action_confirmation","ex":{"ar":["افتحه","ورني التفاصيل","أبغى أشوف المكان","افتح الثاني","ودني لصفحة النشاط","شوف لي تفاصيل العرض","افتح صفحة المطعم"],"en":["open it","show me details","I want to see the place","open the second one","take me to the activity page","show offer details","open the restaurant page"]},"kw":{"ar":["افتحه","التفاصيل","أشوف المكان","افتح الثاني","صفحة النشاط","صفحة المطعم"],"en":["open it","details","see the place","open the second","activity page","restaurant page"]},"en":["object","last_ranked_results"],"r":{"ar":["أفتح لك صفحة {{object}} داخل EyeMakkah.","جاهز، ننتقل لتفاصيل {{object}}."],"en":["I'll open {{object}} inside EyeMakkah.","Ready. Let's open the details for {{object}}."]},"req":null,"fk":[]},{"id":"plan_summary","c":"plan","p":100,"t":"dynamic","h":"plan_summary","s":"structured_summary","ex":{"ar":["وش عندي في خطتي","لخص خطتي","وش مخطط له","وش موجود عندي","عطني ملخص خطتي","وش الأشياء اللي حاطها بخطتي","كيف وضعي اليوم"],"en":["what is in My Plan","summarize My Plan","what do I have planned","what is on my plan","give me a My Plan summary","what have I added to my plan","what does my day look like"]},"kw":{"ar":["خطتي","لخص خطتي","مخطط له","ملخص خطتي","حاطها بخطتي"],"en":["My Plan","summarize","planned","plan summary"]},"en":["plan_state","time","object"],"r":{"ar":["ملخص «خطتي»: {{plan_summary}}.","هذه حالتك الحالية في «خطتي»: {{plan_summary}}."],"en":["My Plan summary: {{plan_summary}}.","This is your current My Plan status: {{plan_summary}}."]},"req":null,"fk":["followup_today_only","followup_upcoming_only","followup_confirmed_only","followup_completed_only"]},{"id":"plan_today","c":"plan","p":100,"t":"dynamic","h":"plan_today","s":"ranked_list","ex":{"ar":["وش عندي اليوم","وش خطتي اليوم","ايش عندي الحين واليوم","عطني جدول اليوم","وش الأشياء اللي بسويها اليوم","وش عندي بعد شوي"],"en":["what do I have today","what is my plan today","what do I have now and today","show today's schedule","what am I doing today","what do I have coming up today"]},"kw":{"ar":["عندي اليوم","خطتي اليوم","الحين واليوم","جدول اليوم","بسويها اليوم"],"en":["today","plan today","now and today","today's schedule"]},"en":["plan_state","date","time"],"r":{"ar":["اليوم عندك: {{plan_items}}.","هذه عناصر «خطتي» لليوم: {{plan_items}}."],"en":["Today you have: {{plan_items}}.","These are your My Plan items for today: {{plan_items}}."]},"req":null,"fk":["followup_what_next","followup_open_second"]},{"id":"plan_upcoming","c":"plan","p":98,"t":"dynamic","h":"plan_upcoming","s":"ranked_list","ex":{"ar":["وش عندي قادم","وش الجاي في خطتي","وش عندي الأسبوع الجاي","عطني الأشياء القادمة","وش بعد اليوم","ايش مخطط له قدام"],"en":["what is coming up","what is next in My Plan","what do I have next week","show upcoming items","what is after today","what do I have planned ahead"]},"kw":{"ar":["قادم","الجاي","الأسبوع الجاي","الأشياء القادمة","بعد اليوم","قدام"],"en":["coming up","next","next week","upcoming","after today","planned ahead"]},"en":["plan_state","date"],"r":{"ar":["القادم في «خطتي»: {{plan_items}}.","هذه الأشياء المخطط لها بعد اليوم: {{plan_items}}."],"en":["Upcoming in My Plan: {{plan_items}}.","These are the items planned after today: {{plan_items}}."]},"req":null,"fk":["followup_second_result","followup_open_details"]},{"id":"plan_confirmed","c":"plan","p":100,"t":"dynamic","h":"plan_confirmed","s":"ranked_list","ex":{"ar":["وش عندي مؤكد","ايش الحجوزات المؤكدة","عطني المؤكد","وش الأشياء اللي تأكدت","وش confirmed عندي"],"en":["what is confirmed","what confirmed bookings do I have","show confirmed items","what has been confirmed","what is confirmed in My Plan"]},"kw":{"ar":["مؤكد","الحجوزات المؤكدة","تأكدت","confirmed"],"en":["confirmed","confirmed bookings","confirmed items"]},"en":["plan_state"],"r":{"ar":["العناصر المؤكدة في «خطتي»: {{plan_items}}.","هذا اللي حالته «مؤكد»: {{plan_items}}."],"en":["Confirmed items in My Plan: {{plan_items}}.","These items are currently marked Confirmed: {{plan_items}}."]},"req":null,"fk":["followup_open_details","followup_today_only"]},{"id":"plan_completed","c":"plan","p":98,"t":"dynamic","h":"plan_completed","s":"ranked_list","ex":{"ar":["وش الأشياء اللي خلصتها","وش مكتمل عندي","عطني اللي سويته","وش تجاربي المكتملة","ايش completed","وش أنجزت"],"en":["what have I completed","what is completed in My Plan","show what I did","what experiences have I completed","what is completed","what have I finished"]},"kw":{"ar":["خلصتها","مكتمل","سويته","تجاربي المكتملة","أنجزت"],"en":["completed","what I did","experiences completed","finished"]},"en":["plan_state","completed"],"r":{"ar":["المكتمل عندك: {{plan_items}}. أقدر بعدها أساعدك تشارك تجربة أو تشوف «وش بعد؟».","هذه الأشياء اللي أكملتها: {{plan_items}}."],"en":["Your completed items are: {{plan_items}}. I can then help you contribute or see what to do next.","These are the things you've completed: {{plan_items}}."]},"req":null,"fk":["followup_contribute","followup_what_next"]},{"id":"plan_add_item","c":"plan","p":100,"t":"action","h":"action_add_to_plan","s":"action_confirmation","ex":{"ar":["ضفه لخطتي","أضف هذا لخطتي","حطه في خطتي","ضيف الثاني لخطتي","أبغى أخطط له","حطه عندي اليوم","أضفه للخطة"],"en":["add it to My Plan","add this to my plan","put it in My Plan","add the second one to My Plan","I want to plan for it","put it in today","add it to the plan"]},"kw":{"ar":["ضفه لخطتي","أضف","حطه في خطتي","ضيف الثاني","أخطط له","أضفه للخطة"],"en":["add to My Plan","put it in My Plan","add the second","plan for it","add to plan"]},"en":["object","last_ranked_results","plan_state"],"r":{"ar":["أضفت {{object}} إلى «خطتي». هذا ما يغيّر حالة الحجز أو الانضمام تلقائيًا.","تمت إضافة {{object}} إلى «خطتي» فقط."],"en":["{{object}} has been added to My Plan. This does not automatically change booking or join status.","{{object}} was added to My Plan only."]},"req":null,"fk":["followup_plan_when","followup_build_around_it"]},{"id":"plan_remove_item","c":"plan","p":100,"t":"action","h":"action_remove_from_plan","s":"action_confirmation","ex":{"ar":["شيله من خطتي","احذف هذا من خطتي","ما أبغاه بالخطة","طلع الثاني من خطتي","الغيه من الخطة","احذف العنصر"],"en":["remove it from My Plan","delete this from my plan","I don't want it in the plan","remove the second one from My Plan","cancel it from the plan","delete the item"]},"kw":{"ar":["شيله من خطتي","احذف","ما أبغاه بالخطة","طلع الثاني","الغيه من الخطة"],"en":["remove from My Plan","delete","don't want it in plan","remove the second","cancel from plan"]},"en":["object","plan_state"],"r":{"ar":["شلت {{object}} من «خطتي». الحفظ أو الانضمام أو الحجز ما يتغير إلا إذا طلبت.","تم حذف {{object}} من «خطتي» فقط."],"en":["{{object}} was removed from My Plan. Saved, join, or booking states remain unless you ask to change them.","{{object}} was removed from My Plan only."]},"req":null,"fk":[]},{"id":"plan_what_next","c":"plan","p":100,"t":"dynamic","h":"plan_recommend_next","s":"ranked_list","ex":{"ar":["وش بعد","وش أسوي بعد هذا","وش يناسب خطتي بعده","بعد النشاط وين أروح","وش الخطوة الجاية","أبغى شي بعد اللي عندي","وش تكملة الخطة"],"en":["what next","what should I do after this","what fits after this in My Plan","where should I go after the activity","what is the next step","I want something after what I already have","what completes the plan"]},"kw":{"ar":["وش بعد","بعد هذا","يناسب خطتي","بعد النشاط","الخطوة الجاية","تكملة الخطة"],"en":["what next","after this","fits after","after the activity","next step","complete the plan"]},"en":["plan_state","current_item","time","neighborhood"],"r":{"ar":["بعد {{current_item}}, هذه أفضل التكملات المناسبة للوقت والمنطقة: {{recommendations}}.","الخطوة التالية المقترحة في خطتك: {{recommendations}}."],"en":["After {{current_item}}, these are the strongest next options for your time and area: {{recommendations}}.","Suggested next step in your plan: {{recommendations}}."]},"req":null,"fk":["followup_with_offer","followup_second_result","followup_add_to_plan"]},{"id":"plan_build_around_item","c":"plan","p":100,"t":"dynamic","h":"plan_build_around_item","s":"composed_plan","ex":{"ar":["رتب شي حول هذا","ابني لي خطة حوله","وش أحط قبله وبعده","رتب يومي حول النشاط","أبغى قهوة قبله وعشاء بعده","كمل لي الخطة حوله","وش يناسب مع هذا"],"en":["build something around this","plan around it","what should I do before and after it","plan my day around the activity","coffee before and dinner after","complete my plan around it","what goes well with this"]},"kw":{"ar":["حول هذا","خطة حوله","قبله وبعده","حول النشاط","قهوة قبله","عشاء بعده","يناسب مع هذا"],"en":["around this","plan around it","before and after","around the activity","coffee before","dinner after","goes well with"]},"en":["object","time_available","neighborhood","party"],"r":{"ar":["بنيت لك تكملة حول {{object}}: {{outing_steps}}.","حول {{object}}، هذا الترتيب الأنسب: {{outing_steps}}."],"en":["I built a continuation around {{object}}: {{outing_steps}}.","Around {{object}}, this is the strongest sequence: {{outing_steps}}."]},"req":null,"fk":["followup_with_offer","followup_swap_step","followup_add_all_to_plan"]},{"id":"community_what_people_say","c":"community","p":100,"t":"dynamic","h":"community_object_summary","s":"structured_summary","ex":{"ar":["وش الناس تقول عنه","وش يقولون أهل مكة","أحد جربه","وش تجارب الناس","وش رأي المجتمع","وش قالوا عن المكان","وش النصائح عنه"],"en":["what do people say about it","what do locals say","has anyone tried it","what are people's experiences","what does the community say","what did people say about the place","any tips about it"]},"kw":{"ar":["الناس تقول","أهل مكة","أحد جربه","تجارب الناس","رأي المجتمع","النصائح"],"en":["people say","locals say","anyone tried","people's experiences","community say","tips"]},"en":["object","contribution","community"],"r":{"ar":["من مساهمات المجتمع المرتبطة بـ{{object}}: {{community_summary}}.","الناس ذكروا عن {{object}}: {{community_summary}}."],"en":["From community contributions linked to {{object}}: {{community_summary}}.","People mentioned the following about {{object}}: {{community_summary}}."]},"req":null,"fk":["followup_more_detail","followup_show_recent","followup_second_result"]},{"id":"community_recommendations","c":"community","p":98,"t":"dynamic","h":"community_recommendations","s":"ranked_list","ex":{"ar":["وش ينصحون أهل مكة","عطني توصيات المجتمع","وش الناس تقترح","أبغى اقتراح من المجتمع","وش توصيات الحي","عطني شي الناس تمدحه","وش الناس تنصح فيه"],"en":["what do Makkah locals recommend","show community recommendations","what do people suggest","I want a community recommendation","what does the neighborhood recommend","show something people praise","what do people recommend"]},"kw":{"ar":["ينصحون أهل مكة","توصيات المجتمع","الناس تقترح","اقتراح من المجتمع","توصيات الحي","الناس تنصح"],"en":["locals recommend","community recommendations","people suggest","neighborhood recommend","people recommend"]},"en":["community","neighborhood","object","interest"],"r":{"ar":["هذه توصيات مرتبطة بالمجتمع وسياقك الحالي: {{recommendations}}.","من المجتمع، هذه أبرز الأشياء اللي انذكرت بشكل مفيد: {{recommendations}}."],"en":["These recommendations come from community-linked context relevant to you: {{recommendations}}.","From the community, these are the strongest useful mentions: {{recommendations}}."]},"req":null,"fk":["followup_nearby","followup_with_offer","followup_second_result"]},{"id":"community_find_group","c":"community","p":100,"t":"dynamic","h":"community_find_relevant","s":"ranked_list","ex":{"ar":["فيه مجتمع يناسبني","وش المجتمع اللي أدخله","عطني مجتمع لاهتماماتي","أبغى مجموعة في حيّي","فيه مجتمع للزوار","وش فيه للأكل المكي","أبغى نادي للهواية"],"en":["is there a community for me","which community should I join","show a community for my interests","I want a group in my neighborhood","is there a visitor community","what is there for Makkah food","I want a hobby club"]},"kw":{"ar":["مجتمع يناسبني","أدخله","لاهتماماتي","مجموعة في حيّي","مجتمع للزوار","الأكل المكي","نادي للهواية"],"en":["community for me","community should I join","my interests","group in my neighborhood","visitor community","hobby club"]},"en":["community","club","interest","neighborhood","mode"],"r":{"ar":["هذه المجتمعات/الأندية الأقرب لاهتماماتك وسياقك: {{communities}}.","إذا تبغى تدخل مجتمع مناسب، ابدأ بـ: {{communities}}."],"en":["These communities/clubs best match your interests and context: {{communities}}.","If you want a relevant community, start with: {{communities}}."]},"req":null,"fk":["followup_join_community","followup_second_result"]},{"id":"community_active_discussions","c":"community","p":96,"t":"dynamic","h":"community_active_discussions","s":"ranked_list","ex":{"ar":["وش النقاشات الحالية","وش الناس تتكلم عنه","وش المواضيع النشطة","وش فيه أسئلة اليوم","عطني نقاشات مفيدة","وش صاير بالمجتمع","وش المواضيع الجديدة"],"en":["what discussions are active","what are people talking about","what topics are active","what questions are there today","show useful discussions","what is happening in Community","what topics are new"]},"kw":{"ar":["النقاشات","الناس تتكلم","المواضيع النشطة","أسئلة اليوم","نقاشات مفيدة","المواضيع الجديدة"],"en":["active discussions","people talking","active topics","questions today","useful discussions","new topics"]},"en":["community","contribution","time"],"r":{"ar":["هذه أبرز النقاشات/المساهمات الحديثة في السياق الحالي: {{discussions}}.","الحديث الجاري حاليًا في المجتمعات المناسبة لك: {{discussions}}."],"en":["These are the strongest recent discussions/contributions in the current context: {{discussions}}.","Current conversation in communities relevant to you: {{discussions}}."]},"req":null,"fk":["followup_open_thread","followup_second_result"]},{"id":"community_ask_question","c":"community","p":100,"t":"action","h":"action_create_community_question","s":"action_confirmation","ex":{"ar":["أبغى أسأل المجتمع","اسأل الناس","اكتب سؤال","أبغى أنشر سؤال","حط سؤالي بالمجتمع","اسأل أهل الحي","أبغى أسأل عن المكان"],"en":["I want to ask the community","ask people","write a question","I want to post a question","post my question in Community","ask people in the neighborhood","I want to ask about the place"]},"kw":{"ar":["أسأل المجتمع","اسأل الناس","اكتب سؤال","أنشر سؤال","سؤالي بالمجتمع","أسأل عن المكان"],"en":["ask the community","ask people","write a question","post a question","ask about the place"]},"en":["community","object","contribution_text"],"r":{"ar":["أقدر أجهز سؤالك داخل {{community_or_object}} كمساهمة «سؤال». النص: {{question_text}}.","جاهز لنشر سؤالك في السياق المناسب: {{question_text}}."],"en":["I can prepare your question inside {{community_or_object}} as a Question contribution. Text: {{question_text}}.","Ready to post your question in the relevant context: {{question_text}}."]},"req":null,"fk":[]},{"id":"community_contribute_experience","c":"community","p":100,"t":"action","h":"action_create_contribution","s":"action_confirmation","ex":{"ar":["أبغى أشارك تجربتي","اكتب نصيحة","أبغى أضيف صورة","خلني أكتب عن النشاط","أبغى أقول للناس وش صار","شارك تجربتي بالمجتمع","أبغى أضيف تحديث"],"en":["I want to share my experience","write a tip","I want to add a photo","let me write about the activity","I want to tell people what happened","share my experience in Community","I want to add an update"]},"kw":{"ar":["أشارك تجربتي","اكتب نصيحة","أضيف صورة","أكتب عن النشاط","شارك تجربتي","أضيف تحديث"],"en":["share my experience","write a tip","add a photo","write about the activity","add an update"]},"en":["object","completed","contribution_type"],"r":{"ar":["أقدر أبدأ مساهمة مرتبطة بـ{{object}} من نوع {{contribution_type}} بدون تحويلها لمراجعة عامة إجبارية.","جاهز. بنربط مساهمتك بـ{{object}} حتى تفيد الأشخاص اللي يشوفونه لاحقًا."],"en":["I can start a contribution linked to {{object}} as {{contribution_type}} without forcing it into a generic review.","Ready. Your contribution will be linked to {{object}} so it can help people who view it later."]},"req":null,"fk":[]},{"id":"community_join_leave","c":"community","p":100,"t":"action","h":"action_community_membership","s":"action_confirmation","ex":{"ar":["انضم للمجتمع","تابع هذا المجتمع","أبغى أدخل المجتمع","خلني عضو","الغ عضويتي بالمجتمع","اطلع من المجتمع","وقف متابعة المجتمع"],"en":["join the community","follow this community","I want to enter the community","make me a member","leave the community","remove me from the community","stop following the community"]},"kw":{"ar":["انضم للمجتمع","تابع","عضو","الغ عضويتي","اطلع من المجتمع","وقف متابعة"],"en":["join the community","follow","member","leave the community","stop following"]},"en":["community","membership_action"],"r":{"ar":["تم تنفيذ {{membership_action}} على {{community}}. هذا ما يكشف موقعك أو حضورك للآخرين تلقائيًا.","حالة {{community}} عندك أصبحت: {{membership_state}}."],"en":["{{membership_action}} was applied to {{community}}. This does not automatically expose your location or attendance to others.","Your status for {{community}} is now: {{membership_state}}."]},"req":null,"fk":[]},{"id":"community_to_activity","c":"community","p":100,"t":"dynamic","h":"community_linked_activities","s":"ranked_list","ex":{"ar":["وش نشاط أقدر أروح له من هذا المجتمع","فيه فعالية مرتبطة بالمجتمع","أبغى أشارك مو بس أقرأ","وش يسوون على أرض الواقع","فيه نادي تابع للمجتمع","عطني نشاط من هالمجموعة"],"en":["what activity can I attend from this community","is there an event linked to the community","I want to participate not just read","what do they do in real life","is there a club linked to the community","show an activity from this group"]},"kw":{"ar":["نشاط من هذا المجتمع","فعالية مرتبطة","أشارك مو بس أقرأ","على أرض الواقع","نادي تابع","نشاط من هالمجموعة"],"en":["activity from this community","event linked","participate","real life","club linked","activity from this group"]},"en":["community","club","activity"],"r":{"ar":["من {{community}} تقدر تنتقل لهذه الأنشطة/الأندية المرتبطة: {{recommendations}}.","إذا تبغى تحول المجتمع لمشاركة فعلية، هذه الخيارات: {{recommendations}}."],"en":["From {{community}}, you can move into these linked activities/clubs: {{recommendations}}.","If you want to turn community into real participation, these are the options: {{recommendations}}."]},"req":null,"fk":["followup_join_activity","followup_add_to_plan","followup_second_result"]},{"id":"followup_why","c":"conversation_context","p":100,"t":"contextual_dynamic","h":"followup_explain_previous_recommendation","s":"single_answer","ex":{"ar":["ليش","طيب ليش","ليه","ليش هذا","ليش اخترته","ليش اقترحته","وش السبب","ليش يناسبني","ليش هو الأول","وش اللي خلاه مناسب","اشرح لي ليش","ليش طلع لي هذا","ليه هذا بالذات","وش سبب الترشيح"],"en":["why","okay why","why this","why did you choose it","why did you suggest it","what is the reason","why does it fit me","why is it first","what made it suitable","explain why","why did this show up","why this one specifically"]},"kw":{"ar":["ليش","ليه","السبب","اخترته","اقترحته","يناسبني","الترشيح"],"en":["why","reason","choose","suggest","fit","first"]},"en":[],"r":{"ar":["رشحته لأن {{reason_summary}}، بناءً على سياقك الحالي والبيانات المتاحة عن {{entity}}.","أهم سبب للترشيح: {{reason_summary}}."],"en":["I recommended it because {{reason_summary}}, based on your current context and the available data for {{entity}}.","The main reason for the recommendation is: {{reason_summary}}."]},"req":["last_intent","last_result"],"fk":[]},{"id":"followup_second_result","c":"conversation_context","p":100,"t":"contextual_dynamic","h":"followup_second_ranked","s":"single_answer","ex":{"ar":["والثاني","طيب والثاني","وش الثاني","مين الثاني","ايش المرتبة الثانية","اللي بعده","اعطني الثاني","النتيجة الثانية","ثاني واحد","طيب وش بعد الأول","افتح لي الثاني بعدين","وش الخيار الثاني"],"en":["what about the second one","okay and the second","what is second","who is second","what is in second place","what comes next","give me the second one","the second result","number two","what comes after the first","what is option two"]},"kw":{"ar":["والثاني","الثاني","المرتبة الثانية","اللي بعده","النتيجة الثانية","ثاني"],"en":["second","second one","second place","next","number two","option two"]},"en":[],"r":{"ar":["الخيار الثاني هو {{entity}}، وسبب ملاءمته المختصر: {{reason}}.","الثاني في نفس الترتيب: {{entity}}."],"en":["The second option is {{entity}}. Brief fit reason: {{reason}}.","Second in the same ranking: {{entity}}."]},"req":["last_ranked_results"],"fk":[]},{"id":"followup_third_result","c":"conversation_context","p":99,"t":"contextual_dynamic","h":"followup_third_ranked","s":"single_answer","ex":{"ar":["والثالث","طيب والثالث","وش الثالث","مين الثالث","ايش المرتبة الثالثة","اعطني الثالث","النتيجة الثالثة","ثالث واحد","وش بعد الثاني","الخيار الثالث"],"en":["what about the third one","okay and the third","what is third","who is third","what is in third place","give me the third one","the third result","number three","what comes after second","the third option"]},"kw":{"ar":["والثالث","الثالث","المرتبة الثالثة","اعطني الثالث","بعد الثاني"],"en":["third","third one","third place","number three","after second"]},"en":[],"r":{"ar":["الخيار الثالث هو {{entity}}، وسبب ملاءمته المختصر: {{reason}}.","الثالث في نفس الترتيب: {{entity}}."],"en":["The third option is {{entity}}. Brief fit reason: {{reason}}.","Third in the same ranking: {{entity}}."]},"req":["last_ranked_results"],"fk":[]},{"id":"followup_compare_top_two","c":"conversation_context","p":100,"t":"contextual_dynamic","h":"followup_compare_top_two","s":"comparison","ex":{"ar":["قارنهم","طيب قارنهم","قارن الاثنين","وش الفرق بينهم","مين أنسب لي","قارن الأول والثاني","وش يميز كل واحد","اعطني مقارنة","وش الفرق بين الأول والثاني","أيهم أقرب","أيهم أهدأ"],"en":["compare them","okay compare them","compare the two","what is the difference","which fits me better","compare first and second","what is different about each","give me a comparison","difference between first and second","which is closer","which is quieter"]},"kw":{"ar":["قارنهم","قارن","الفرق بينهم","الأول والثاني","يميز","أيهم"],"en":["compare","difference","first and second","which one"]},"en":[],"r":{"ar":["مقارنة الأول والثاني ضمن نفس السياق: {{comparison_summary}}.","الفرق الأهم بينهم: {{comparison_summary}}."],"en":["Comparing the top two in the same context: {{comparison_summary}}.","The most useful difference between them is: {{comparison_summary}}."]},"req":["last_ranked_results"],"fk":[]},{"id":"followup_more_detail","c":"conversation_context","p":96,"t":"contextual_dynamic","h":"followup_expand_previous","s":"single_answer","ex":{"ar":["فصل أكثر","اعطني تفاصيل أكثر","وضح أكثر","اشرح أكثر","ادخل بالتفاصيل","أبغى تفاصيل","زيدني معلومات","طيب كمل","قول لي أكثر","وش بعد عنه","فصّل لي هذا"],"en":["give me more detail","explain more","expand on that","go into more detail","show me the details","tell me more","continue","what else about it","break it down"]},"kw":{"ar":["فصل","تفاصيل","وضح","اشرح","زيدني","كمل","أكثر"],"en":["detail","explain","expand","tell me more","continue","break down"]},"en":[],"r":{"ar":["تفصيل إضافي على نفس النتيجة: {{expanded_detail}}.","عن {{entity}} تحديدًا: {{expanded_detail}}."],"en":["More detail on the same result: {{expanded_detail}}.","For {{entity}} specifically: {{expanded_detail}}."]},"req":["last_result"],"fk":[]},{"id":"followup_make_shorter","c":"conversation_context","p":92,"t":"contextual_dynamic","h":"followup_shorten_previous","s":"single_answer","ex":{"ar":["اختصر","اختصرها","اعطني الزبدة","باختصار","قولها بسرعة","اختصر الجواب","خلاصة","سطر واحد","بس الزبدة","لا تطول"],"en":["make it shorter","summarize that","give me the short version","in brief","just the takeaway","one line","keep it concise","don't make it long"]},"kw":{"ar":["اختصر","الزبدة","باختصار","خلاصة","سطر واحد","لا تطول"],"en":["shorter","summarize","short version","brief","takeaway","one line","concise"]},"en":[],"r":{"ar":["الخلاصة: {{short_summary}}.","باختصار: {{short_summary}}."],"en":["In short: {{short_summary}}.","The takeaway: {{short_summary}}."]},"req":["last_result"],"fk":[]},{"id":"followup_show_more_ranked","c":"conversation_context","p":97,"t":"contextual_dynamic","h":"followup_expand_ranking","s":"ranked_list","ex":{"ar":["اعطني أكثر","وريني باقي النتائج","كمل القائمة","وش بعد","اعطني خمسة","أبغى خيارات أكثر","كمل الترتيب","وريني الباقي","غير هالثلاثة وش فيه","فيه خيارات ثانية"],"en":["show me more","show the rest","continue the list","what comes next","give me five","I want more options","continue the ranking","show the remaining ones","what else is there","any other options"]},"kw":{"ar":["أكثر","باقي النتائج","كمل","خمسة","خيارات أكثر","الباقي","خيارات ثانية"],"en":["more","rest","continue","five","more options","remaining","other options"]},"en":[],"r":{"ar":["خيارات إضافية ضمن نفس السياق: {{ranked_results}}.","تكملة النتائج: {{ranked_results}}."],"en":["More options in the same context: {{ranked_results}}.","Continuing the results: {{ranked_results}}."]},"req":["last_intent","last_ranked_results"],"fk":[]},{"id":"followup_different_option","c":"conversation_context","p":100,"t":"contextual_dynamic","h":"followup_alternative","s":"ranked_list","ex":{"ar":["غيره","شي ثاني","أبغى بديل","مو هذا عطيني غيره","شي مختلف","ورني خيار ثاني مختلف","بدل هذا","غير الاقتراح","لا هذا غيره","أبغى شيء مختلف تمامًا"],"en":["another one","something else","I want an alternative","not this give me another","something different","show me a different option","replace this","change the suggestion","not this one","something completely different"]},"kw":{"ar":["غيره","شي ثاني","بديل","شي مختلف","بدل","غير الاقتراح"],"en":["another","something else","alternative","different","replace","change suggestion"]},"en":[],"r":{"ar":["تمام، أستبعد {{previous_entity}} وأعطيك بديلًا مختلفًا: {{recommendations}}.","بديل مختلف عن السابق: {{recommendations}}."],"en":["Okay. I'll exclude {{previous_entity}} and give you a different alternative: {{recommendations}}.","A different alternative from the previous result: {{recommendations}}."]},"req":["last_intent","last_result"],"fk":[]},{"id":"followup_closer","c":"conversation_context","p":100,"t":"contextual_dynamic","h":"followup_refine_proximity","s":"ranked_list","ex":{"ar":["أقرب","طيب أقرب","أبغى شي أقرب","وش الأقرب","قريب مني أكثر","نفس الشي بس أقرب","خلها في الحي","أبغى أقرب خيار","شي حولي أكثر","أقرب واحد"],"en":["closer","something closer","what is closest","closer to me","same thing but closer","keep it in the neighborhood","give me the nearest option","more nearby","the closest one"]},"kw":{"ar":["أقرب","قريب مني","في الحي","حولي"],"en":["closer","closest","nearby","in the neighborhood"]},"en":["neighborhood","location"],"r":{"ar":["بنفس طلبك السابق لكن مع أولوية القرب: {{recommendations}}.","الأقرب لك ضمن نفس الطلب: {{recommendations}}."],"en":["Keeping the same request but prioritizing proximity: {{recommendations}}.","Closest options under the same request: {{recommendations}}."]},"req":["last_intent"],"fk":[]},{"id":"followup_quieter","c":"conversation_context","p":100,"t":"contextual_dynamic","h":"followup_refine_quiet","s":"ranked_list","ex":{"ar":["أهدأ","طيب شي أهدأ","أبغى هادي","نفسه بس أهدأ","بعيد عن الزحمة","شي رايق","مكان أهدى","أبغى هدوء أكثر","مو زحمة"],"en":["quieter","something calmer","I want quiet","same but quieter","away from crowds","something relaxed","a calmer place","more quiet","not crowded"]},"kw":{"ar":["أهدأ","هادي","الزحمة","رايق","هدوء"],"en":["quieter","calmer","quiet","crowds","relaxed"]},"en":["quiet"],"r":{"ar":["بنفس السياق لكن مع أولوية الهدوء: {{recommendations}}.","خيارات أهدأ من السابقة: {{recommendations}}."],"en":["Same context, now prioritizing calm: {{recommendations}}.","Quieter options than before: {{recommendations}}."]},"req":["last_intent"],"fk":[]},{"id":"followup_cheaper","c":"conversation_context","p":100,"t":"contextual_dynamic","h":"followup_refine_price","s":"ranked_list","ex":{"ar":["أرخص","طيب الأرخص","أبغى شي أرخص","نفسه بس أرخص","ميزانيتي أقل","شي أوفر","أقل سعر","وش الأرخص بينهم","بديل أرخص"],"en":["cheaper","what is the cheapest","I want something cheaper","same but cheaper","lower budget","more affordable","lowest price","which is cheapest","cheaper alternative"]},"kw":{"ar":["أرخص","الأرخص","ميزانيتي أقل","أوفر","أقل سعر"],"en":["cheaper","cheapest","lower budget","affordable","lowest price"]},"en":["price"],"r":{"ar":["بنفس طلبك السابق لكن مع أولوية السعر الأقل من البيانات المتاحة: {{recommendations}}.","خيارات أوفر ضمن نفس السياق: {{recommendations}}."],"en":["Keeping the same request but prioritizing lower represented cost: {{recommendations}}.","More affordable options in the same context: {{recommendations}}."]},"req":["last_intent"],"fk":[]},{"id":"followup_with_offer","c":"conversation_context","p":100,"t":"contextual_dynamic","h":"followup_refine_active_offer","s":"ranked_list","ex":{"ar":["وعليه عرض؟","طيب بعرض","أبغى اللي عليه خصم","نفسه بس عليه عرض","فيه واحد بخصم","خلها عروض بس","أبغى خصم","وش منهم عليه عرض","بس اللي عليهم عروض"],"en":["with an offer","what about a deal","I want one with a discount","same but with an offer","is one discounted","offers only","I want a discount","which of these has an offer","only ones with deals"]},"kw":{"ar":["عليه عرض","بعرض","خصم","عروض بس","عليهم عروض"],"en":["with an offer","deal","discount","offers only","with deals"]},"en":["offer"],"r":{"ar":["من نفس النوع، هذه الخيارات اللي عليها عرض نشط: {{recommendations}}.","إذا العرض شرط، هذه النتائج المناسبة: {{recommendations}}."],"en":["Within the same type, these options have an active offer: {{recommendations}}.","If an offer is required, these are the matching results: {{recommendations}}."]},"req":["last_intent"],"fk":[]},{"id":"followup_family_only","c":"conversation_context","p":100,"t":"contextual_dynamic","h":"followup_refine_family","s":"ranked_list","ex":{"ar":["للعائلة","طيب للعائلة","خلها عائلية","مع العائلة","نفسه بس للعائلة","أبغى شي للأسرة","يكون مناسب للعوائل","مع الأهل"],"en":["for family","okay for family","make it family-friendly","with family","same but for family","something for the family","family suitable","with the family"]},"kw":{"ar":["للعائلة","عائلية","الأسرة","العوائل","الأهل"],"en":["family","family-friendly","for the family","family suitable"]},"en":["party"],"r":{"ar":["بنفس الطلب لكن للعائلة: {{recommendations}}.","خيارات عائلية ضمن نفس السياق: {{recommendations}}."],"en":["Same request, now filtered for family suitability: {{recommendations}}.","Family-suitable options in the same context: {{recommendations}}."]},"req":["last_intent"],"fk":[]},{"id":"followup_kids_only","c":"conversation_context","p":100,"t":"contextual_dynamic","h":"followup_refine_kids","s":"ranked_list","ex":{"ar":["للأطفال","طيب للأطفال","معي عيال","خلها للصغار","نفسه بس يناسب أطفال","أبغى شي للأطفال","يناسب بنتي","يناسب ولدي"],"en":["for kids","okay for children","I'm with kids","make it for children","same but kid-friendly","I want something for kids","suitable for my child"]},"kw":{"ar":["للأطفال","عيال","الصغار","يناسب أطفال","بنتي","ولدي"],"en":["kids","children","kid-friendly","child"]},"en":["party","kids"],"r":{"ar":["بنفس السياق لكن مع شرط ملاءمة الأطفال: {{recommendations}}.","خيارات مناسبة للأطفال من نفس نوع الطلب: {{recommendations}}."],"en":["Same context, now requiring explicit kid suitability: {{recommendations}}.","Kid-suitable options under the same request: {{recommendations}}."]},"req":["last_intent"],"fk":[]},{"id":"followup_beginner_only","c":"conversation_context","p":99,"t":"contextual_dynamic","h":"followup_refine_beginner","s":"ranked_list","ex":{"ar":["للمبتدئين","طيب للمبتدئ","ما عندي خبرة","خلها سهلة","نفسه بس للمبتدئين","أول مرة أجرب","شي ما يحتاج خبرة"],"en":["for beginners","okay for a beginner","I have no experience","make it easy","same but beginner-friendly","first time trying","something with no experience needed"]},"kw":{"ar":["للمبتدئين","ما عندي خبرة","سهلة","أول مرة","ما يحتاج خبرة"],"en":["beginners","no experience","easy","first time","beginner-friendly"]},"en":["beginners"],"r":{"ar":["بنفس الطلب لكن للمبتدئين: {{recommendations}}.","خيارات ما تحتاج خبرة سابقة: {{recommendations}}."],"en":["Same request, now filtered for beginners: {{recommendations}}.","Options that do not require prior experience: {{recommendations}}."]},"req":["last_intent"],"fk":[]},{"id":"followup_accessible_only","c":"conversation_context","p":100,"t":"contextual_dynamic","h":"followup_refine_accessibility","s":"ranked_list","ex":{"ar":["أسهل وصول","طيب مناسب للكرسي","بدون درج","خلها أسهل للحركة","نفسه بس وصوله أسهل","أبغى accessible","يناسب كرسي متحرك","ما فيه سلالم"],"en":["easier access","wheelchair-friendly","step-free","make it easier to access","same but easier access","I want accessible options","suitable for a wheelchair","no stairs"]},"kw":{"ar":["أسهل وصول","للكرسي","بدون درج","أسهل للحركة","كرسي متحرك","سلالم"],"en":["accessible","wheelchair","step-free","easier access","no stairs"]},"en":["accessibility"],"r":{"ar":["بنفس السياق لكن مع أولوية سهولة الوصول: {{recommendations}}.","هذه الخيارات عندها إشارات وصول أوضح: {{recommendations}}."],"en":["Same context, now prioritizing accessibility: {{recommendations}}.","These options have clearer accessibility signals: {{recommendations}}."]},"req":["last_intent"],"fk":[]},{"id":"followup_category_only","c":"conversation_context","p":100,"t":"contextual_dynamic","h":"followup_refine_category","s":"ranked_list","ex":{"ar":["بس مطاعم","قهوة بس","أنشطة فقط","تجارب بس","فنادق فقط","بس فعاليات","خلها أماكن ثقافية","مجتمعات بس","خدمات فقط","أسواق بس","إقامة فقط"],"en":["restaurants only","cafes only","activities only","experiences only","hotels only","events only","culture only","communities only","services only","markets only","stays only"]},"kw":{"ar":["بس مطاعم","قهوة بس","أنشطة فقط","تجارب بس","فنادق فقط","فعاليات","مجتمعات بس","خدمات فقط","أسواق بس"],"en":["restaurants only","cafes only","activities only","experiences only","hotels only","events only","communities only","services only","markets only"]},"en":["category","object_type"],"r":{"ar":["أبقي نفس طلبك السابق لكن أقصره على {{category}}: {{recommendations}}.","ضمن {{category}} فقط: {{recommendations}}."],"en":["I'll keep the previous request but restrict it to {{category}}: {{recommendations}}.","Within {{category}} only: {{recommendations}}."]},"req":["last_intent"],"fk":[]},{"id":"followup_area_change_repeat","c":"conversation_context","p":100,"t":"contextual_dynamic","h":"followup_repeat_with_new_area","s":"single_answer","ex":{"ar":["طيب بالعوالي؟","وفي العزيزية؟","خلها بالنسيم","وش عنها بأجياد","طيب بجرول","نفس السؤال بالشوقية","في المسفلة؟","طيب في محيط الحرم","لو بالعوالي"],"en":["what about Al Awali","and in Al Aziziyah","make it An Naseem","what about Ajyad","how about Jarwal","same question in Al Shawqiyah","in Al Misfalah","what about the Haram area","if in Al Awali"]},"kw":{"ar":["بالعوالي","العزيزية","النسيم","أجياد","جرول","الشوقية","المسفلة","محيط الحرم"],"en":["Al Awali","Al Aziziyah","An Naseem","Ajyad","Jarwal","Al Shawqiyah","Al Misfalah","Haram area"]},"en":["neighborhood"],"r":{"ar":["أعيد نفس طلبك السابق لكن على {{neighborhood}}: {{result}}.","في {{neighborhood}}، النتيجة لنفس السؤال: {{result}}."],"en":["I'll rerun the same request for {{neighborhood}}: {{result}}.","In {{neighborhood}}, the answer to the same request is: {{result}}."]},"req":["last_intent"],"fk":[]},{"id":"followup_time_change_repeat","c":"conversation_context","p":100,"t":"contextual_dynamic","h":"followup_repeat_with_new_time","s":"single_answer","ex":{"ar":["طيب لو عندي ساعة","ولو ساعتين؟","طيب الليلة","هذا المساء؟","طيب الويكند","لو عندي نص يوم","بكرة؟","طيب بعد المغرب","قبل العشاء؟"],"en":["what if I have one hour","what about two hours","what about tonight","this evening","what about the weekend","if I have half a day","tomorrow","after sunset","before dinner"]},"kw":{"ar":["عندي ساعة","ساعتين","الليلة","هذا المساء","الويكند","نص يوم","بكرة","بعد المغرب","قبل العشاء"],"en":["one hour","two hours","tonight","this evening","weekend","half a day","tomorrow","after sunset","before dinner"]},"en":["time_available","time"],"r":{"ar":["أعيد نفس طلبك السابق لكن بوقت {{time_context}}: {{result}}.","مع وقت {{time_context}}، النتيجة تصبح: {{result}}."],"en":["I'll rerun the same request using {{time_context}}: {{result}}.","With {{time_context}}, the result becomes: {{result}}."]},"req":["last_intent"],"fk":[]},{"id":"followup_same_question_current_context","c":"conversation_context","p":98,"t":"contextual_dynamic","h":"followup_repeat_current_context","s":"single_answer","ex":{"ar":["طيب الحين؟","والحين وش النتيجة","بعد التغيير وش صار","جاوبني مرة ثانية","أعدها","وش صار الآن","بعد ما غيرت الحي","بعد ما غيرت الوقت","الحين ايش تقترح","طيب بعد التعديل"],"en":["what about now","what is the result now","after the change what happened","run it again","repeat it","what happens now","after I changed the area","after I changed the time","what do you suggest now","after the update"]},"kw":{"ar":["الحين","بعد التغيير","مرة ثانية","أعدها","بعد ما غيرت","بعد التعديل"],"en":["now","after the change","again","repeat","after I changed","after the update"]},"en":[],"r":{"ar":["بعد تحديث السياق، جواب نفس طلبك السابق هو: {{result}}.","بالسياق الحالي الآن: {{result}}."],"en":["With the updated context, the answer to your previous request is: {{result}}.","Under the current context now: {{result}}."]},"req":["last_intent"],"fk":[]}],"routing":{"followup_key_aliases":{"followup_why":"followup_why","followup_second_result":"followup_second_result","followup_third_result":"followup_third_result","followup_more_detail":"followup_more_detail","followup_make_shorter":"followup_make_shorter","followup_show_more_ranked":"followup_show_more_ranked","followup_closer":"followup_closer","followup_nearby":"followup_closer","followup_quieter":"followup_quieter","followup_cheaper":"followup_cheaper","followup_with_offer":"followup_with_offer","followup_family_only":"followup_family_only","followup_make_it_family":"followup_family_only","followup_kids_only":"followup_kids_only","followup_beginner_only":"followup_beginner_only","followup_accessible_only":"followup_accessible_only","followup_easier_access":"followup_accessible_only","followup_stepfree_only":"followup_accessible_only","followup_food_only":"followup_category_only","followup_restaurants_only":"followup_category_only","followup_activities_only":"followup_category_only","followup_stays_only":"followup_category_only","followup_neighborhood_only":"followup_area_change_repeat","followup_free_only":"discover_free","followup_what_to_order":"food_what_to_order","followup_indoor_only":"discover_what_to_do_now","followup_solo_ok":"party_solo","followup_half_day":"visitor_half_day","followup_first_time":"visitor_first_time","followup_shorter":"time_one_hour","followup_this_week":"discover_weekend","followup_group_small":"party_small_group","followup_women_only":"party_women","followup_community_link":"community_to_activity","followup_build_around_it":"plan_build_around_item","followup_show_sources":"practical_source_freshness","followup_compare_claims":"practical_source_freshness","followup_build_outing":"discover_build_outing","followup_family_package":"offers_family_packages","followup_offer_terms":"offers_terms_details","followup_book_now":"action_start_booking_handoff","followup_confirm_booking":"action_confirm_booking_explicit","followup_add_to_plan":"plan_add_item","followup_plan_when":"plan_today","followup_open_details":"action_open_details","followup_today_only":"plan_today","followup_upcoming_only":"plan_upcoming","followup_confirmed_only":"plan_confirmed","followup_completed_only":"plan_completed","followup_what_next":"plan_what_next","followup_open_second":"action_open_details","followup_contribute":"community_contribute_experience","followup_join_community":"community_join_leave","followup_open_thread":"action_open_details","followup_join_activity":"action_join_activity","followup_add_all_to_plan":"plan_add_item","followup_swap_step":"followup_different_option","followup_more_local":"resident_local_life","followup_offer_nearby":"offers_nearby","followup_offer_expiring":"offers_expiring_soon","followup_offer_category":"followup_category_only","followup_near_haram":"followup_area_change_repeat","followup_show_recent":"community_active_discussions"},"confidence":{"exact_or_alias":0.92,"strong_example_similarity":0.82,"keyword_plus_entity":0.76,"keyword_plus_context":0.72,"followup_with_valid_context":0.76,"action_verb_plus_referent":0.84,"clarify_below":0.62}},"suggestions":{"by_page":{"الرئيسية":{"ar":["وش أسوي الليلة؟","وش فيه قريب وعليه عرض؟","رتب لي طلعة على وقتي","وش يناسبني اليوم؟"],"en":["What should I do tonight?","What's nearby with an offer?","Build an outing for my available time","What fits me today?"]},"اكتشف":{"ar":["أبغى شي مختلف","وش الأقرب؟","خلها للعائلة","وش عليه عرض؟"],"en":["I want something different","What's closest?","Make it family-friendly","What has an offer?"]},"المجتمع":{"ar":["وش الناس تقول عنه؟","فيه نشاط مرتبط بالمجتمع؟","وش تنصح المجتمعات القريبة من اهتماماتي؟"],"en":["What do people say about it?","Is there an activity linked to this community?","Which communities fit my interests?"]},"خطتي":{"ar":["وش عندي اليوم؟","وش يناسب بعد هذا؟","رتب شي حوله","وش المكتمل عندي؟"],"en":["What do I have today?","What fits after this?","Build something around it","What have I completed?"]},"تفاصيل":{"ar":["وش الناس تقول عنه؟","عليه عرض؟","كم يحتاج وقت؟","ضفه لخطتي"],"en":["What do people say about it?","Does it have an offer?","How long does it take?","Add it to My Plan"]},"الحساب":{"ar":["وش سياقي الحالي؟","كيف التخصيص يشتغل؟"],"en":["What's my current context?","How does personalization work?"]}},"after_answer_type":{"ranked_list":{"ar":["والثاني؟","ليش هذا الأول؟"],"en":["What about the second one?","Why is this first?"]},"single_entity":{"ar":["اعطني تفاصيل أكثر","عليه عرض؟"],"en":["Give me more detail","Does it have an offer?"]},"composed_plan":{"ar":["غير لي خطوة","ضفها لخطتي"],"en":["Swap one step","Add it to My Plan"]},"offer":{"ar":["وش شروط العرض؟","ودني للحجز"],"en":["What are the offer terms?","Take me to booking"]},"community_summary":{"ar":["وش أحدث تعليق؟","فيه نشاط مرتبط؟"],"en":["What's the latest contribution?","Is there a linked activity?"]}}},"aliases":{"pages":{"الرئيسية":["الرئيسية","الهوم","home","الصفحة الرئيسية"],"اكتشف":["اكتشف","discover","التصفح","صفحة اكتشف"],"المجتمع":["المجتمع","community","المجتمعات","صفحة المجتمع"],"خطتي":["خطتي","my plan","الخطة","صفحتي","خطة اليوم"],"الحساب":["الحساب","حسابي","profile","الملف الشخصي","الإعدادات"]},"modes":{"مقيم":["مقيم","ساكن","من سكان مكة","resident","local","Makkah resident"],"زائر":["زائر","زيارة","جاي مكة","visitor","visiting","guest"]},"neighborhoods":{"العوالي":["عوالي","العوالي","Al Awali","Awali","alawali"],"العزيزية":["عزيزيه","العزيزيه","العزيزية","Aziziyah","Al Aziziyah","aziziya"],"الششة":["الششه","ششة","الششة","Shisha","Al Shisha"],"الشوقية":["الشوقيه","شوقية","الشوقية","Shawqiyah","Ash Shawqiyah"],"النسيم":["نسيم","النسيم","Naseem","An Naseem","nasim"],"بطحاء قريش":["بطحاء","بطحا قريش","بطحاء قريش","Batha Quraysh","Batha Quraish"],"المسفلة":["المسفله","مسفلة","المسفلة","Misfalah","Al Misfalah"],"أجياد":["اجياد","أجياد","Ajyad"],"الهجرة":["الهجره","الهجرة","Hijrah","Al Hijrah"],"الزاهر":["زاهر","الزاهر","Zahir","Az Zahir"],"الكعكية":["الكعكيه","كعكية","الكعكية","Kakiyah","Al Kakiyah"],"جرول":["جرول","Jarwal"],"الرصيفة":["الرصيفه","رصيفة","الرصيفة","Rusayfah","Ar Rusayfah"],"التنعيم":["التنعيم","تنعيم","Tanim","At Tanim"],"محيط الحرم":["الحرم","حول الحرم","محيط الحرم","Haram area","near Haram"]},"party":{"فردي":["لحالي","لوحدي","فردي","شخص واحد","solo","alone","one person"],"عائلة":["عائلة","العائلة","العوائل","الأسرة","family","families"],"مع أطفال":["أطفال","عيال","الصغار","kids","children","with kids"],"مجموعة":["مجموعة","قروب","group","friends","مع أصحابي"]},"time_windows":{"ساعة":["ساعة","ساعة وحدة","1 ساعة","one hour","1 hour"],"ساعتان":["ساعتين","ساعتان","2 ساعة","two hours","2 hours"],"المساء":["المساء","الليلة","هذا المساء","evening","tonight"],"نصف يوم":["نص يوم","نصف يوم","half day","half a day","أربع ساعات","4 hours"],"نهاية الأسبوع":["الويكند","نهاية الأسبوع","الجمعة والسبت","weekend"]},"content_types":{"restaurant":["مطعم","مطاعم","أكل","restaurant","restaurants","food"],"cafe":["مقهى","مقاهي","كوفي","قهوة","cafe","cafes","coffee"],"place":["مكان","أماكن","place","places"],"experience":["تجربة","تجارب","experience","experiences"],"activity":["نشاط","أنشطة","activity","activities"],"event":["فعالية","فعاليات","حدث","event","events"],"club":["نادي","أندية","club","clubs"],"community":["مجتمع","مجتمعات","community","communities"],"market":["سوق","أسواق","تسوق","market","markets","shopping"],"service":["خدمة","خدمات","service","services"],"stay":["فندق","إقامة","سكن","شقق","hotel","stay","accommodation"]},"categories":{"الثقافة والتاريخ":["ثقافة","ثقافي","تاريخ","متحف","معرض","culture","history","museum"],"التراث والمسارات":["تراث","مسار","مسارات","heritage","trail","trails"],"الطبيعة والجبال":["طبيعة","جبل","جبال","nature","mountain","mountains"],"العائلات والأطفال":["عائلات","أطفال","family","kids"],"التعلم والورش":["ورشة","ورش","تعلم","workshop","workshops","learning"],"الحرف والمهارات":["حرف","مهارات","خط","سدو","craft","skills","calligraphy"],"التطوع والمبادرات":["تطوع","مبادرة","volunteer","volunteering","initiative"],"الرياضة والمشي":["رياضة","مشي","جري","دراجات","sport","walking","running","cycling"]},"suitability":{"quiet":["هادي","هادئ","أهدأ","رايق","quiet","calm"],"family":["عائلي","للعائلة","family-friendly","family"],"kids":["للأطفال","للعيال","kids","children"],"solo":["لحالي","فردي","solo","alone"],"beginner":["مبتدئ","للمبتدئين","بدون خبرة","beginner","no experience"],"women_only":["نسائي","للنساء","women-only","women only"],"accessible":["كرسي متحرك","سهولة وصول","accessible","wheelchair"],"stepfree":["بدون درج","بدون سلالم","step-free","no stairs"],"outdoor":["خارجي","مكان مفتوح","outdoor","open-air"],"indoor":["داخلي","مكان مغلق","indoor"]},"offers":{"discount":["خصم","تخفيض","discount","deal"],"percentage_discount":["10%","١٠٪","عشرة بالمية","percentage discount"],"family_package":["باقة عائلية","بكج عائلي","family package","family bundle"],"bundle":["باقة","بكج","bundle","package"],"app_exclusive":["حصري التطبيق","حصري EyeMakkah","من التطبيق","app exclusive","app-only"],"limited_time":["لفترة محدودة","ينتهي قريب","limited time","ending soon"]},"plan_states":{"now":["الآن","الحين","now"],"today":["اليوم","today"],"upcoming":["قادم","الجاي","upcoming","next"],"confirmed":["مؤكد","confirmed"],"interested":["مهتم","interested"],"saved":["محفوظ","حفظ","saved"],"completed":["مكتمل","خلصت","completed","done"]},"actions":{"save":["احفظ","حفظ","save"],"add_to_plan":["أضف لخطتي","ضف لخطتي","add to my plan","plan it"],"join":["انضم","سجلني","join","going"],"book":["احجز","حجز","book","booking"],"open":["افتح","ورني","open","show"],"directions":["اتجاهات","كيف أوصل","directions","route"],"contribute":["شارك تجربتي","أكتب نصيحة","share experience","add a tip"]},"known_places":{"المسجد الحرام":["الحرم","المسجد الحرام","Masjid al-Haram","Grand Mosque"],"حي حراء الثقافي":["حراء","حي حراء","حي حراء الثقافي","Hira Cultural District"],"متحف برج الساعة":["برج الساعة","متحف برج الساعة","Clock Tower Museum"],"جبل النور":["جبل النور","غار حراء","Jabal al-Nour","Jabal Al Noor"],"جبل ثور":["جبل ثور","Jabal Thawr","Mount Thawr"],"عين زبيدة":["عين زبيدة","Ayn Zubaydah","Zubaida"],"الحديبية":["الحديبية","Hudaybiyyah","Hudaibiyah"],"مجمع كسوة الكعبة المشرفة":["الكسوة","مجمع الكسوة","كسوة الكعبة","Kiswah complex"],"مكتبة مكة المكرمة":["مكتبة مكة","مكتبة مكة المكرمة","Makkah Library"],"سوق العتيبية":["العتيبية","سوق العتيبية","Otaybiyah Market"]}}};
+/* AGENT_BANK:end */
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   ASSISTANT — a free-text agent over the EyeMakkah Intent Bank
+   The bank (assets/agent/*.json, 150 intents, ~2,100 AR/EN examples, aliases,
+   follow-up routing and contextual suggestions) is inlined by
+   scripts/agent-sync.mjs. Pipeline: normalise → detect language → resolve aliases
+   and entities → explicit context/action changes → intent matching → follow-up
+   routing → dynamic handler over the SAME inventory, offers and state the UI reads
+   → natural answer → short-session memory. Deterministic and local: no LLM or
+   external API is connected, and the assistant says so when asked.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+const AGENT = (() => {
+  const B = AGENT_BANK;
+  /* ── normalisation: Saudi colloquial, missing hamza, ya/alif maqsura, ta marbuta,
+     tatweel, diacritics, repeated letters, Arabic-Indic digits, light punctuation ── */
+  const AR_DIGITS_RX = /[٠-٩]/g;
+  const norm = (s) => String(s || "").toLowerCase()
+    .replace(/[ً-ٰٟـ]/g, "")
+    .replace(/[أإآٱ]/g, "ا").replace(/ى/g, "ي").replace(/ة/g, "ه").replace(/ؤ/g, "و").replace(/ئ/g, "ي")
+    .replace(AR_DIGITS_RX, (d) => String("٠١٢٣٤٥٦٧٨٩".indexOf(d))).replace(/٪/g, "%")
+    .replace(/[’'`]/g, "").replace(/[؟?!.,،؛;:"«»()\[\]{}\-_/\\|+*~@#$^&=<>]+/g, " ")
+    .replace(/([؀-ۿa-z])\1{2,}/g, "$1")
+    .replace(/\s+/g, " ").trim();
+  const PREFIXES = ["وبال", "وال", "بال", "فال", "كال", "لل", "ال", "و", "ب", "ل", "ف"];
+  const stem = (w) => {
+    if (/^[a-z0-9%]+$/.test(w)) return w.length > 4 ? w.replace(/(ies)$/, "y").replace(/([^s])s$/, "$1") : w;
+    for (const p of PREFIXES) if (w.startsWith(p) && w.length - p.length >= 3) { w = w.slice(p.length); break; }
+    if (w.length > 4 && w.endsWith("ات")) w = w.slice(0, -2);
+    return w;
+  };
+  const STOP = new Set(["في", "من", "علي", "عن", "الي", "اي", "يا", "هل", "انا", "لي", "the", "a", "an", "to", "of", "in", "for", "me", "i", "is", "are", "please", "you", "it", "do", "my"]);
+  const toks = (n) => n.split(" ").filter(Boolean).map(stem);
+  const grams = (n) => { const s = ` ${n.replace(/\s+/g, " ")} `; const g = new Set(); for (let i = 0; i < s.length - 2; i++) g.add(s.slice(i, i + 3)); return g; };
+  const langOf = (s) => (/[؀-ۿ]/.test(s) ? "ar" : "en");
+  const prep = (s) => { const n = norm(s); const t = toks(n); return { n, t, ts: new Set(t.filter((x) => !STOP.has(x))), all: new Set(t), g: grams(n), lang: langOf(s) }; };
+
+  /* ── precompute the bank ── */
+  const INTENTS = B.intents.map((it) => ({
+    ...it,
+    exs: [...it.ex.ar, ...it.ex.en].map((e) => { const p = prep(e); return { n: p.n, ts: p.ts, g: p.g }; }),
+    kws: [...it.kw.ar, ...it.kw.en].map((k) => toks(norm(k))).filter((k) => k.length),
+  }));
+  const BY_ID = Object.fromEntries(INTENTS.map((it) => [it.id, it]));
+  const FOLLOW = B.routing.followup_key_aliases;
+  const CONF = B.routing.confidence;
+
+  function scoreIntent(it, q) {
+    let best = 0;
+    for (const e of it.exs) {
+      if (e.n === q.n) return 1;
+      let inter = 0; for (const x of q.ts) if (e.ts.has(x)) inter++;
+      const tokF = q.ts.size + e.ts.size ? (2 * inter) / (q.ts.size + e.ts.size) : 0;
+      let gi = 0; for (const x of q.g) if (e.g.has(x)) gi++;
+      const tri = (2 * gi) / (q.g.size + e.g.size || 1);
+      const s = 0.55 * tokF + 0.45 * tri;
+      if (s > best) best = s;
+    }
+    let hits = 0, long = 0;
+    for (const k of it.kws) if (k.every((t) => q.all.has(t))) { hits++; long = Math.max(long, k.length); }
+    const kw = Math.min(1, hits * 0.34 + (long > 1 ? 0.2 : 0));
+    return Math.max(best, 0.62 * best + 0.38 * kw + (hits ? 0.06 : 0)) + (it.p || 50) / 4000;
+  }
+
+  /* ── aliases & entities ── */
+  const A = B.aliases;
+  const aliasList = (group) => Object.entries(group || {}).flatMap(([canon, arr]) => arr.map((a) => ({ canon, k: toks(norm(a)) })).filter((x) => x.k.length));
+  const matchAliases = (q, group) => {
+    const out = [];
+    for (const { canon, k } of aliasList(group)) if (k.every((t) => q.all.has(t)) && !out.includes(canon)) out.push(canon);
+    return out;
+  };
+  const NB_BY_NAME = Object.fromEntries(NEIGHBORHOODS.map((n) => [norm(n.name), n.id]));
+  NB_BY_NAME[norm("محيط الحرم")] = "haram-area";
+  const CAT_OF = { "الثقافة والتاريخ": ["culture", "heritage"], "التراث والمسارات": ["heritage"], "الطبيعة والجبال": ["nature"], "العائلات والأطفال": ["family"], "التعلم والورش": ["learn", "craft"], "الحرف والمهارات": ["craft"], "التطوع والمبادرات": ["volunteer"], "الرياضة والمشي": ["sport"] };
+  const SUIT_OF = { quiet: "quiet", family: "family", kids: "kids", solo: "solo", beginner: "beginners", women_only: "women", accessible: "accessible", stepfree: "stepfree", outdoor: "outdoor", indoor: "indoor" };
+  const PARTY_OF = { "فردي": "solo", "عائلة": "family", "مع أطفال": "kids", "مجموعة": "group" };
+  const TIME_OF = { "ساعة": 60, "ساعتان": 120, "المساء": 240, "نصف يوم": 240, "نهاية الأسبوع": "weekend" };
+  const GENERIC = new Set(["مطعم", "مقهي", "قهوه", "سوق", "ورشه", "نادي", "حي", "مكه", "مجتمع", "بيت", "جلسه", "عرض", "مسار", "معرض", "ركن", "جبل", "لقاء", "حديقه", "مركز", "عائله", "اطفال", "family", "kids", "restaurant", "cafe", "market", "house", "centre", "center", "park", "tour", "walk", "club", "workshop", "مكي", "makkah", "offer", "deal", "breakfast", "فطور", "قديم", "old", "new", "evening", "مسائي", ...NEIGHBORHOODS.flatMap((n) => [n.name, EN_TXT[n.name] || ""])].flatMap((w) => toks(norm(w))).map(stem));
+  /* object references: full names and their head before « — » in both languages */
+  const OBJ_KEYS = [];
+  const addKey = (id, text) => { const k = toks(norm(text)).filter((t) => !STOP.has(t)); if (!k.length) return; if (k.every((t) => GENERIC.has(t) || t.length < 3)) return; if (k.length === 1 && k[0].length < 4) return; OBJ_KEYS.push({ id, k }); };
+  INVENTORY.forEach((o) => {
+    if (o.type === "offer" || o.generated) return;
+    const arName = o.n, enName = EN_TXT[o.n];
+    [arName, enName].filter(Boolean).forEach((nm) => { addKey(o.id, nm); if (nm.includes(" — ")) addKey(o.id, nm.split(" — ")[0]); });
+  });
+  Object.entries(A.known_places || {}).forEach(([canon, arr]) => {
+    const o = INVENTORY.find((x) => x.n === canon);
+    if (o) arr.forEach((a) => addKey(o.id, a));
+  });
+  const COM_KEYS = COMMUNITIES.filter((c) => c.kind !== "family").map((c) => ({ id: c.id, k: toks(norm(c.name)).filter((t) => !STOP.has(t)) })).filter((x) => x.k.length);
+
+  function entitiesOf(q) {
+    const E = { nb: null, party: null, time: null, types: [], cats: [], suit: [], offer: [], plan: [], actions: [], mode: null, objects: [], community: null, ordinal: null, lang: null };
+    const nbs = matchAliases(q, A.neighborhoods);
+    if (nbs.length) E.nb = NB_BY_NAME[norm(nbs[0])] || null;
+    const parties = matchAliases(q, A.party); if (parties.length) E.party = PARTY_OF[parties[0]];
+    const times = matchAliases(q, A.time_windows); if (times.length) E.time = TIME_OF[times[0]];
+    E.types = matchAliases(q, A.content_types).filter((x) => x !== "community");
+    E.cats = matchAliases(q, A.categories).flatMap((c) => CAT_OF[c] || []);
+    E.suit = matchAliases(q, A.suitability).map((s) => SUIT_OF[s]).filter(Boolean);
+    E.offer = matchAliases(q, A.offers);
+    if (/(^| )(وال|ال|و|ب|بال)?(خصم|خصومات|عرض|عروض|تخفيض|باقه|بكج|deal|deals|discount|discounts|offer|offers|package|bundle)( |$)/.test(q.n)) if (!E.offer.includes("discount")) E.offer.push("discount");
+    E.plan = matchAliases(q, A.plan_states);
+    E.actions = matchAliases(q, A.actions);
+    const modes = matchAliases(q, A.modes); if (modes.length) E.mode = modes[0] === "زائر" ? "visitor" : "resident";
+    const hit = OBJ_KEYS.filter((x) => x.k.every((t) => q.all.has(t))).sort((a, b) => b.k.length - a.k.length);
+    E.objects = [...new Set(hit.map((h) => h.id))].slice(0, 3);
+    const ch = COM_KEYS.filter((x) => x.k.every((t) => q.all.has(t))).sort((a, b) => b.k.length - a.k.length)[0];
+    if (ch) E.community = ch.id;
+    const ord = [["اول", 0], ["اولي", 0], ["first", 0], ["1", 0], ["ثاني", 1], ["ثانيه", 1], ["second", 1], ["2", 1], ["ثالث", 2], ["ثالثه", 2], ["third", 2], ["3", 2]];
+    for (const [w, i] of ord) if (q.all.has(w)) { E.ordinal = i; break; }
+    if (/(^| )(انجليزي|english)( |$)/.test(q.n)) E.lang = "en";
+    if (/(^| )(عربي|arabic)( |$)/.test(q.n)) E.lang = "ar";
+    return E;
+  }
+
+  return { norm, prep, toks, INTENTS, BY_ID, FOLLOW, CONF, scoreIntent, entitiesOf, bank: B };
+})();
+
+/* ── query model: what the handlers ask the inventory ── */
+const TYPE_TEST = {
+  restaurant: (o) => o.type === "restaurant" && o.category === "food",
+  cafe: (o) => o.category === "cafe" && o.type !== "offer",
+  stay: (o) => o.category === "stay",
+  place: (o) => o.type === "place" && o.category !== "stay",
+  experience: (o) => o.type === "experience",
+  activity: (o) => ["activity", "recurring"].includes(o.type),
+  event: (o) => o.type === "event",
+  club: (o) => o.type === "recurring",
+  market: (o) => o.category === "market",
+  service: (o) => o.type === "service",
+};
+const TYPE_NAME = {
+  restaurant: ["المطاعم", "restaurants"], cafe: ["المقاهي", "cafés"], stay: ["الإقامة", "stays"], place: ["الأماكن", "places"],
+  experience: ["التجارب", "experiences"], activity: ["الأنشطة", "activities"], event: ["الفعاليات", "events"], club: ["الأندية", "clubs"],
+  market: ["الأسواق", "markets"], service: ["الخدمات", "services"],
+};
+const LOCAL_FOOD_RX = /حجاز|مكي|مكيه|مكية|سليق|فول|معصوب|ريوق|مندي|كبسه|كبسة|كبده|كبدة|شعبي|تميس/;
+const BREAKFAST_RX = /فطور|ريوق|صباح|فول|معصوب/;
+
+const HANDLER_QUERY = {
+  recommend_now: { when: "now" }, recommend_tonight: { when: "tonight" }, recommend_weekend: { when: "weekend" },
+  recommend_novel: { novel: true }, recommend_nearby: { sort: "near" }, recommend_free: { free: true },
+  recommend_no_booking: { noBooking: true }, recommend_restaurants: { types: ["restaurant"] },
+  recommend_local_food: { types: ["restaurant", "cafe"], local: true }, recommend_breakfast: { types: ["restaurant", "cafe"], breakfast: true },
+  recommend_family_food: { types: ["restaurant", "cafe"], suit: ["family"] }, recommend_cafes: { types: ["cafe"] },
+  recommend_quiet_cafes: { types: ["cafe"], suit: ["quiet"] }, recommend_late_open: { types: ["restaurant", "cafe"], late: true },
+  recommend_family: { suit: ["family"] }, recommend_kids: { suit: ["kids"] }, recommend_solo: { suit: ["solo"] },
+  recommend_women_only: { suit: ["women"] }, recommend_beginner_friendly: { suitAny: ["beginners", "noexp"] },
+  recommend_small_group: { suit: ["small"] }, recommend_first_visit: { suit: ["firsttime"] },
+  recommend_after_umrah: { types: ["experience", "place", "restaurant", "cafe"], suitAny: ["firsttime", "seated", "family"], excludeIds: ["haram"] },
+  recommend_repeat_visitor: { novel: true }, recommend_resident_local: { types: ["activity", "event", "club"], sort: "near" },
+  recommend_culture: { cats: ["culture", "heritage"] }, recommend_nature: { cats: ["nature", "heritage"], suitAny: ["outdoor"] },
+  recommend_workshops: { types: ["experience", "activity"], cats: ["craft", "learn"] }, recommend_volunteering: { cats: ["volunteer"] },
+  recommend_sport: { cats: ["sport"] }, recommend_events: { types: ["event"] }, recommend_active_clubs: { types: ["club"] },
+  recommend_markets: { cats: ["market"] }, recommend_accessible: { suitAny: ["accessible", "stepfree"] }, recommend_stepfree: { suit: ["stepfree"] },
+  recommend_within_one_hour: { maxDur: 60 }, recommend_for_two_hours: { maxDur: 120 }, recommend_in_area: {},
+  offers_active_all: { offer: true }, offers_restaurants: { offer: true, types: ["restaurant"] }, offers_cafes: { offer: true, types: ["cafe"] },
+  offers_stays: { offer: true, types: ["stay"] }, offers_experiences_activities: { offer: true, types: ["experience", "activity", "event"] },
+  offers_family_packages: { offer: true, offerWho: ["family", "kids"] }, offers_app_exclusive: { offer: true, exclusive: true },
+  offers_expiring_soon: { offer: true, sort: "expiry" }, offers_nearby: { offer: true, sort: "near" },
+  community_recommendations: { fromCommunity: true },
+};
+
+function applyEntities(q, E, keepTypes) {
+  const n = { ...q, suit: [...(q.suit || [])], suitAny: q.suitAny ? [...q.suitAny] : null };
+  if (E.nb) n.nb = E.nb;
+  if (E.types.length && !keepTypes) n.types = E.types;
+  if (E.cats.length && !(n.types?.length && E.cats.every((c) => c === "family"))) n.cats = E.cats;
+  E.suit.forEach((s) => { if (!n.suit.includes(s)) n.suit.push(s); });
+  if (E.party === "family" && !n.suit.includes("family")) n.suit.push("family");
+  if (E.party === "kids" && !n.suit.includes("kids")) n.suit.push("kids");
+  if (E.party === "solo" && !n.suit.includes("solo") && !n.types?.includes("restaurant")) n.suit.push("solo");
+  if (E.offer.length) {
+    n.offer = true;
+    if (E.offer.includes("family_package")) n.offerWho = ["family", "kids"];
+    if (E.offer.includes("app_exclusive")) n.exclusive = true;
+    if (E.offer.includes("limited_time")) n.sort = "expiry";
+  }
+  if (typeof E.time === "number") n.maxDur = E.time; else if (E.time === "weekend") n.when = "weekend";
+  return n;
+}
+
+function agentFrom(q, ctx) {
+  const nb = q.nb || ctx.nb;
+  return ctx.from && !q.nb ? ctx.from : { x: NB[nb]?.x ?? 0.5, y: NB[nb]?.y ?? 0.5 };
+}
+
+/* run a query against the live inventory and state; returns ranked results with reasons */
+function runAgentQuery(q, ctx, state) {
+  const from = agentFrom(q, ctx);
+  const suitAll = q.suit || [];
+  const hard = (o) =>
+    isPromotable(o) && o.type !== "offer" && !(state.dismissed[o.id] >= 2) &&
+    !(q.excludeIds || []).includes(o.id) && !(q.exclude || []).includes(o.id) &&
+    (!q.types?.length || q.types.some((t) => TYPE_TEST[t]?.(o))) &&
+    (!q.cats?.length || q.cats.includes(o.category)) &&
+    suitAll.every((s) => o.suit.includes(s)) &&
+    (!q.suitAny?.length || q.suitAny.some((s) => o.suit.includes(s))) &&
+    (!q.free || o.price === 0) &&
+    (!q.noBooking || ["go", "join"].includes(o.action)) &&
+    (!q.maxDur || (o.duration != null && o.duration <= q.maxDur)) &&
+    (!q.local || LOCAL_FOOD_RX.test(o.n + " " + (o.t || "") + " " + (o.ab || ""))) &&
+    (!q.breakfast || BREAKFAST_RX.test(o.n + " " + (o.t || "")) || offerFor(o)?.when === "morning") &&
+    (!q.late || (o.timing?.kind === "hours" && (o.timing.close <= 4 || o.timing.close >= 24))) &&
+    (!q.when || whenFits(o, q.when)) &&
+    (!q.offer || offerMatches(o, q));
+  let pool = INVENTORY.filter(hard);
+  let relaxed = null;
+  if (q.nb) {
+    const inNb = pool.filter((o) => o.neighborhood === q.nb);
+    if (inNb.length) pool = inNb; else relaxed = "area";
+  }
+  const rctx = { ...ctx, party: q.party || ctx.party, nb: q.nb || ctx.nb, noveltySeeking: q.novel || ctx.noveltySeeking, from };
+  let ranked = rank(pool, rctx, { limit: 40, maxPerCategory: 40, maxPerNeighborhood: q.nb ? 40 : 4 });
+  if (q.novel) ranked = ranked.filter((x) => x.o.novelty > 0.55 && !ctx.completed[x.o.id]).concat(ranked.filter((x) => !(x.o.novelty > 0.55)));
+  if (q.sort === "near" || relaxed === "area") ranked = ranked.slice().sort((a, b) => distanceKm(a.o, from) - distanceKm(b.o, from));
+  if (q.sort === "price") ranked = ranked.slice().sort((a, b) => effPrice(a.o) - effPrice(b.o));
+  if (q.sort === "expiry") ranked = ranked.slice().sort((a, b) => (offerFor(a.o)?.end || 9e15) - (offerFor(b.o)?.end || 9e15));
+  if (q.sort === "quiet") ranked = ranked.slice().sort((a, b) => (b.o.suit.includes("quiet") - a.o.suit.includes("quiet")));
+  const items = ranked.map((x) => ({ id: x.o.id, why: agentReasons(x, q, from) }));
+  return { items, relaxed };
+}
+function effPrice(o) { const of = offerFor(o); const p = of ? offerPrice(of) : null; return p ? p.now : o.price == null ? 9e9 : o.price; }
+function offerMatches(o, q) {
+  const of = offerFor(o);
+  if (!of) return false;
+  if (q.exclusive && !of.exclusive) return false;
+  if (q.offerWho && !q.offerWho.includes(of.who) && of.kind !== "package") return false;
+  return true;
+}
+function whenFits(o, when) {
+  const life = lifecycleOf(o), open = isOpenNow(o), next = nextOccurrence(o);
+  if (when === "now") return ["live", "soon"].includes(life) || open === true || (!o.timing && o.type === "place");
+  if (when === "tonight") return ["live", "soon"].includes(life) || (next && next - t0 < 8 * HOUR && next > NOW - HOUR) || (open === true && o.suit.includes("evening")) || (o.timing?.kind === "hours" && (o.timing.close <= 4 || o.timing.close >= 22));
+  if (when === "weekend") { if (!next) return o.type === "place" || o.type === "restaurant"; return next - t0 < 7 * DAY; }
+  return true;
+}
+function agentReasons(x, q, from) {
+  const o = x.o, r = [];
+  /* the offer itself is shown by the card's deal line, from the shared offer record */
+  if (q.nb && o.neighborhood === q.nb) r.push(tx(`في ${NB[q.nb].name}`, `In ${NB[q.nb].name}`));
+  if (q.sort === "near") r.push(tx(`قريب من منطقتك (~${ar(distanceKm(o, from))} كم)`, `Close to your area (~${distanceKm(o, from)} km)`));
+  (q.suit || []).forEach((s) => { if (o.suit.includes(s)) r.push(SUIT[s]); });
+  if (q.maxDur && o.duration) r.push(tx(`يأخذ ${minutesAr(o.duration)} — ضمن وقتك`, `Takes ${minutesAr(o.duration)} — within your time`));
+  if (q.free && o.price === 0) r.push(tx("بدون رسوم", "No fee"));
+  if (q.sort === "price" && o.price != null) r.push(tx(`من الأقل سعرًا: ${riyal(effPrice(o))}`, `Among the cheapest: ${riyal(effPrice(o))}`));
+  (x.why || []).slice(0, 2).forEach((w) => r.push(D(w)));
+  return [...new Set(r)].slice(0, 4);
+}
+
+/* shared with My Plan so both read the same bucket semantics */
+function planBucket(p) {
+  const o = getObj(p.obj);
+  if (p.state === "active") return "now";
+  if (p.state === "completed") return "completed";
+  if (p.state === "saved") return "saved";
+  if (p.state === "interested") return "interested";
+  if (p.state === "confirmed") return "confirmed";
+  const n = o ? nextOccurrence(o) : null;
+  if (n && mkDayStart(n) === mkDayStart(NOW)) return "today";
+  return "upcoming";
+}
+
+/* short-session memory — survives leaving and re-opening the assistant */
+const AGENT_SESSION = { messages: [], mem: { turn: 0, lastIntent: null, lastQuery: null, ranked: [], shown: [], offset: 0, lastObject: null, lastOffer: null, lastOuting: null, lastAction: null, lastEntities: null, lastShape: null, recentSugg: [] } };
+
+const AGENT_ACTION_LABEL = bilingual(
+  { go: "لا يحتاج حجزًا — تذهب مباشرة", join: "انضمام (سأحضر)", register: "تسجيل", book: "حجز", contact: "تواصل مع مقدّم الخدمة", official: "المصدر الرسمي", redeem: "استخدام العرض" },
+  { go: "No booking — you just go", join: "Join (going)", register: "Registration", book: "Booking", contact: "Contact the provider", official: "Official source", redeem: "Use the offer" });
+
+/* one turn: text in, answer out (actions are dispatched here, through the app's reducer) */
+function agentTurn(text, env) {
+  const { state, ctx, dispatch } = env;
+  const S = AGENT_SESSION.mem;
+  const q = AGENT.prep(text);
+  const lang = q.lang;
+  const T2 = (a, e) => (lang === "en" ? e : a);
+  const E = AGENT.entitiesOf(q);
+  S.turn += 1;
+
+  /* ── intent matching ── */
+  const hasQuery = !!S.lastQuery, hasRanked = S.ranked.length > 0;
+  const reqOK = (it) => !it.req || it.req.every((r) =>
+    r === "last_intent" ? !!S.lastIntent : r === "last_result" ? !!(S.lastObject || hasRanked || S.lastShape) : r === "last_ranked_results" ? hasRanked : true);
+  let scored = AGENT.INTENTS.map((it) => {
+    let s = AGENT.scoreIntent(it, q);
+    if (!reqOK(it)) s *= 0.5;
+    return { it, s };
+  }).sort((a, b) => b.s - a.s);
+  let pick = scored[0];
+  const words = q.t.length;
+  const referential = words <= 4 || /^(و|طيب|طب|وش عن|طيب وش|and|what about|how about|ok|okay|so)( |$)/.test(q.n);
+  const force = (id) => ({ it: AGENT.BY_ID[id], s: 0.9 });
+
+  /* explicit context/refinement on a short turn reuses the previous task */
+  const weakAction = pick.it.t === "action" && !E.actions.length && pick.s < 0.8;
+  if (hasQuery && referential && pick.s < 0.8 && (!["action", "fixed"].includes(pick.it.t) || weakAction) || (hasQuery && referential && pick.it.c === "conversation_context")) {
+    if (E.ordinal === 1 && !E.actions.length) pick = force("followup_second_result");
+    else if (E.ordinal === 2 && !E.actions.length) pick = force("followup_third_result");
+    else if (E.nb && pick.it.c !== "conversation_context") pick = force("followup_area_change_repeat");
+    else if (E.time && pick.it.c !== "conversation_context") pick = force("followup_time_change_repeat");
+    else if (E.offer.length && !E.actions.length && pick.it.id !== "offers_terms_details") pick = force("followup_with_offer");
+    else if (E.types.length && pick.it.c !== "conversation_context") pick = force("followup_category_only");
+    else if (E.suit.includes("family") || E.party === "family") pick = force("followup_family_only");
+    else if (E.suit.includes("kids") || E.party === "kids") pick = force("followup_kids_only");
+  }
+  /* an action verb with a referent wins over lookalike discovery phrasing */
+  const actionIntent = scored.find((x) => x.it.t === "action" && x.s > 0.42 && x.it.c !== "user_context");
+  if (actionIntent && (E.actions.length || (actionIntent.s >= 0.62 && pick.it.c !== "conversation_context")) && (E.ordinal != null || E.objects.length || S.lastObject || hasRanked) && actionIntent.s > pick.s - 0.12) pick = actionIntent;
+  /* "this offer — is it for families?" asks about the offer on the table, not for a new list */
+  if (E.offer.length && (S.lastOffer || S.lastObject) && /(^| )(هذا|هذي|ذا|ذي|this|that)( |$)/.test(q.n) && !E.actions.length) pick = force("offers_terms_details");
+  /* "what's in my plan" is the plan itself, not an explanation of the feature */
+  if (pick.it.id === "app_plan_help" && /(^| )(في|فيها|عندي|have|in|on)( |$)/.test(q.n) && !/(فايده|فائده|اشرح|يعني|explain|what is|how)/.test(q.n)) pick = force("plan_summary");
+  /* "what does the community say" about the thing we're discussing */
+  if (["app_community_help", "community_active_discussions"].includes(pick.it.id) && (E.objects.length || S.lastObject || hasRanked) && /(يقول|يقولون|تقول|رأي|راي|say|saying|think)/.test(q.n)) pick = force("community_what_people_say");
+  /* nothing matched but the text names things: build discovery from the entities */
+  if (pick.s < 0.34) {
+    if (E.objects.length) pick = force("followup_more_detail");
+    else if (E.offer.length) pick = force("offers_all_active");
+    else if (E.types.length || E.cats.length || E.suit.length || E.nb) pick = force(E.nb && !E.types.length ? "area_specific_discovery" : "discover_what_to_do_now");
+    else pick = force(q.t.length <= 1 && q.n.length <= 3 ? "fallback_spelling_noise" : "fallback_unclear");
+  }
+  const it = pick.it;
+  const h = it.h;
+  const msg = { role: "agent", text: "", cards: [], shape: it.s || null, intent: it.id };
+  const say = (vars = {}, variant) => {
+    const rs = (it.r[lang] && it.r[lang].length ? it.r[lang] : it.r.ar) || [""];
+    let t = rs[variant ?? (S.turn % rs.length)];
+    t = t.replace(/\{\{(\w+)\}\}/g, (_, k) => (vars[k] != null && vars[k] !== "" ? vars[k] : "—"));
+    return t.replace(/\s+([.،,])/g, "$1");
+  };
+  const nameOf = (o) => (lang === "en" ? (EN_TXT[o.n] || enText(o.n) || o.n) : o.n);
+  const names = (ids) => ids.map((id) => nameOf(getObj(id))).join(lang === "en" ? ", " : "، ");
+  const referent = () => {
+    if (E.ordinal != null) return S.ranked[E.ordinal] ? getObj(S.ranked[E.ordinal]) : null;
+    if (E.objects.length) return getObj(E.objects[0]);
+    if (S.lastObject) return getObj(S.lastObject);
+    if (S.ranked.length === 1) return getObj(S.ranked[0]);
+    return null;
+  };
+  const ambiguous = () => S.ranked.length > 1 && E.ordinal == null && !E.objects.length && !S.lastObject;
+  const noOrdinal = () => {
+    msg.text = S.ranked.length
+      ? T2(`آخر نتيجة فيها ${ar(Math.min(3, S.ranked.length))} فقط — ما فيه خيار بهذا الترتيب.`, `The last answer only had ${Math.min(3, S.ranked.length)} — there's no option at that position.`)
+      : T2("ما عندي قائمة سابقة أرتّب منها. قل لي وش تدوّر عليه أولًا.", "I don't have a previous list to pick from. Tell me what you're looking for first.");
+    msg.clarify = true; return msg;
+  };
+  const clarify = () => {
+    msg.text = T2(`تقصد أي واحد؟ اكتب «الأول» أو «الثاني» أو اسم المكان — عندي ${ar(Math.min(3, S.ranked.length))} خيارات من آخر نتيجة.`,
+      `Which one do you mean? Say "the first", "the second" or the name — I have ${Math.min(3, S.ranked.length)} options from the last answer.`);
+    msg.clarify = true;
+    return msg;
+  };
+  const finishList = (items, query, vars = {}, opts = {}) => {
+    const shown = items.slice(0, opts.n || 3);
+    S.lastQuery = query; S.ranked = items.slice(0, 8).map((x) => x.id); S.shown = shown.map((x) => x.id); S.offset = 0;
+    S.lastObject = shown.length === 1 ? shown[0].id : null; S.lastShape = "ranked_list";
+    const offerFirst = shown.find((x) => offerFor(x.id)); S.lastOffer = query.offer && offerFirst ? offerFor(offerFirst.id).id : S.lastOffer;
+    if (!shown.length) {
+      msg.text = query.offer
+        ? T2("ما فيه عرض نشط في بيانات EyeMakkah يطابق طلبك بهذا الشكل. جرّب منطقة أخرى أو شرطًا أخف.", "No active offer in EyeMakkah matches that request. Try another area or a looser condition.")
+        : T2("ما لقيت شيئًا يطابق كل هذه الشروط في المحتوى الحالي. جرّب شرطًا أخف أو منطقة أخرى.", "Nothing in the current content matches all of that. Try a looser condition or another area.");
+      msg.empty = true;
+      return msg;
+    }
+    const list = names(shown.map((x) => x.id));
+    msg.text = say({ recommendations: list, offers: list, ranked_results: list, result: list, neighborhood: query.nb ? NB[query.nb].name : NB[ctx.nb]?.name, category: vars.category, time_context: vars.time_context, current_item: vars.current_item, previous_entity: vars.previous_entity, community: vars.community, ...vars });
+    if (opts.lead) msg.text = opts.lead + " " + msg.text;
+    msg.cards = shown.map((x) => ({ id: x.id, why: x.why }));
+    msg.shape = query.offer ? "offer" : "ranked_list";
+    return msg;
+  };
+  const runList = (query, vars, opts) => {
+    const { items, relaxed } = runAgentQuery(query, ctx, state);
+    let lead = opts?.lead || "";
+    if (relaxed === "area") lead = T2(`ما لقيت في ${NB[query.nb].name} نفسها؛ هذه الأقرب لها.`, `Nothing in ${NB[query.nb].name} itself; these are the closest.`);
+    if (!items.length && (query.suit?.length || query.suitAny?.length) && !query.offer) {
+      const loose = runAgentQuery({ ...query, suit: [], suitAny: null }, ctx, state);
+      if (loose.items.length) return finishList(loose.items, { ...query, suit: [] }, vars, { lead: T2("ما فيه خيار يذكر كل الشروط صراحةً؛ هذه أقرب البدائل:", "Nothing states every condition explicitly; these are the closest alternatives:") });
+    }
+    return finishList(items, query, vars, { ...opts, lead });
+  };
+  const outing = (hours, around) => {
+    const c2 = around ? { ...ctx, planNeighborhoods: [around.neighborhood] } : ctx;
+    const outs = buildOutings(c2, state, hours);
+    const out = outs[0];
+    if (!out) { msg.text = T2("ما قدرت أركب مسارًا من المحتوى الحالي يناسب وقتك. جرّب وقتًا أطول أو منطقة أخرى.", "I couldn't assemble a route from current content for your time. Try a longer window or another area."); return msg; }
+    S.lastOuting = out.objects.map((o) => o.id); S.ranked = S.lastOuting; S.lastObject = null; S.lastShape = "composed_plan";
+    msg.text = say({ outing_steps: out.objects.map((o, i) => `${ar(i + 1)}. ${nameOf(o)}`).join(lang === "en" ? " → " : " ← "), total_time: minutesAr(out.minutes), object: around ? nameOf(around) : "" });
+    msg.outing = { ids: S.lastOuting, minutes: out.minutes };
+    msg.shape = "composed_plan";
+    return msg;
+  };
+  const objCard = (o, why) => { msg.cards = [{ id: o.id, why: why || [] }]; };
+  S.lastIntent = it.id; S.lastEntities = E;
+
+  /* ── handlers ── */
+  if (it.t === "fixed") {
+    msg.text = say();
+    if (/^fallback|frustration|acknowledgement_no/.test(it.id)) msg.clarify = true;
+    return msg;
+  }
+  switch (h) {
+    case "describe_current_user_context": {
+      const p = state.profile;
+      msg.text = say({ mode: T2(p.mode === "visitor" ? "زائر" : "مقيم", p.mode === "visitor" ? "visitor" : "resident"), neighborhood: NB[p.nb]?.name,
+        party: T2({ solo: "لوحدك", family: "عائلة", kids: "مع أطفال", group: "مجموعة" }[p.party], p.party), time_available: p.timeAvailable ? minutesAr(p.timeAvailable) : T2("غير محدد", "not set"),
+        interests: p.interests.map((c) => CAT[c]?.name).filter(Boolean).join("، "), language: p.lang === "en" ? "English" : "العربية" });
+      return msg;
+    }
+    case "set_user_mode_from_query": {
+      if (!E.mode) { msg.text = T2("تبغى أغيّر وضعك إلى «مقيم» أو «زائر»؟", "Should I switch you to resident or visitor?"); msg.clarify = true; return msg; }
+      dispatch({ type: "profile", patch: { mode: E.mode } });
+      msg.text = say({ mode: T2(E.mode === "visitor" ? "زائر" : "مقيم", E.mode) }); S.lastAction = { kind: "mode" }; return msg;
+    }
+    case "set_neighborhood_from_query": {
+      if (!E.nb) { msg.text = T2("أي حي تقصد؟ مثلًا العوالي أو العزيزية أو أجياد.", "Which neighbourhood? For example Al-Awali, Al-Aziziyah or Ajyad."); msg.clarify = true; return msg; }
+      dispatch({ type: "profile", patch: { nb: E.nb } });
+      msg.text = say({ neighborhood: NB[E.nb].name }); S.lastAction = { kind: "nb" }; return msg;
+    }
+    case "set_party_from_query": {
+      if (!E.party) { msg.text = T2("مع مين بتكون؟ لوحدك، عائلة، أطفال أو مجموعة؟", "Who's with you — solo, family, kids or a group?"); msg.clarify = true; return msg; }
+      dispatch({ type: "profile", patch: { party: E.party } });
+      msg.text = say({ party: T2({ solo: "لوحدك", family: "عائلة", kids: "مع أطفال", group: "مجموعة" }[E.party], E.party) }); return msg;
+    }
+    case "set_time_available_from_query": {
+      const v = typeof E.time === "number" ? E.time : null;
+      if (!v) { msg.text = T2("كم وقتك المتاح؟ ساعة، ساعتان أو المساء كله؟", "How much time — an hour, two hours or the whole evening?"); msg.clarify = true; return msg; }
+      dispatch({ type: "profile", patch: { timeAvailable: v } });
+      msg.text = say({ time_available: minutesAr(v) }); return msg;
+    }
+    case "set_language_from_query": {
+      const l = E.lang || (lang === "en" ? "ar" : "en");
+      dispatch({ type: "profile", patch: { lang: l } });
+      msg.text = say({ language: l === "en" ? "English" : "العربية" }); return msg;
+    }
+
+    /* discovery + offers: one query model over the inventory */
+    case "build_contextual_outing": return outing(ctx.timeAvailable ? ctx.timeAvailable / 60 : 3);
+    case "visitor_half_day_plan": return outing(4);
+    case "build_evening_outing": return outing(4);
+    case "plan_build_around_item": {
+      const o = referent() || (state.plan[0] && getObj(state.plan[0].obj));
+      if (!o) return ambiguous() ? clarify() : (msg.text = T2("حول أي شيء أرتب؟ اذكر المكان أو النشاط.", "Around what? Name the place or activity."), msg);
+      return outing(ctx.timeAvailable ? ctx.timeAvailable / 60 : 3, o);
+    }
+    case "rank_previous_by_proximity": {
+      if (!hasQuery) break;
+      return runList({ ...S.lastQuery, sort: "near" });
+    }
+    case "plan_recommend_next": {
+      const anchorP = state.plan.find((p) => ["active", "confirmed", "going", "registered", "planned", "awaiting"].includes(p.state));
+      const anchor = anchorP ? getObj(anchorP.obj) : null;
+      const query = { nb: anchor?.neighborhood, exclude: anchor ? [anchor.id] : [], sort: "near" };
+      return runList(query, { current_item: anchor ? nameOf(anchor) : T2("خطتك", "your plan") });
+    }
+    case "food_order_recommendation": {
+      const o = referent() || (E.objects[0] && getObj(E.objects[0]));
+      if (!o) return ambiguous() ? clarify() : (msg.text = T2("عن أي مطعم؟ اذكر اسمه أو افتح نتيجة أولًا.", "Which restaurant? Name it or open a result first."), msg);
+      const ks = contributionsFor(o.id, state).filter((k) => ["recommendation", "tip", "experience_report"].includes(k.type)).slice(0, 3);
+      S.lastObject = o.id;
+      if (!ks.length) { msg.text = T2(`ما فيه مساهمات من المجتمع عن ${nameOf(o)} تذكر أطباقًا بعينها بعد.`, `No community contributions about ${nameOf(o)} mention specific dishes yet.`); objCard(o); return msg; }
+      msg.text = say({ object: nameOf(o), order_suggestions: T2("من كلام الناس أدناه — آراء وليست معلومة رسمية", "in people's own words below — opinions, not official facts") });
+      msg.contribs = ks.map((k) => k.id); objCard(o); return msg;
+    }
+    case "object_duration_fit": {
+      const o = referent();
+      if (!o) return ambiguous() ? clarify() : (msg.text = T2("عن أي مكان أو نشاط؟", "Which place or activity?"), msg);
+      S.lastObject = o.id;
+      const tA = state.profile.timeAvailable;
+      const fit = o.duration == null ? T2("المدة غير محددة في البيانات", "the duration isn't represented") : !tA ? T2("حدد وقتك المتاح وأقولك إذا يناسب", "set your available time and I'll check the fit") : o.duration <= tA ? T2("يناسب وقتك", "it fits your time") : T2("أطول من وقتك المتاح", "it's longer than your available time");
+      msg.text = say({ object: nameOf(o), duration: o.duration ? minutesAr(o.duration) : "—", time_available: tA ? minutesAr(tA) : T2("غير محدد", "not set"), fit_note: fit });
+      objCard(o); return msg;
+    }
+    case "object_action_requirement": {
+      const o = referent();
+      if (!o) return ambiguous() ? clarify() : (msg.text = T2("عن أي مكان أو نشاط؟", "Which place or activity?"), msg);
+      S.lastObject = o.id;
+      const note = ["book", "register"].includes(o.action) ? T2(`يكتمل لدى ${o.outbound || "مقدّم الخدمة"}، والانتقال لا يعني أن الحجز تم`, `It completes with ${partnerEn(o.outbound || "مزوّد الخدمة")}; leaving to book is not a confirmed booking`) : o.action === "join" ? T2("الانضمام يعني نية حضور فقط", "Joining only records that you're going") : T2("لا تحتاج خطوة مسبقة في بيانات النموذج", "No prior step is represented");
+      msg.text = say({ object: nameOf(o), action_label: AGENT_ACTION_LABEL[o.action] || o.action, action_note: note });
+      objCard(o); return msg;
+    }
+    case "object_trust_summary": {
+      const o = referent();
+      if (!o) return ambiguous() ? clarify() : (msg.text = T2("عن أي مكان؟", "Which place?"), msg);
+      S.lastObject = o.id;
+      const tr = objectTrust(o, state.resolved);
+      const srcs = uniq(o.facts.map((f) => ({ official: T2("رسمي", "official"), provider: T2("مقدّم الخدمة", "provider"), community: T2("المجتمع", "community") }[f.cls])).filter(Boolean));
+      msg.text = say({ object: nameOf(o), trust_summary: TRUST_STATE[tr.state]?.label ? D(TRUST_STATE[tr.state].label) : tr.state, sources: srcs.join("، ") || "—", field_or_general: "" });
+      if (tr.state === "conflicting") msg.text += " " + T2("المصادر تختلف — نعرضها جنب بعض بدل ما نختار لك.", "Sources disagree — shown side by side, not resolved for you.");
+      objCard(o); return msg;
+    }
+    case "offer_terms_detail": {
+      let o = referent();
+      let of = o ? offerFor(o) : null;
+      if (!of && S.lastOffer) { of = DEAL_BY_ID[S.lastOffer]; o = getObj(of.obj); }
+      if (!of && hasRanked) { const first = S.ranked.map((id) => offerFor(id)).find(Boolean); if (first) { of = first; o = getObj(of.obj); } }
+      if (!o || !of) { msg.text = o ? T2(`ما فيه عرض نشط على ${nameOf(o)} في بيانات EyeMakkah الحالية.`, `There's no active offer on ${nameOf(o)} in current EyeMakkah data.`) : T2("عن أي عرض؟ اذكر المكان أو اسأل «وش العروض؟» أولًا.", "Which offer? Name the place or ask for offers first."); if (o) objCard(o); return msg; }
+      S.lastObject = o.id; S.lastOffer = of.id; S.lastShape = "offer";
+      const p = offerPrice(of);
+      const value = Dj([L2(of.badge), p ? tx(`${ar(p.now)} ريال بدل ${ar(p.was)}`, `SAR ${p.now} instead of ${p.was}`) : null]);
+      msg.text = say({ offer: `${L2(of.title)} — ${nameOf(o)}`, offer_value: value, terms: `${L2(of.terms)} (${WHO[of.who]})`, validity: `${whenAr(of.end)} · ${offerExpiry(of)}`, redemption: REDEEM[of.redeem], source: T2("عرض توضيحي في النموذج", "illustrative prototype offer"), terms_summary: offerSummary(of) });
+      if (E.suit.includes("family") || E.party === "family" || /عائل|family/.test(q.n)) msg.text += " " + (["family", "kids"].includes(of.who) || of.kind === "package" ? T2("نعم، العرض موجّه للعائلات.", "Yes, this offer is aimed at families.") : T2(`العرض ${WHO[of.who]} وليس باقة عائلية تحديدًا.`, `The offer is for ${WHO[of.who].toLowerCase()}, not a family package as such.`));
+      msg.offer = of.id; objCard(o); msg.shape = "offer"; return msg;
+    }
+
+    /* actions — each changes exactly one state and says which states did not change */
+    case "action_save_object": case "action_unsave_object": case "action_join_activity": case "action_leave_activity":
+    case "action_add_to_plan": case "action_remove_from_plan": case "action_open_object_detail": case "action_open_directions":
+    case "action_booking_handoff": case "action_confirm_booking_by_user": {
+      let o = referent();
+      if (h === "action_confirm_booking_by_user" && !o) { const aw = state.plan.find((p) => p.state === "awaiting"); o = aw ? getObj(aw.obj) : null; }
+      if (!o && E.ordinal != null) return noOrdinal();
+      if (!o && h === "action_booking_handoff") { const bk = S.shown.map(getObj).filter((x) => x && ["book", "register", "redeem", "contact"].includes(x.action)); if (bk.length === 1) o = bk[0]; }
+      if (!o) return ambiguous() ? clarify() : (msg.text = T2("على أي عنصر؟ اذكر اسمه أو اطلب اقتراحات أولًا.", "On which item? Name it or ask for suggestions first."), msg.clarify = true, msg);
+      return agentAct(h, o, { state, dispatch, lang, say, msg, S, nameOf });
+    }
+
+    /* My Plan */
+    case "plan_summary": case "plan_today": case "plan_upcoming": case "plan_confirmed": case "plan_completed": {
+      const items = state.plan.filter((p) => p.state !== "cancelled");
+      const want = { plan_today: ["now", "today"], plan_upcoming: ["upcoming", "today"], plan_confirmed: ["confirmed"], plan_completed: ["completed"] }[h];
+      const list = want ? items.filter((p) => want.includes(planBucket(p))) : items;
+      S.ranked = list.map((p) => p.obj); S.lastObject = list.length === 1 ? list[0].obj : null; S.lastShape = "plan";
+      if (!list.length) { msg.empty = true; msg.text = h === "plan_summary" ? T2("«خطتي» فاضية الآن. اطلب اقتراحًا وأضف ما يعجبك — الإضافة ليست حجزًا.", "My Plan is empty. Ask for a suggestion and add what you like — adding is not booking.") : T2("ما فيه عناصر بهذه الحالة في «خطتي».", "Nothing in My Plan has that state."); return msg; }
+      const counts = {}; items.forEach((p) => { const b = planBucket(p); counts[b] = (counts[b] || 0) + 1; });
+      const summary = Object.entries(counts).map(([b, n]) => `${D(PLAN_BUCKETS.find((x) => x.id === b)?.label || b)} ${ar(n)}`).join(" · ");
+      msg.text = say({ plan_summary: summary, plan_items: names(list.slice(0, 4).map((p) => p.obj)) });
+      msg.plan = list.slice(0, 5).map((p) => p.obj); return msg;
+    }
+
+    /* community */
+    case "community_object_summary": {
+      const o = referent();
+      if (!o) return ambiguous() ? clarify() : (msg.text = T2("عن أي مكان تبغى رأي الناس؟", "Which place do you want people's views on?"), msg);
+      S.lastObject = o.id;
+      const ks = contributionsFor(o.id, state);
+      if (!ks.length) { msg.text = T2(`ما فيه مساهمات عن ${nameOf(o)} بعد. تجربتك لو زرته تفيد غيرك.`, `No contributions about ${nameOf(o)} yet. Your experience would help others.`); objCard(o); return msg; }
+      const byType = {}; ks.forEach((k) => { byType[k.type] = (byType[k.type] || 0) + 1; });
+      msg.text = say({ object: nameOf(o), community_summary: T2(`${ar(ks.length)} مساهمات من الناس — آراء وتجارب وليست معلومات رسمية`, `${ks.length} contributions from people — opinions and experiences, not official facts`) });
+      msg.contribs = ks.slice(0, 3).map((k) => k.id); objCard(o); msg.shape = "community_summary"; return msg;
+    }
+    case "community_active_discussions": case "community_recommendations": {
+      let ks = allContributions(state).filter((k) => !k.parent);
+      if (h === "community_recommendations") ks = ks.filter((k) => ["recommendation", "tip", "experience_report"].includes(k.type));
+      const mine = ks.filter((k) => k.communities.some((c) => state.joinedCommunities.includes(c)));
+      ks = (mine.length >= 2 ? mine : ks).sort((a, b) => new Date(b.at) - new Date(a.at)).slice(0, 3);
+      msg.text = say({ discussions: T2("أحدثها أدناه", "the latest are below"), recommendations: T2("من كلام الناس أدناه", "in people's words below") });
+      msg.contribs = ks.map((k) => k.id); msg.shape = "community_summary"; return msg;
+    }
+    case "community_find_relevant": {
+      const p = state.profile;
+      const list = COMMUNITIES.filter((c) => c.kind !== "family" && c.state !== "archived")
+        .map((c) => ({ c, s: (c.nb === (E.nb || p.nb) ? 3 : 0) + (p.interests.includes(c.family) ? 2 : 0) + (p.mode === "visitor" && c.family === "visitors" ? 3 : 0) + (E.community === c.id ? 5 : 0) + c.members / 5000 }))
+        .sort((a, b) => b.s - a.s).slice(0, 3).map((x) => x.c);
+      msg.text = say({ communities: list.map((c) => D(c.name)).join("، ") });
+      msg.communities = list.map((c) => c.id); return msg;
+    }
+    case "community_linked_activities": {
+      const cid = E.community || (S.lastObject && getObj(S.lastObject)?.communities[0]) || state.joinedCommunities[0];
+      const c = COM[cid];
+      if (!c) { msg.text = T2("أي مجتمع تقصد؟", "Which community?"); msg.clarify = true; return msg; }
+      const acts = INVENTORY.filter((o) => ["activity", "recurring", "event", "experience"].includes(o.type) && isPromotable(o) && (o.communities.includes(c.id) || (c.linked || []).includes(o.id)));
+      const items = rank(acts, ctx, { limit: 6, maxPerCategory: 6 }).map((x) => ({ id: x.o.id, why: x.why.map(D) }));
+      return finishList(items, { types: ["activity", "event", "experience"] }, { community: D(c.name) });
+    }
+    case "action_community_membership": {
+      const cid = E.community;
+      if (!cid) { msg.text = T2("أي مجتمع تبغى تنضم له أو تطلع منه؟ اكتب اسمه.", "Which community? Type its name."); msg.clarify = true; return msg; }
+      const on = !state.joinedCommunities.includes(cid);
+      dispatch({ type: "join_community", com: cid });
+      msg.text = say({ membership_action: T2(on ? "الانضمام" : "المغادرة", on ? "join" : "leave"), community: D(COM[cid].name) }); return msg;
+    }
+    case "action_create_community_question": case "action_create_contribution": {
+      const o = referent();
+      msg.text = say({ community_or_object: o ? nameOf(o) : T2("المجتمع المناسب", "the right community"), question_text: text, object: o ? nameOf(o) : "—", contribution_type: T2("تجربة", "experience") });
+      msg.compose = { obj: o?.id || null }; return msg;
+    }
+
+    /* follow-ups over the previous answer */
+    case "followup_explain_previous_recommendation": {
+      const o = referent() || (hasRanked && getObj(S.ranked[0]));
+      if (!o) break;
+      const why = runAgentQuery({ ...(S.lastQuery || {}), excludeIds: [] }, ctx, state).items.find((x) => x.id === o.id)?.why || scoreObject(o, ctx).why.map(D);
+      S.lastObject = o.id;
+      msg.text = say({ reason_summary: why.slice(0, 3).join(T2("، و", ", and ")) || T2("يطابق طلبك وسياقك", "it matches your request and context"), entity: nameOf(o) });
+      objCard(o, why); return msg;
+    }
+    case "followup_second_ranked": case "followup_third_ranked": {
+      const i = h === "followup_second_ranked" ? 1 : 2;
+      const id = S.ranked[i];
+      if (!id) { msg.text = T2("ما عندي خيار بهذا الترتيب في آخر نتيجة.", "The last answer didn't have that many options."); return msg; }
+      const o = getObj(id);
+      const why = S.lastQuery ? runAgentQuery(S.lastQuery, ctx, state).items.find((x) => x.id === id)?.why || [] : [];
+      S.lastObject = id; S.lastShape = "single_entity";
+      msg.text = say({ entity: nameOf(o), reason: why[0] || T2("ضمن نفس الطلب", "part of the same request") });
+      objCard(o, why); msg.shape = "single_entity"; return msg;
+    }
+    case "followup_compare_top_two": {
+      if (S.ranked.length < 2) break;
+      const [a, b] = S.ranked.slice(0, 2).map(getObj);
+      const from = agentFrom(S.lastQuery || {}, ctx);
+      const line = (o) => Dj([nameOf(o), NB[o.neighborhood]?.name, `~${ar(distanceKm(o, from))} ${T2("كم", "km")}`, effPrice(o) < 9e8 ? riyal(effPrice(o)) : null, offerFor(o) ? L2(offerFor(o).badge) : T2("بدون عرض", "no offer"), o.suit.includes("quiet") ? SUIT.quiet : null]);
+      msg.text = say({ comparison_summary: `${line(a)} | ${line(b)}` });
+      msg.cards = [{ id: a.id, why: [] }, { id: b.id, why: [] }]; msg.shape = "ranked_list"; return msg;
+    }
+    case "followup_expand_previous": case "followup_shorten_previous": {
+      const o = referent() || (hasRanked && getObj(S.ranked[0]));
+      if (!o) break;
+      S.lastObject = o.id;
+      const of = offerFor(o);
+      const detail = Dj([nameOf(o), D(o.t), NB[o.neighborhood]?.name, timingLabel(o), o.duration ? minutesAr(o.duration) : null, o.price != null ? riyal(o.price) : null, of ? L2(of.badge) : null]);
+      msg.text = say({ expanded_detail: detail + (h === "followup_expand_previous" && o.ab ? ". " + D(o.ab) : ""), short_summary: detail, entity: nameOf(o) });
+      objCard(o); msg.shape = "single_entity"; return msg;
+    }
+    case "followup_expand_ranking": {
+      if (!hasQuery) break;
+      const all = runAgentQuery(S.lastQuery, ctx, state).items.filter((x) => !S.shown.includes(x.id));
+      if (!all.length) { msg.text = T2("هذه كل الخيارات المطابقة في المحتوى الحالي.", "Those are all the matching options in current content."); return msg; }
+      const shown = all.slice(0, 3);
+      S.shown = [...S.shown, ...shown.map((x) => x.id)]; S.ranked = shown.map((x) => x.id); S.lastObject = null;
+      msg.text = say({ ranked_results: names(shown.map((x) => x.id)) });
+      msg.cards = shown.map((x) => ({ id: x.id, why: x.why })); return msg;
+    }
+    case "followup_alternative": {
+      if (!hasQuery) break;
+      const prev = S.lastObject || S.ranked[0];
+      return runList({ ...S.lastQuery, exclude: [...(S.lastQuery.exclude || []), ...S.shown] }, { previous_entity: prev ? nameOf(getObj(prev)) : "" });
+    }
+    case "followup_refine_proximity": if (hasQuery) return runList({ ...applyEntities(S.lastQuery, E, true), sort: "near" }); break;
+    case "followup_refine_quiet": {
+      if (!hasQuery) break;
+      const strict = { ...S.lastQuery, suit: uniq([...(S.lastQuery.suit || []), "quiet"]) };
+      if (runAgentQuery(strict, ctx, state).items.length >= 2) return runList(strict);
+      return runList({ ...S.lastQuery, sort: "quiet" }, {}, { lead: T2("قليل منها موصوف بالهدوء صراحةً؛ رتبتها بحيث الأهدأ أولًا.", "Few are explicitly described as quiet; I've put the quieter ones first.") });
+    }
+    case "followup_refine_price": if (hasQuery) return runList({ ...S.lastQuery, sort: "price" }); break;
+    case "followup_refine_active_offer": {
+      const o = S.lastObject && getObj(S.lastObject);
+      if (o && !/(اللي|منهم|which|ones|only|بس)/.test(q.n)) {
+        const of = offerFor(o);
+        S.lastOffer = of?.id || null;
+        msg.text = of ? T2(`نعم، على ${nameOf(o)} عرض: ${offerSummary(of)}.`, `Yes — ${nameOf(o)} has an offer: ${offerSummary(of)}.`) : T2(`ما عليه عرض نشط في بيانات EyeMakkah الحالية.`, `${nameOf(o)} has no active offer in current EyeMakkah data.`);
+        if (of) msg.offer = of.id;
+        objCard(o); msg.shape = of ? "offer" : "single_entity"; return msg;
+      }
+      if (hasQuery) return runList({ ...S.lastQuery, offer: true });
+      return runList({ offer: true });
+    }
+    case "followup_refine_family": if (hasQuery) return runList({ ...S.lastQuery, suit: uniq([...(S.lastQuery.suit || []), "family"]) }); break;
+    case "followup_refine_kids": if (hasQuery) return runList({ ...S.lastQuery, suit: uniq([...(S.lastQuery.suit || []), "kids"]) }); break;
+    case "followup_refine_beginner": if (hasQuery) return runList({ ...S.lastQuery, suitAny: ["beginners", "noexp"] }); break;
+    case "followup_refine_accessibility": if (hasQuery) return runList({ ...S.lastQuery, suitAny: ["accessible", "stepfree"] }); break;
+    case "followup_refine_category": {
+      if (!hasQuery && !E.types.length) break;
+      const types = E.types.length ? E.types : S.lastQuery.types;
+      return runList({ ...(S.lastQuery || {}), types, cats: E.cats.length ? E.cats : null }, { category: (types || []).map((t) => T2(TYPE_NAME[t]?.[0], TYPE_NAME[t]?.[1])).join("، ") });
+    }
+    case "followup_repeat_with_new_area": if (hasQuery && E.nb) return runList({ ...S.lastQuery, nb: E.nb }, { neighborhood: NB[E.nb].name }); break;
+    case "followup_repeat_with_new_time": if (hasQuery) { const n = applyEntities(S.lastQuery, E, true); if (/(ليله|مساء|tonight|evening)/.test(q.n)) n.when = "tonight"; return runList(n, { time_context: E.time ? (typeof E.time === "number" ? minutesAr(E.time) : T2("نهاية الأسبوع", "the weekend")) : T2("الليلة", "tonight") }); } break;
+    case "followup_repeat_current_context": if (hasQuery) return runList(S.lastQuery); break;
+    default: {
+      const base = HANDLER_QUERY[h];
+      if (base) {
+        let query = applyEntities({ ...base }, E, !!base.types && !E.types.length ? false : false);
+        if (base.types && E.types.length === 0) query.types = base.types;
+        if (h === "recommend_in_area") query.nb = E.nb || ctx.nb;
+        if (h === "recommend_nearby" || h === "offers_nearby") query.nb = query.nb || null;
+        return runList(query, { neighborhood: NB[query.nb || ctx.nb]?.name });
+      }
+    }
+  }
+  /* a follow-up without the context it needs, or an unhandled shape */
+  msg.text = T2("ما عندي سؤال سابق أبني عليه هنا. قل لي بطريقتك وش تبغى — مكان، أكل، نشاط، عرض أو شيء في «خطتي».", "I don't have a previous request to build on. Tell me what you need — a place, food, an activity, an offer or something in My Plan.");
+  msg.clarify = true;
+  return msg;
+}
+
+/* the one place agent actions touch app state — same reducer as the UI buttons */
+function agentAct(h, o, { state, dispatch, lang, say, msg, S, nameOf }) {
+  const T2 = (a, e) => (lang === "en" ? e : a);
+  const it = AGENT.BY_ID[{ action_save_object: "action_save_item", action_unsave_object: "action_unsave_item", action_join_activity: "action_join_activity", action_leave_activity: "action_leave_activity", action_add_to_plan: "plan_add_item", action_remove_from_plan: "plan_remove_item", action_open_object_detail: "action_open_details", action_open_directions: "action_open_directions", action_booking_handoff: "action_start_booking_handoff", action_confirm_booking_by_user: "action_confirm_booking_explicit" }[h]];
+  const sayA = (vars) => { const rs = it.r[lang] || it.r.ar; return rs[0].replace(/\{\{(\w+)\}\}/g, (_, k) => vars[k] ?? "—"); };
+  const name = nameOf(o);
+  const planItem = state.plan.find((p) => p.obj === o.id);
+  S.lastObject = o.id; S.lastAction = { kind: h, obj: o.id };
+  msg.cards = [{ id: o.id, why: [] }];
+  switch (h) {
+    case "action_save_object":
+      if (state.saved[o.id]) { msg.text = T2(`${name} محفوظ من قبل — ما غيّرت شيئًا.`, `${name} is already saved — nothing changed.`); return msg; }
+      dispatch({ type: "save", obj: o.id }); msg.text = sayA({ object: name }); return msg;
+    case "action_unsave_object":
+      if (!state.saved[o.id]) { msg.text = T2(`${name} مو محفوظ أصلًا.`, `${name} isn't saved.`); return msg; }
+      dispatch({ type: "save", obj: o.id }); msg.text = sayA({ object: name }); return msg;
+    case "action_join_activity":
+      if (!["join"].includes(o.action) && !["activity", "recurring"].includes(o.type)) { msg.text = T2(`${name} ما يُنضم له — إجراؤه: ${AGENT_ACTION_LABEL[o.action]}.`, `${name} isn't something you join — its action is: ${AGENT_ACTION_LABEL[o.action]}.`); return msg; }
+      dispatch({ type: "join", obj: o.id }); msg.text = sayA({ object: name }); return msg;
+    case "action_leave_activity":
+      if (!planItem || !["going", "registered"].includes(planItem.state)) { msg.text = T2(`ما عندك انضمام نشط لـ${name}.`, `You don't have an active join for ${name}.`); return msg; }
+      dispatch({ type: "cancel", obj: o.id }); msg.text = sayA({ object: name }); return msg;
+    case "action_add_to_plan":
+      if (planItem && !["saved", "interested", "cancelled"].includes(planItem.state)) { msg.text = T2(`${name} موجود في «خطتي» بحالة «${D(PLAN_STATE[planItem.state].label)}» — ما غيّرته.`, `${name} is already in My Plan as "${D(PLAN_STATE[planItem.state].label)}" — unchanged.`); return msg; }
+      dispatch({ type: "plan", obj: o.id }); msg.text = sayA({ object: name }); return msg;
+    case "action_remove_from_plan":
+      if (!planItem) { msg.text = T2(`${name} مو موجود في «خطتي».`, `${name} isn't in My Plan.`); return msg; }
+      dispatch({ type: "remove_plan", obj: o.id }); msg.text = sayA({ object: name }); return msg;
+    case "action_open_object_detail":
+      msg.text = sayA({ object: name }); msg.navigate = o.id; return msg;
+    case "action_open_directions":
+      dispatch({ type: "directions", obj: o.id });
+      msg.text = sayA({ object: name }) + " " + T2("(الخريطة في هذا النموذج تخطيطية.)", "(The map in this prototype is schematic.)"); msg.navigate = o.id; return msg;
+    case "action_booking_handoff":
+      if (!["book", "register", "redeem", "contact"].includes(o.action)) { msg.text = T2(`${name} لا يحتاج حجزًا في بيانات EyeMakkah — ${AGENT_ACTION_LABEL[o.action]}.`, `${name} doesn't need booking in EyeMakkah data — ${AGENT_ACTION_LABEL[o.action]}.`); return msg; }
+      msg.text = sayA({ object: name }); msg.handoff = o.id; return msg;
+    case "action_confirm_booking_by_user":
+      if (!planItem || planItem.state !== "awaiting") { msg.text = T2(`ما عندي انتقال حجز مفتوح لـ${name}، فما أقدر أحوله إلى «مؤكد».`, `There's no open booking handoff for ${name}, so it can't become Confirmed.`); return msg; }
+      dispatch({ type: "book_confirm", obj: o.id, source: "user" }); msg.text = sayA({ object: name }); return msg;
+    default: return msg;
+  }
+}
+
+/* 0–2 contextual suggestions — optional aids, never the primary input */
+function agentSuggestions(lastMsg, ctx, lang) {
+  const sg = AGENT.bank.suggestions;
+  const pick = (arr) => (arr || []).filter((s) => !AGENT_SESSION.mem.recentSugg.includes(s));
+  let out = [];
+  if (!lastMsg) {
+    const page = sg.by_page["الرئيسية"][lang] || [];
+    out = [ctx.evening ? page[0] : page[3], page[1]];
+  } else if (lastMsg.clarify || lastMsg.empty) {
+    out = [];
+  } else {
+    const shape = lastMsg.shape === "offer" ? "offer" : lastMsg.shape;
+    out = pick(sg.after_answer_type[shape]?.[lang]);
+    if (shape === "ranked_list" && lastMsg.cards?.length && !lastMsg.cards.some((c) => offerFor(c.id))) out = [out[0], lang === "en" ? "Any of them with an offer?" : "فيه منهم عليه عرض؟"];
+    if (lastMsg.cards?.length === 1 && shape === "single_entity") {
+      out = pick(sg.by_page["تفاصيل"][lang]).slice(1, 3);
+      if (offerFor(lastMsg.cards[0].id)) out = out.map((x) => (/عرض|offer/i.test(x) ? (lang === "en" ? "What are the offer terms?" : "وش شروط العرض؟") : x));
+    }
+  }
+  out = out.filter(Boolean).slice(0, 2);
+  AGENT_SESSION.mem.recentSugg = [...out, ...AGENT_SESSION.mem.recentSugg].slice(0, 4);
+  return out;
+}
+
 function buildHome(state, ctx) {
   const used = new Set();
   const take = (list, n) => { const out = []; for (const x of list) { if (used.has(x.o.id)) continue; used.add(x.o.id); out.push(x); if (out.length >= n) break; } return out; };
@@ -5347,6 +6356,10 @@ function buildHome(state, ctx) {
   const soon = rank(INVENTORY.filter((o) => ["soon", "live"].includes(lifecycleOf(o))), ctx, { limit: 6, maxPerCategory: 2 });
   if (soon.length) modules.push({ id: "soon", kind: "scroller", title: "يبدأ قريبًا", sub: "ما زال أمامك وقت للحاق به", items: take(soon, 4) });
 
+  /* H6 — offers & discounts: one shared model, only while valid */
+  const deals = rankedDeals(ctx, 8);
+  if (deals.length) modules.push({ id: "deals", kind: "deals", title: "عروض وخصومات", sub: "عروض سارية مختارة لك — تختفي عند انتهائها", items: deals });
+
   /* H2 — immediate context */
   const areaName = NB[ctx.nb]?.name || "مكة";
   const nearby = rank(pool.filter((o) => (ctx.locationGranted ? distanceKm(o, ctx.from) < 4 : o.neighborhood === ctx.nb)), ctx, { limit: 8, maxPerCategory: 2 });
@@ -5370,9 +6383,6 @@ function buildHome(state, ctx) {
     .sort((a, b) => new Date(b.at) - new Date(a.at)).slice(0, 4);
   if (comItems.length) modules.push({ id: "community", kind: "community", title: "من مجتمعك", sub: "معرفة محلية حديثة من الناس، لا من التطبيق", items: comItems });
 
-  /* H6 — offers, only when genuinely valid */
-  const offers = rank(INVENTORY.filter((o) => o.type === "offer" && isPromotable(o)), ctx, { limit: 4, maxPerCategory: 3 });
-  if (offers.length) modules.push({ id: "offers", kind: "offers", title: "عروض سارية تناسبك", sub: "نعرض العرض ما دام ساريًا فقط", items: take(offers, 3) });
 
   /* H7 — inspiration / novelty */
   const novel = rank(pool.filter((o) => o.novelty > 0.65), { ...ctx, noveltySeeking: true }, { limit: 8, maxPerCategory: 2 });
@@ -5533,10 +6543,8 @@ function ScreenHome() {
    ranks Home, not a separate chatbot. «خصّص يومي» assembles a short day from the ranked
    inventory; «اسأل» routes a question to the right community. */
 function AssistantCard() {
-  const { state, ctx } = useApp();
+  const { state, ctx, go } = useApp();
   const p = state.profile;
-  const [dayOpen, setDayOpen] = useState(false);
-  const [askOpen, setAskOpen] = useState(false);
   const nb = NB[p.nb]?.name || "";
   const t = p.timeAvailable;
   const timeAr = t === 60 ? "ساعة" : t === 120 ? "ساعتان" : t != null ? "المساء كله" : null;
@@ -5565,55 +6573,315 @@ function AssistantCard() {
           </div>
         </div>
         <div className="row" style={{ gap: 8, marginTop: 12, position: "relative" }}>
-          <button className="press" onClick={() => setDayOpen(true)}
+          <button className="press" onClick={() => go({ s: "assistant", q: tx("رتب لي يومي", "Plan my day") })}
             style={{ flex: 1, minHeight: 40, borderRadius: R.pill, background: "#F6EFE0", color: "#133B31", fontSize: 13.5, fontWeight: 800 }}>
             <Sparkles size={14} style={{ verticalAlign: "-2px", marginInlineEnd: 6 }} />{tx("خصّص يومي", "Plan my day")}
           </button>
-          <button className="press" onClick={() => setAskOpen(true)}
+          <button className="press" onClick={() => go({ s: "assistant" })}
             style={{ minHeight: 40, paddingInline: 18, borderRadius: R.pill, border: "1px solid rgba(246,239,224,.38)", color: "#F6EFE0", fontSize: 13.5, fontWeight: 800 }}>
             {tx("اسأل", "Ask")}
           </button>
         </div>
       </div>
-      <DaySheet open={dayOpen} onClose={() => setDayOpen(false)} />
-      <AskSheet open={askOpen} onClose={() => setAskOpen(false)} />
     </div>
   );
 }
 
-function DaySheet({ open, onClose }) {
-  const { state, ctx, dispatch, go, toast } = useApp();
-  const p = state.profile;
-  const picks = useMemo(() => (open ? rank(INVENTORY.filter(isPromotable), ctx, { limit: 3, maxPerCategory: 1 }) : []), [open, ctx]);
+/* ───────── The Assistant screen — one free-text input over the Intent Bank agent ─────────
+   No fixed question grid and no fifth tab: it opens from the Home assistant card and
+   answers with real objects, offers and plan state. Buttons on its cards dispatch the
+   same reducer actions as the rest of the app (Save ≠ Plan ≠ Join ≠ booking handoff). */
+function agentDirect(h, oid, { state, dispatch }) {
+  const lang = isEn() ? "en" : "ar";
+  const nameOf = (o) => (lang === "en" ? (EN_TXT[o.n] || enText(o.n) || o.n) : o.n);
+  const msg = { role: "agent", text: "", cards: [], shape: "single_entity", intent: h };
+  return agentAct(h, getObj(oid), { state, dispatch, lang, say: () => "", msg, S: AGENT_SESSION.mem, nameOf });
+}
+
+function AgentAvatar({ size = 30 }) {
   return (
-    <Sheet open={open} onClose={onClose} title={tx("يومك المقترح", "Your suggested day")}>
-      <div style={{ fontSize: 12.5, color: T.muted, lineHeight: 1.8, marginBottom: 10 }}>
-        {tx("ثلاث خطوات مرتّبة من وقتك وحيّك واهتماماتك. أضفها لخطتك أو افتح أيًّا منها.", "Three steps chosen from your time, district and interests. Add them to your plan or open any of them.")}
-      </div>
-      {picks.map((x, i) => (
-        <button key={x.o.id} className="press" onClick={() => { onClose(); go({ s: "object", id: x.o.id }); }}
-          style={{ display: "flex", width: "100%", gap: 11, textAlign: "start", padding: "10px 0", borderBottom: `1px solid ${T.lineSoft}`, alignItems: "center" }}>
-          <div style={{ width: 22, flex: "0 0 22px", height: 22, borderRadius: 99, background: T.sand, color: T.green, fontSize: 11.5, fontWeight: 800, display: "grid", placeItems: "center" }}>{ar(i + 1)}</div>
-          <div style={{ width: 52, flex: "0 0 52px" }}><Photo kind={x.o.scene} seed={x.o.id} photo={x.o.photo} ratio="1 / 1" radius={R.box} scrim="none" /></div>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: 14, fontWeight: 800, lineHeight: 1.45 }}>{x.o.name}</div>
-            <MetaLine o={x.o} />
-            {x.why?.[0] && <div className="clamp1" style={{ fontSize: 11.5, color: T.ok, fontWeight: 700 }}>{x.why[0]}</div>}
-          </div>
-        </button>
-      ))}
-      {!p.locationGranted && (
-        <button className="press row" onClick={() => dispatch({ type: "profile", patch: { locationGranted: true } })}
-          style={{ width: "100%", gap: 8, marginTop: 12, padding: "10px 12px", borderRadius: R.ctl, background: T.sand, textAlign: "start", minHeight: 44 }}>
-          <MapPin size={15} color={T.green} style={{ flexShrink: 0 }} />
-          <span style={{ flex: 1, fontSize: 12.5, fontWeight: 700 }}>{tx("فعّل الموقع لاقتراحات أقرب", "Turn on location for closer suggestions")}</span>
-        </button>
-      )}
-      <button className="press" onClick={() => { picks.forEach((x) => dispatch({ type: "plan", obj: x.o.id })); toast(tx("أُضيفت إلى خطتي — لم يُحجز شيء بعد", "Added to my plan — nothing is booked yet")); onClose(); }}
-        style={{ width: "100%", marginTop: 14, padding: "13px", borderRadius: R.ctl, background: T.deep, color: "#F6EFE0", fontWeight: 800, fontSize: 14 }}>
-        {tx("أضف الخطوات لخطتي", "Add these steps to my plan")}
+    <div aria-hidden="true" style={{
+      width: size, height: size, flex: `0 0 ${size}px`, borderRadius: 999, display: "grid", placeItems: "center",
+      background: "linear-gradient(145deg, #E3C78C, #B8944A)", boxShadow: "0 0 0 3px rgba(184,148,74,.16)",
+    }}><Sparkles size={Math.round(size * 0.48)} color="#133B31" strokeWidth={2.2} /></div>
+  );
+}
+
+function AgentCard({ id, why, onAsk, onDirect, onHandoff, withDeal = true }) {
+  const { state, go } = useApp();
+  const [more, setMore] = useState(false);
+  const o = getObj(id);
+  if (!o) return null;
+  const saved = !!state.saved[o.id];
+  const pi = state.plan.find((p) => p.obj === o.id && p.state !== "cancelled");
+  const inPlan = pi && !["saved", "interested"].includes(pi.state);
+  const trust = objectTrust(o, state.resolved);
+  const warn = ["conflicting", "possibly_stale", "expired"].includes(trust.state);
+  const needsHandoff = ["book", "register", "redeem", "contact"].includes(o.action);
+  const primaryLabel = { book: tx("احجز", "Book"), register: tx("سجّل", "Register"), redeem: tx("استخدم العرض", "Use offer"), contact: tx("تواصل", "Contact") }[o.action];
+  const btn = (label, onClick, opts = {}) => (
+    <button key={label} className="press" onClick={onClick} disabled={opts.disabled}
+      style={{
+        minHeight: 34, padding: "6px 12px", borderRadius: R.pill, fontSize: 12, fontWeight: 800, whiteSpace: "nowrap",
+        background: opts.solid ? T.deep : T.paper, color: opts.solid ? "#F6EFE0" : opts.done ? T.ok : T.ink,
+        border: opts.solid ? "none" : `1px solid ${opts.done ? `${T.ok}55` : T.line}`, opacity: opts.disabled ? 0.75 : 1,
+      }}>{opts.icon ? <opts.icon size={13} style={{ verticalAlign: "-2px", marginInlineEnd: 4 }} /> : null}{label}</button>
+  );
+  return (
+    <div style={{ background: T.paper, border: `1px solid ${T.line}`, borderRadius: R.box, padding: 10, marginTop: 8 }}>
+      <button className="lift" onClick={() => go({ s: "object", id: o.id })} style={{ display: "flex", gap: 10, width: "100%", textAlign: "start" }}>
+        <div style={{ width: 66, flex: "0 0 66px", position: "relative" }}>
+          <Photo kind={o.scene} seed={o.id} photo={o.photo} ratio="1 / 1" radius={R.box - 4} scrim="none" />
+        </div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div className="clamp2" style={{ fontSize: 14.5, fontWeight: 800, lineHeight: 1.45 }}>{o.name}</div>
+          <div style={{ marginTop: 2 }}><MetaLine o={o} lines={2} /></div>
+          {why?.length ? <div className="clamp2" style={{ fontSize: 11.5, color: T.ok, fontWeight: 700, marginTop: 4, lineHeight: 1.55 }}>{Dj(why.slice(0, 2), " · ")}</div> : null}
+        </div>
       </button>
-    </Sheet>
+      {withDeal && <DealLine o={o} />}
+      {warn && (
+        <div className="row" style={{ gap: 6, marginTop: 7, fontSize: 11.5, color: T.warn, fontWeight: 700, lineHeight: 1.55, alignItems: "flex-start" }}>
+          <AlertTriangle size={13} style={{ flexShrink: 0, marginTop: 2 }} />
+          <span>{trust.state === "conflicting" ? tx("معلومات متعارضة — تحقّق من المصدر", "Conflicting information — check the source") : trust.state === "expired" ? tx("لم يعد ساريًا", "No longer current") : tx("قد تكون بعض المعلومات قديمة", "Some information may be out of date")}</span>
+        </div>
+      )}
+      <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 9 }}>
+        {btn(tx("التفاصيل", "Details"), () => go({ s: "object", id: o.id }))}
+        {btn(saved ? tx("محفوظ", "Saved") : tx("احفظ", "Save"), () => onDirect(saved ? "action_unsave_object" : "action_save_object", o.id, saved ? tx(`ألغِ حفظ ${o.name}`, `Unsave ${o.name}`) : tx(`احفظ ${o.name}`, `Save ${o.name}`)), { icon: saved ? BookmarkCheck : Bookmark, done: saved })}
+        {btn(inPlan ? D(PLAN_STATE[pi.state].label) : tx("أضف إلى خطتي", "Add to my plan"), () => !inPlan && onDirect("action_add_to_plan", o.id, tx(`أضف ${o.name} إلى خطتي`, `Add ${o.name} to my plan`)), { icon: inPlan ? Check : Plus, done: inPlan, disabled: inPlan })}
+        {o.action === "join" && !(pi && ["going", "registered"].includes(pi.state)) && btn(tx("انضم", "Join"), () => onDirect("action_join_activity", o.id, tx(`انضم إلى ${o.name}`, `Join ${o.name}`)), { solid: true })}
+        {needsHandoff && !(pi && ["awaiting", "confirmed", "registered"].includes(pi.state)) && btn(primaryLabel, () => onHandoff(o.id), { solid: true })}
+        {!more && <button className="press" onClick={() => setMore(true)} aria-label={tx("المزيد", "More")} style={{ width: 34, height: 34, borderRadius: R.pill, background: T.paper, border: `1px solid ${T.line}`, display: "grid", placeItems: "center" }}><MoreHorizontal size={15} /></button>}
+        {more && btn(tx("الاتجاهات", "Directions"), () => onDirect("action_open_directions", o.id, tx(`الاتجاهات إلى ${o.name}`, `Directions to ${o.name}`)), { icon: Navigation })}
+        {more && btn(tx("بديل", "Alternative"), () => onAsk(tx("عطني بديل", "Give me an alternative"), o.id), { icon: RefreshCw })}
+        {more && offerFor(o) && btn(tx("عرض آخر", "Another offer"), () => onAsk(tx("فيه عرض ثاني؟", "Is there another offer?"), o.id), { icon: Tag })}
+        {more && btn(tx("ماذا يقول المجتمع؟", "What do people say?"), () => onAsk(tx("وش الناس تقول عنه؟", "What do people say about it?"), o.id), { icon: MessageCircle })}
+      </div>
+    </div>
+  );
+}
+
+function AgentHandoff({ id, onOpen }) {
+  const { state } = useApp();
+  const o = getObj(id);
+  if (!o) return null;
+  const pi = state.plan.find((p) => p.obj === o.id);
+  const st = pi?.state;
+  return (
+    <div style={{ marginTop: 8, borderRadius: R.box, border: `1px solid ${T.line}`, background: T.paper, padding: "11px 12px" }}>
+      <div className="row" style={{ gap: 8, alignItems: "flex-start" }}>
+        <ExternalLink size={16} color={T.green} style={{ flexShrink: 0, marginTop: 2 }} />
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontSize: 13.5, fontWeight: 800, lineHeight: 1.5 }}>{o.name}</div>
+          <div style={{ fontSize: 12, color: T.muted, lineHeight: 1.65, marginTop: 2 }}>
+            {o.outbound ? tx(`يكتمل الحجز لدى ${o.outbound}.`, `Booking is completed with ${partnerEn(o.outbound)}.`) : tx("يكتمل لدى مقدّم الخدمة.", "Completed with the provider.")}{" "}
+            {tx("بعد الانتقال تُسجَّل الحالة «انتقلت لإكمال الحجز» — لا «تم الحجز».", "After you go, it's recorded as “Continued to booking” — not “Booked”.")}
+          </div>
+          <DealLine o={o} compact />
+        </div>
+      </div>
+      <div className="row" style={{ gap: 8, marginTop: 10, flexWrap: "wrap" }}>
+        {st === "awaiting"
+          ? <Pill tone={T.warn} bg={`${T.warn}14`}>{tx("انتقلت لإكمال الحجز — غير مؤكد بعد", "Continued to booking — not confirmed yet")}</Pill>
+          : st === "confirmed" ? <Pill tone={T.ok} bg={`${T.ok}14`} icon={Check}>{tx("مؤكد بتأكيدك", "Confirmed by you")}</Pill>
+          : <button className="press" onClick={() => onOpen(o.id)} style={{ minHeight: 38, padding: "8px 14px", borderRadius: R.pill, background: T.deep, color: "#F6EFE0", fontSize: 12.5, fontWeight: 800 }}>
+              {tx("افتح مسار الحجز", "Open the booking step")}
+            </button>}
+      </div>
+    </div>
+  );
+}
+
+function AgentMessage({ m, onAsk, onDirect, onHandoff, onCompose }) {
+  const { state, dispatch, toast, go } = useApp();
+  if (m.role === "user") {
+    return (
+      <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 14 }}>
+        <div dir="auto" style={{ maxWidth: "82%", background: T.deep, color: "#F6EFE0", padding: "9px 13px", borderRadius: 18, borderEndEndRadius: 6, fontSize: 14, fontWeight: 600, lineHeight: 1.65, overflowWrap: "anywhere" }}>{m.text}</div>
+      </div>
+    );
+  }
+  const offerObj = m.offer ? DEAL_BY_ID[m.offer]?.obj : null;
+  const contribs = (m.contribs || []).map((cid) => allContributions(state).find((k) => k.id === cid)).filter(Boolean);
+  return (
+    <div className="up" style={{ display: "flex", gap: 9, marginTop: 14, alignItems: "flex-start" }}>
+      <AgentAvatar size={28} />
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div dir="auto" style={{ background: T.paper, border: `1px solid ${T.lineSoft}`, padding: "10px 13px", borderRadius: 18, borderStartStartRadius: 6, fontSize: 14, lineHeight: 1.8, overflowWrap: "anywhere" }}>{m.text}</div>
+        {!m.handoff && (m.cards || []).map((c) => <AgentCard key={c.id} id={c.id} why={c.why} onAsk={onAsk} onDirect={onDirect} onHandoff={onHandoff} withDeal={c.id !== offerObj} />)}
+        {offerObj && <DealPanel o={getObj(offerObj)} />}
+        {m.handoff && <AgentHandoff id={m.handoff} onOpen={onHandoff} />}
+        {m.outing && (
+          <div style={{ marginTop: 8, background: T.paper, border: `1px solid ${T.line}`, borderRadius: R.box, padding: "6px 12px 12px" }}>
+            {m.outing.ids.map((oid, i) => { const o = getObj(oid); return o ? (
+              <button key={oid} className="press" onClick={() => go({ s: "object", id: oid })} style={{ display: "flex", gap: 10, width: "100%", textAlign: "start", padding: "9px 0", borderBottom: `1px solid ${T.lineSoft}`, alignItems: "center" }}>
+                <span style={{ width: 22, height: 22, flex: "0 0 22px", borderRadius: 99, background: T.sand, color: T.green, fontSize: 11.5, fontWeight: 800, display: "grid", placeItems: "center" }}>{ar(i + 1)}</span>
+                <div style={{ width: 46, flex: "0 0 46px" }}><Photo kind={o.scene} seed={o.id} photo={o.photo} ratio="1 / 1" radius={10} scrim="none" /></div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div className="clamp1" style={{ fontSize: 13.5, fontWeight: 800 }}>{o.name}</div>
+                  <MetaLine o={o} lines={1} />
+                  <DealLine o={o} compact />
+                </div>
+              </button>) : null; })}
+            <div className="row" style={{ justifyContent: "space-between", gap: 8, marginTop: 10, flexWrap: "wrap" }}>
+              <span style={{ fontSize: 12, color: T.muted, fontWeight: 700 }}>{tx(`نحو ${minutesAr(m.outing.minutes)}`, `About ${minutesAr(m.outing.minutes)}`)}</span>
+              <button className="press" onClick={() => { m.outing.ids.forEach((oid) => { const pi = state.plan.find((p) => p.obj === oid); if (!pi || ["saved", "interested", "cancelled"].includes(pi.state)) dispatch({ type: "plan", obj: oid }); }); toast(tx("أُضيفت إلى خطتي — لم يُحجز شيء بعد", "Added to my plan — nothing is booked yet")); }}
+                style={{ minHeight: 36, padding: "7px 14px", borderRadius: R.pill, background: T.deep, color: "#F6EFE0", fontSize: 12.5, fontWeight: 800 }}>
+                {tx("أضف الخطوات لخطتي", "Add the steps to my plan")}
+              </button>
+            </div>
+          </div>
+        )}
+        {m.plan?.length > 0 && (
+          <div style={{ marginTop: 8, background: T.paper, border: `1px solid ${T.line}`, borderRadius: R.box, padding: "2px 12px" }}>
+            {m.plan.map((oid) => { const o = getObj(oid); const pi = state.plan.find((p) => p.obj === oid); if (!o || !pi) return null; const s = PLAN_STATE[pi.state];
+              return (
+                <button key={oid} className="press" onClick={() => go({ s: "object", id: oid })} style={{ display: "flex", gap: 10, width: "100%", textAlign: "start", padding: "9px 0", borderBottom: `1px solid ${T.lineSoft}`, alignItems: "center" }}>
+                  <span style={{ width: 9, height: 9, flex: "0 0 9px", borderRadius: 99, background: s.tone }} />
+                  <span className="clamp1" style={{ flex: 1, minWidth: 0, fontSize: 13.5, fontWeight: 800 }}>{o.name}</span>
+                  <Pill tone={s.tone} bg={`${s.tone}14`}>{s.label}</Pill>
+                </button>); })}
+            <button className="press" onClick={() => go({ s: "plan" })} style={{ minHeight: 38, fontSize: 12.5, fontWeight: 800, color: T.green }}>{tx("افتح خطتي", "Open my plan")}</button>
+          </div>
+        )}
+        {contribs.length > 0 && (
+          <div style={{ marginTop: 8, background: T.paper, border: `1px solid ${T.line}`, borderRadius: R.box, padding: "0 12px" }}>
+            {contribs.map((k) => <CommunitySnippet key={k.id} k={k} compact />)}
+          </div>
+        )}
+        {m.communities?.length > 0 && (
+          <div style={{ marginTop: 8, background: T.paper, border: `1px solid ${T.line}`, borderRadius: R.box, padding: "0 12px" }}>
+            {m.communities.map((cid) => COM[cid] ? <CommunityRow key={cid} c={COM[cid]} /> : null)}
+          </div>
+        )}
+        {m.compose && (
+          <button className="press" onClick={() => onCompose(m.compose.obj)} style={{ marginTop: 8, minHeight: 38, padding: "8px 14px", borderRadius: R.pill, background: T.deep, color: "#F6EFE0", fontSize: 12.5, fontWeight: 800 }}>
+            {tx("اكتب مساهمتك", "Write your post")}
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function ScreenAssistant({ params }) {
+  const { state, ctx, dispatch, go } = useApp();
+  const [msgs, setMsgs] = useState(() => AGENT_SESSION.messages);
+  const [text, setText] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [handoffId, setHandoffId] = useState(null);
+  const [compose, setCompose] = useState(null);
+  const endRef = useRef(null);
+  const inputRef = useRef(null);
+  const rootRef = useRef(null);
+  const [fillH, setFillH] = useState(null);
+  /* the composer stays at the foot of the phone screen, even before any message */
+  useEffect(() => {
+    const sc = rootRef.current?.closest("[data-screen]");
+    if (!sc) return;
+    const fit = () => setFillH(sc.clientHeight);
+    fit();
+    const ro = typeof ResizeObserver !== "undefined" ? new ResizeObserver(fit) : null;
+    ro?.observe(sc);
+    return () => ro?.disconnect();
+  }, []);
+  const live = useRef({ state, ctx });
+  live.current = { state, ctx };
+  const lang = isEn() ? "en" : "ar";
+  const push = (m) => { AGENT_SESSION.messages = [...AGENT_SESSION.messages, m].slice(-60); setMsgs(AGENT_SESSION.messages); };
+
+  const send = (raw, focusObj) => {
+    const q = String(raw || "").trim();
+    if (!q || busy) return;
+    if (focusObj) { AGENT_SESSION.mem.lastObject = focusObj; AGENT_SESSION.mem.ranked = [focusObj]; }
+    push({ role: "user", text: q });
+    setText(""); setBusy(true);
+    setTimeout(() => {
+      let reply;
+      try { reply = agentTurn(q, { state: live.current.state, ctx: live.current.ctx, dispatch }); }
+      catch (e) { reply = { role: "agent", text: tx("صار خطأ بسيط عندي. جرّب تكتب طلبك بشكل آخر.", "Something went wrong on my side. Try phrasing it another way."), cards: [], clarify: true }; }
+      reply.sugg = agentSuggestions(reply, live.current.ctx, lang);
+      push(reply); setBusy(false);
+      if (reply.navigate) setTimeout(() => go({ s: "object", id: reply.navigate }), 650);
+    }, 420);
+  };
+  const direct = (h, oid, label) => {
+    push({ role: "user", text: label });
+    const reply = agentDirect(h, oid, { state: live.current.state, dispatch });
+    reply.sugg = [];
+    push(reply);
+    if (reply.navigate && h === "action_open_object_detail") setTimeout(() => go({ s: "object", id: reply.navigate }), 650);
+  };
+
+  const sentQ = useRef(false);
+  useEffect(() => { if (params?.q && !sentQ.current) { sentQ.current = true; send(params.q); } }, []);
+  useEffect(() => { endRef.current?.scrollIntoView({ block: "end", behavior: msgs.length > 1 ? "smooth" : "auto" }); }, [msgs.length, busy]);
+
+  const last = [...msgs].reverse().find((m) => m.role === "agent");
+  const sugg = busy ? [] : last ? (last.sugg || []) : agentSuggestions(null, ctx, lang);
+  const hasText = !!text.trim();
+
+  return (
+    <div ref={rootRef} className="screen" style={{ minHeight: fillH || "100dvh", display: "flex", flexDirection: "column" }}>
+      <div style={{ position: "sticky", top: 0, zIndex: 20, background: "rgba(244,239,229,.975)", backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)", padding: "10px 16px 10px", paddingTop: "calc(10px + var(--safe-top))", borderBottom: `1px solid ${T.lineSoft}` }}>
+        <div className="row" style={{ gap: 9 }}>
+          <button className="press tap" onClick={() => go({ back: true })} aria-label="رجوع" style={{ color: T.ink, width: 40, height: 40, flex: "0 0 40px", marginInlineStart: -8, display: "grid", placeItems: "center" }}><ChevronRight size={22} /></button>
+          <AgentAvatar size={34} />
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: 15, fontWeight: 800 }}>{tx("مساعد EyeMakkah", "EyeMakkah Assistant")}</div>
+            <div className="clamp1" style={{ fontSize: 11.5, color: T.muted, fontWeight: 600 }}>{tx("يعمل على محتوى التطبيق وعروضه وخطتك", "Works from the app's content, offers and your plan")}</div>
+          </div>
+        </div>
+      </div>
+
+      <div style={{ flex: 1, padding: "4px 16px 16px" }}>
+        {!msgs.length && (
+          <div className="up" style={{ paddingTop: 22, textAlign: "center" }}>
+            <div style={{ display: "grid", placeItems: "center" }}><AgentAvatar size={52} /></div>
+            <div style={{ fontSize: 19, fontWeight: 800, marginTop: 12 }}>{tx("وش ودّك تسوي في مكة؟", "What would you like to do in Makkah?")}</div>
+            <div style={{ fontSize: 13, color: T.muted, lineHeight: 1.85, marginTop: 6, maxWidth: 320, marginInline: "auto" }}>
+              {tx(`اكتب طلبك بطريقتك — مكان، عرض، طلعة على وقتك، أو ماذا يقول الناس. أبدأ من ${NB[ctx.nb]?.name || "مكة"} ومن اهتماماتك.`, `Ask in your own words — a place, an offer, an outing for your time, or what people say. I start from ${NB[ctx.nb]?.name || "Makkah"} and your interests.`)}
+            </div>
+          </div>
+        )}
+        {msgs.map((m, i) => <AgentMessage key={i} m={m} onAsk={send} onDirect={direct} onHandoff={setHandoffId} onCompose={(oid) => setCompose({ obj: oid })} />)}
+        {busy && (
+          <div className="row" style={{ gap: 9, marginTop: 14 }} aria-live="polite">
+            <AgentAvatar size={28} />
+            <div className="row" style={{ gap: 4, background: T.paper, border: `1px solid ${T.lineSoft}`, padding: "12px 14px", borderRadius: 18, borderStartStartRadius: 6 }}>
+              {[0, 1, 2].map((d) => <span key={d} style={{ width: 6, height: 6, borderRadius: 99, background: T.muted, animation: `emIn .6s ${d * 0.15}s ease-in-out infinite alternate` }} />)}
+            </div>
+          </div>
+        )}
+        <div ref={endRef} />
+      </div>
+
+      <div style={{ position: "sticky", bottom: 0, zIndex: 20, background: "linear-gradient(180deg, rgba(244,239,229,0) 0%, #F4EFE5 22%)", padding: "12px 16px", paddingBottom: "calc(12px + var(--safe-bottom))" }}>
+        {sugg.length > 0 && (
+          <div style={{ display: "flex", gap: 7, flexWrap: "wrap", marginBottom: 8 }}>
+            {sugg.map((s) => (
+              <button key={s} className="press" onClick={() => send(s)} dir="auto"
+                style={{ minHeight: 34, padding: "6px 12px", borderRadius: R.pill, background: T.paper, border: `1px solid ${T.line}`, fontSize: 12.5, fontWeight: 700, color: T.green, maxWidth: "100%", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{s}</button>
+            ))}
+          </div>
+        )}
+        <form onSubmit={(e) => { e.preventDefault(); send(text); }} className="row" style={{ gap: 8, background: T.paper, border: `1px solid ${T.line}`, borderRadius: 24, padding: "4px 5px 4px 14px", paddingInlineStart: 14, paddingInlineEnd: 5, boxShadow: "0 10px 24px -18px rgba(38,28,16,.55)" }}>
+          <input ref={inputRef} value={text} onChange={(e) => setText(e.target.value)} dir="auto" enterKeyHint="send"
+            placeholder={tx("اسأل EyeMakkah...", "Ask EyeMakkah...")} aria-label={tx("اسأل EyeMakkah", "Ask EyeMakkah")}
+            style={{ flex: 1, minWidth: 0, border: "none", outline: "none", background: "transparent", fontSize: 15, fontWeight: 600, padding: "10px 0" }} />
+          <button type="submit" className="press" disabled={!hasText || busy} aria-label={tx("إرسال", "Send")}
+            style={{ width: 40, height: 40, flex: "0 0 40px", borderRadius: 99, display: "grid", placeItems: "center", background: hasText ? T.deep : T.sand, color: hasText ? "#F6EFE0" : T.muted, transition: "background .2s" }}>
+            <Send size={17} style={{ transform: isEn() ? "none" : "scaleX(-1)" }} />
+          </button>
+        </form>
+        <div style={{ fontSize: 10.5, color: T.muted, textAlign: "center", marginTop: 6, lineHeight: 1.5 }}>
+          {tx("مساعد داخل التطبيق يطابق طلبك مع محتوى EyeMakkah — العروض توضيحية في هذا النموذج.", "An in-app assistant matching your request to EyeMakkah content — offers are illustrative in this prototype.")}
+        </div>
+      </div>
+      {handoffId && <HandoffSheet o={getObj(handoffId)} open={!!handoffId} onClose={() => setHandoffId(null)} />}
+      <AskSheet open={!!compose} onClose={() => setCompose(null)} presetObject={compose?.obj ? getObj(compose.obj) : undefined} />
+    </div>
   );
 }
 
@@ -5640,29 +6908,8 @@ function HomeModule({ m, index }) {
         );
       case "community":
         return <div style={{ padding: "0 16px" }}>{m.items.map((k) => <CommunitySnippet key={k.id} k={k} compact />)}</div>;
-      case "offers":
-        return (
-          <div style={{ padding: "0 16px" }}>
-            {m.items.map((x) => {
-              const o = x.o, life = lifecycleOf(o), linked = o.linked ? getObj(o.linked) : null;
-              return (
-                <button key={o.id} className="lift" onClick={() => go({ s: "object", id: o.id })}
-                  style={{ display: "flex", width: "100%", gap: 12, textAlign: "start", padding: "12px 0", borderBottom: `1px solid ${T.lineSoft}` }}>
-                  <div style={{ width: 72, flex: "0 0 72px" }}><Photo kind={o.scene} seed={o.id} photo={o.photo} ratio="1 / 1" radius={R.box} scrim="none" /></div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div className="row" style={{ gap: 6, marginBottom: 4 }}>
-                      <Pill tone={life === "ending" ? T.warn : T.brass} bg={life === "ending" ? `${T.warn}16` : `${T.brass}16`} icon={Tag}>
-                        {life === "ending" ? "ينتهي الليلة" : "عرض ساري"}
-                      </Pill>
-                    </div>
-                    <div className="clamp1" style={{ fontSize: 15, fontWeight: 800 }}>{o.name}</div>
-                    <div className="clamp1" style={{ fontSize: 12.5, color: T.muted, marginTop: 3 }}>{linked ? linked.name : o.tagline}</div>
-                  </div>
-                </button>
-              );
-            })}
-          </div>
-        );
+      case "deals":
+        return <div className="rail scroll">{m.items.map((x) => <DealTile key={x.o.id} of={x.of} />)}</div>;
       case "outings":
         return <OutingsRow items={m.items} />;
       case "hoods":
@@ -5686,8 +6933,8 @@ function HomeModule({ m, index }) {
   return (
     <div className="up" style={{ marginBottom: 26, animationDelay: `${Math.min(index * 45, 260)}ms` }}>
       {m.title && <SectionTitle title={m.title} sub={m.sub}
-        action={m.id === "community" ? "المجتمع" : m.id === "hoods" ? "اكتشف" : undefined}
-        onAction={() => go({ s: m.id === "community" ? "community" : "discover" })} />}
+        action={m.id === "community" ? "المجتمع" : m.id === "hoods" ? "اكتشف" : m.id === "deals" ? "كل العروض" : undefined}
+        onAction={() => go(m.id === "community" ? { s: "community" } : m.id === "deals" ? { s: "discover", intent: "deals" } : { s: "discover" })} />}
       {body()}
     </div>
   );
@@ -5732,6 +6979,7 @@ function PlanTeaser({ item, o }) {
 
 const INTENTS = [
   { id: "tonight", label: "الليلة", test: (o) => ["soon", "live"].includes(lifecycleOf(o)) || isOpenNow(o) === true || o.suit.includes("evening") },
+  { id: "deals", label: "عليه عرض", test: (o) => o.type !== "offer" && !!offerFor(o) },
   { id: "week", label: "هذا الأسبوع", test: (o) => { const n = nextOccurrence(o); return n && n - t0 < 7 * DAY; } },
   { id: "free", label: "بدون رسوم", test: (o) => o.price === 0 || o.price == null },
   { id: "nobooking", label: "بدون حجز", test: (o) => ["go", "join"].includes(o.action) },
@@ -5782,6 +7030,7 @@ function ScreenDiscover({ params }) {
     const base = INVENTORY.filter((o) => o.type !== "offer");
     return [
       mk("الليلة في مكة", "ما يمكن اللحاق به خلال ساعات", rank(base.filter(INTENTS[0].test), ctx, { limit: 10 }), "hero", 4),
+      (() => { const d = rankedDeals(ctx, 10); return d.length ? { title: "عروض وخصومات", sub: "مطاعم ومقاهٍ وإقامة وتجارب — عروض سارية فقط", items: d, kind: "deals" } : null; })(),
       mk("مطاعم وأكل", "من مطابخ الأحياء إلى الأكل المكي القديم", rank(base.filter((o) => ["food", "cafe"].includes(o.category)), ctx, { limit: 12, maxPerCategory: 8, maxPerNeighborhood: 2 })),
       mk("تجارب تستحق", "ورش، مسارات، وضيافة محلية", rank(base.filter((o) => o.type === "experience"), ctx, { limit: 12, maxPerCategory: 6 })),
       mk("فعاليات وأنشطة", "ما هو مجدول فعلًا هذه الأيام", rank(base.filter((o) => ["event", "activity"].includes(o.type) && isPromotable(o)), ctx, { limit: 12, maxPerCategory: 6 }), "rows", 4),
@@ -5881,12 +7130,14 @@ function ScreenDiscover({ params }) {
         <div style={{ paddingTop: 14 }}>
           {editorial.map((sec, i) => (
             <div key={sec.title} className="up" style={{ marginBottom: 26, animationDelay: `${Math.min(i * 40, 200)}ms` }}>
-              <SectionTitle title={sec.title} sub={sec.sub} />
+              <SectionTitle title={sec.title} sub={sec.sub} action={sec.kind === "deals" ? "كل العروض" : undefined} onAction={() => { setIntent("deals"); setPage(1); }} />
               {sec.kind === "hero" ? (
                 <div style={{ padding: "0 16px" }}>
                   <HeroCard x={sec.items[0]} />
                   <div style={{ marginTop: 6 }}>{sec.items.slice(1).map((x) => <RowCard key={x.o.id} x={x} />)}</div>
                 </div>
+              ) : sec.kind === "deals" ? (
+                <div className="rail scroll">{sec.items.map((x) => <DealTile key={x.o.id} of={x.of} />)}</div>
               ) : sec.kind === "rows" ? (
                 <div style={{ padding: "0 16px" }}>{sec.items.map((x) => <RowCard key={x.o.id} x={x} />)}</div>
               ) : (
@@ -6059,6 +7310,16 @@ function ScreenSearch() {
         </div>
       )}
 
+      {!typing && q.trim().length > 2 && (
+        <div style={{ padding: "14px 16px 0" }}>
+          <button className="press row" onClick={() => go({ s: "assistant", q: q.trim() })}
+            style={{ width: "100%", gap: 10, padding: "10px 12px", borderRadius: R.ctl, background: T.paper, border: `1px solid ${T.line}`, textAlign: "start", minHeight: 46 }}>
+            <AgentAvatar size={26} />
+            <span className="clamp1" style={{ flex: 1, minWidth: 0, fontSize: 13, fontWeight: 700 }}>{tx(`اسأل المساعد: «${q.trim()}»`, `Ask the assistant: “${q.trim()}”`)}</span>
+            <ChevronLeft size={16} color={T.muted} />
+          </button>
+        </div>
+      )}
       {!typing && res.communities.length > 0 && (
         <div style={{ padding: "18px 16px 0" }}>
           <SectionTitle title="مجتمعات" sub="نقاش دائم ومعرفة محلية" />
@@ -6163,6 +7424,7 @@ function ScreenObject({ id }) {
       <div style={{ padding: "14px 16px 0", paddingTop: "calc(14px + var(--safe-top))" }}>
         {o.tagline && <div style={{ fontSize: 15.5, fontWeight: 700, lineHeight: 1.65, marginBottom: 8 }}>{o.tagline}</div>}
         <div style={{ fontSize: 14.5, lineHeight: 1.95, color: T.ink }}>{o.about}</div>
+        <DealPanel o={o} />
 
         {/* trust headline — visible but not dominant */}
         {(trust.state === "conflicting" || trust.state === "possibly_stale" || trust.state === "expired") && (
@@ -7343,17 +8605,7 @@ function ScreenPlan() {
   const [completing, setCompleting] = useState(null);
   const items = state.plan.filter((p) => p.state !== "cancelled");
 
-  const bucketOf = (p) => {
-    const o = getObj(p.obj);
-    if (p.state === "active") return "now";
-    if (p.state === "completed") return "completed";
-    if (p.state === "saved") return "saved";
-    if (p.state === "interested") return "interested";
-    if (p.state === "confirmed") return "confirmed";
-    const n = o ? nextOccurrence(o) : null;
-    if (n && mkDayStart(n) === mkDayStart(NOW)) return "today";
-    return "upcoming";
-  };
+  const bucketOf = planBucket;              // same buckets the Assistant reports
   const grouped = {};
   items.forEach((p) => { const b = bucketOf(p); (grouped[b] = grouped[b] || []).push(p); });
   Object.values(grouped).forEach((list) => list.sort((a, b) => {
@@ -7494,6 +8746,7 @@ function PlanRow({ p, onComplete }) {
               p.state === "completed" ? null : o.duration ? minutesAr(o.duration) : null,
             ])}
           </div>
+          {!["completed", "cancelled"].includes(p.state) && <DealLine o={o} compact />}
         </button>
         <div className="row" style={{ gap: 8, marginTop: 9, flexWrap: "wrap" }}>
           {actions.slice(0, open ? actions.length : 2).map((a) => (
@@ -8401,8 +9654,8 @@ export default function EyeMakkahApp() {
   const askDismiss = useCallback((o) => setDismissTarget(o), []);
   const api = { state, dispatch, ctx, go, setTab, toast, askDismiss };
   const planCount = state.plan.filter((p) => ["planned", "going", "registered", "confirmed", "active", "awaiting"].includes(p.state)).length;
-  const tab = TAB_OF[view.s] || (["object", "search", "profile", "notifications", "provider"].includes(view.s) ? TAB_OF[stack[0]?.s] || "home" : "home");
-  const hideNav = ["search", "thread", "object"].includes(view.s);
+  const tab = TAB_OF[view.s] || (["object", "search", "assistant", "profile", "notifications", "provider"].includes(view.s) ? TAB_OF[stack[0]?.s] || "home" : "home");
+  const hideNav = ["search", "thread", "object", "assistant"].includes(view.s);
   const ts = state.profile.textScale || 1;
   const device = useDeviceViewport();
   const lang = state.profile.lang || "ar";
@@ -8428,6 +9681,7 @@ export default function EyeMakkahApp() {
       case "plan": return <ScreenPlan />;
       case "object": return <ScreenObject id={view.id} />;
       case "search": return <ScreenSearch />;
+      case "assistant": return <ScreenAssistant params={view} />;
       case "profile": return <ScreenProfile />;
       case "notifications": return <ScreenNotifications />;
       case "provider": return <ScreenProvider />;

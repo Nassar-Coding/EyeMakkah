@@ -1,0 +1,3446 @@
+{
+  "file": "eyemakkah_app_agent_bank_02_discovery.json",
+  "version": "1.0.0",
+  "phase": 1,
+  "part": "02_discovery",
+  "source_alignment": {
+    "app_branch": "claude/upbeat-bell-hkmvzy",
+    "scope_reviewed": [
+      "Home contextual discovery",
+      "Discover intents and categories",
+      "Search object model",
+      "Inventory: places, restaurants, cafés, experiences, events, activities, recurring groups, markets and services",
+      "Resident/visitor context",
+      "Family/solo/kids/women/beginner/accessibility suitability",
+      "Time-available logic and composed outings",
+      "Trust/freshness/source context"
+    ],
+    "note": "Intent semantics and handlers are aligned to the current EyeMakkah consumer prototype information model. This file defines the intent bank only; it does not modify or integrate the app."
+  },
+  "product": {
+    "name_ar": "تطبيق EyeMakkah",
+    "name_en": "EyeMakkah App",
+    "assistant_name_ar": "مساعد EyeMakkah",
+    "assistant_name_en": "EyeMakkah Assistant"
+  },
+  "purpose": "Bilingual discovery and recommendation intent bank for the EyeMakkah consumer assistant. Covers what-to-do, food/cafés, families, visitors/residents, places/activities, accessibility/practical questions, and time/area discovery. Answers are resolved dynamically from current app inventory and user context.",
+  "integration_contract": {
+    "languages": [
+      "ar",
+      "en"
+    ],
+    "requires_active_context": [
+      "mode",
+      "neighborhood",
+      "party",
+      "time_available",
+      "interests",
+      "plan_state",
+      "current_time",
+      "language"
+    ],
+    "dynamic_only": true,
+    "ranking_rule": "Use the current app's inventory, promotability/lifecycle state, suitability, time fit, selected area, explicit preferences, Plan/completion state, novelty, community context and existing ranking helpers. Do not invent objects outside the current inventory.",
+    "time_rule": "Respect current Makkah time and item duration/open-hours data where represented. Do not imply live availability beyond the prototype data.",
+    "distance_rule": "Use selected neighborhood or granted location context when available. The assistant must still work without precise location.",
+    "suitability_rule": "Only claim family/kids/solo/women/beginner/accessibility suitability when the object explicitly declares it or has a direct practical fact supporting it.",
+    "trust_rule": "If practical information is stale/conflicting, carry the trust/freshness warning into the answer rather than presenting certainty.",
+    "result_rule": "Prefer 1–3 actionable EyeMakkah objects or a composed outing instead of generic paragraphs.",
+    "truthfulness": [
+      "Do not claim live crowding, inventory, seats, parking, or booking availability unless a real source exists.",
+      "Do not present a generic/context image as proof of an exact place.",
+      "Do not infer sensitive traits from behavior.",
+      "Do not collapse Save, Add to Plan, Join, Booking, Confirmed, Active, or Completed.",
+      "Do not mark external booking confirmed after handoff alone.",
+      "Do not recommend expired offers, ended events, or dormant/paused recurring groups as active options."
+    ]
+  },
+  "supported_entities": {
+    "neighborhoods_ar": [
+      "العوالي",
+      "العزيزية",
+      "الششة",
+      "الشوقية",
+      "النسيم",
+      "بطحاء قريش",
+      "المسفلة",
+      "أجياد",
+      "الهجرة",
+      "الزاهر",
+      "الكعكية",
+      "جرول",
+      "الرصيفة",
+      "التنعيم",
+      "محيط الحرم"
+    ],
+    "categories_ar": [
+      "مطاعم وأكل",
+      "مقاهٍ",
+      "ثقافة وتاريخ",
+      "تراث ومسارات",
+      "طبيعة وجبال",
+      "أسواق وتسوق",
+      "عائلات وأطفال",
+      "تعلّم وورش",
+      "حرف ومهارات",
+      "تطوع ومبادرات",
+      "رياضة ومشي",
+      "فعاليات",
+      "خدمات",
+      "إقامة"
+    ],
+    "suitability_ar": [
+      "مناسب للعائلات",
+      "مناسب للأطفال",
+      "مناسب للحضور منفردًا",
+      "مناسب للمبتدئين",
+      "مجموعة صغيرة",
+      "مخصص للنساء",
+      "مناسب للطلاب",
+      "مسار مناسب للكراسي المتحركة",
+      "بدون درج",
+      "هادئ",
+      "مناسب للمساء",
+      "في الهواء الطلق",
+      "مكان مغلق",
+      "يناسب وقتًا قصيرًا"
+    ],
+    "object_types": [
+      "place",
+      "restaurant",
+      "cafe",
+      "experience",
+      "event",
+      "activity",
+      "recurring_activity",
+      "market",
+      "service",
+      "stay"
+    ]
+  },
+  "bank_plan": {
+    "part_01_intents": 50,
+    "part_02_intents": 45,
+    "cumulative_intents_after_part_02": 95,
+    "planned_part_03": "Offers/discounts, booking/actions, Plan operations, community participation and multi-step outing actions.",
+    "planned_part_04": "Conversation follow-ups, aliases, entity routing, contextual suggestions and short-session memory.",
+    "target_total_intents_across_all_parts": 150
+  },
+  "stats": {
+    "intent_count": 45,
+    "utterances_ar": 301,
+    "utterances_en": 291,
+    "utterances_total": 592,
+    "by_category": {
+      "discovery": 8,
+      "food_cafe": 8,
+      "family_party": 6,
+      "visitor_resident": 5,
+      "places_activities": 8,
+      "access_practical": 5,
+      "time_area": 5
+    },
+    "by_answer_type": {
+      "dynamic": 45
+    }
+  },
+  "intents": [
+    {
+      "id": "discover_what_to_do_now",
+      "category": "discovery",
+      "purpose": "Recommend suitable things to do now using current time, promotability, user context and Plan state.",
+      "examples": {
+        "ar": [
+          "وش أسوي الحين",
+          "وش أسوي الآن",
+          "وش فيه الحين",
+          "وين أروح الآن",
+          "اقترح لي شي الحين",
+          "أنا فاضي الحين وش أسوي",
+          "وش متاح لي الآن",
+          "عطني شي أسويه الحين"
+        ],
+        "en": [
+          "what should I do now",
+          "what can I do right now",
+          "what's on now",
+          "where should I go now",
+          "suggest something now",
+          "I'm free right now",
+          "what is available now"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "الحين",
+          "الآن",
+          "وش أسوي",
+          "وين أروح",
+          "متاح"
+        ],
+        "keywords_en": [
+          "now",
+          "right now",
+          "what should I do",
+          "where should I go",
+          "available"
+        ],
+        "entities": [
+          "time",
+          "neighborhood",
+          "party",
+          "interest"
+        ]
+      },
+      "answer": {
+        "type": "dynamic",
+        "handler": "recommend_now",
+        "responses": {
+          "ar": [
+            "بناءً على وقتك الحالي وسياقك، هذه أفضل الخيارات المتاحة الآن: {{recommendations}}.",
+            "أقرب اقتراحات مناسبة الآن: {{recommendations}}."
+          ],
+          "en": [
+            "Based on your current time and context, the best options right now are: {{recommendations}}.",
+            "The strongest options available now are: {{recommendations}}."
+          ]
+        },
+        "result_shape": "ranked_list"
+      },
+      "context": {
+        "applicable_pages": [
+          "الرئيسية",
+          "اكتشف",
+          "*"
+        ],
+        "followup_keys": [
+          "followup_closer",
+          "followup_quieter",
+          "followup_with_offer",
+          "followup_second_result"
+        ]
+      },
+      "priority": 100
+    },
+    {
+      "id": "discover_what_to_do_tonight",
+      "category": "discovery",
+      "purpose": "Recommend evening/tonight options that fit time, area and suitability.",
+      "examples": {
+        "ar": [
+          "وش أسوي الليلة",
+          "وش فيه الليلة",
+          "وين أروح الليلة",
+          "اقترح لي شي للمساء",
+          "وش فيه هذا المساء",
+          "أبغى طلعة الليلة",
+          "وش تسوي الليلة بمكة",
+          "عطني خيارات للمساء"
+        ],
+        "en": [
+          "what should I do tonight",
+          "what's on tonight",
+          "where should I go tonight",
+          "suggest something for this evening",
+          "what is there this evening",
+          "I want something to do tonight"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "الليلة",
+          "المساء",
+          "هذا المساء",
+          "طلعة"
+        ],
+        "keywords_en": [
+          "tonight",
+          "evening",
+          "this evening"
+        ],
+        "entities": [
+          "time",
+          "neighborhood",
+          "party",
+          "interest"
+        ]
+      },
+      "answer": {
+        "type": "dynamic",
+        "handler": "recommend_tonight",
+        "responses": {
+          "ar": [
+            "لليلة، أقوى الخيارات المناسبة لسياقك هي: {{recommendations}}.",
+            "هذا المساء، هذه الخيارات تبدو الأنسب لك: {{recommendations}}."
+          ],
+          "en": [
+            "For tonight, the strongest matches for your context are: {{recommendations}}.",
+            "This evening, these options look most suitable: {{recommendations}}."
+          ]
+        },
+        "result_shape": "ranked_list"
+      },
+      "context": {
+        "applicable_pages": [
+          "الرئيسية",
+          "اكتشف",
+          "*"
+        ],
+        "followup_keys": [
+          "followup_quieter",
+          "followup_closer",
+          "followup_with_offer",
+          "followup_make_it_family"
+        ]
+      },
+      "priority": 100
+    },
+    {
+      "id": "discover_weekend",
+      "category": "discovery",
+      "purpose": "Recommend relevant weekend events, activities, recurring groups and experiences.",
+      "examples": {
+        "ar": [
+          "وش فيه الويكند",
+          "وش فيه نهاية الأسبوع",
+          "اقترح لي شي للويكند",
+          "وين نروح الجمعة",
+          "وش أسوي نهاية الأسبوع",
+          "عطني فعاليات الويكند",
+          "وش عندكم للجمعة والسبت"
+        ],
+        "en": [
+          "what is there this weekend",
+          "what should I do this weekend",
+          "suggest something for the weekend",
+          "where should we go Friday",
+          "weekend activities",
+          "what's on Friday and Saturday"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "الويكند",
+          "نهاية الأسبوع",
+          "الجمعة",
+          "السبت",
+          "فعاليات"
+        ],
+        "keywords_en": [
+          "weekend",
+          "Friday",
+          "Saturday",
+          "activities"
+        ],
+        "entities": [
+          "date",
+          "time",
+          "party",
+          "neighborhood"
+        ]
+      },
+      "answer": {
+        "type": "dynamic",
+        "handler": "recommend_weekend",
+        "responses": {
+          "ar": [
+            "لنهاية الأسبوع، هذه الخيارات الحالية الأنسب: {{recommendations}}.",
+            "أبرز ما يناسبك في الويكند: {{recommendations}}."
+          ],
+          "en": [
+            "For the weekend, these are the strongest current matches: {{recommendations}}.",
+            "The best weekend options for your context are: {{recommendations}}."
+          ]
+        },
+        "result_shape": "ranked_list"
+      },
+      "context": {
+        "applicable_pages": [
+          "الرئيسية",
+          "اكتشف",
+          "*"
+        ],
+        "followup_keys": [
+          "followup_family_only",
+          "followup_free_only",
+          "followup_with_offer",
+          "followup_second_result"
+        ]
+      },
+      "priority": 96
+    },
+    {
+      "id": "discover_something_new",
+      "category": "discovery",
+      "purpose": "Recommend novel items, reducing obvious/repeated or already-completed content.",
+      "examples": {
+        "ar": [
+          "أبغى شي جديد",
+          "اقترح لي شي مختلف",
+          "شي ما جربته",
+          "طفشت من نفس الأماكن",
+          "أبغى تجربة جديدة",
+          "وش فيه غير المعتاد",
+          "شي مو معروف مرة",
+          "أبغى أغير"
+        ],
+        "en": [
+          "I want something new",
+          "suggest something different",
+          "something I haven't tried",
+          "I'm tired of the same places",
+          "I want a new experience",
+          "something less obvious",
+          "show me something different"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "جديد",
+          "مختلف",
+          "ما جربته",
+          "غير المعتاد",
+          "أغير"
+        ],
+        "keywords_en": [
+          "new",
+          "different",
+          "haven't tried",
+          "less obvious"
+        ],
+        "entities": [
+          "interest",
+          "completed",
+          "seen",
+          "neighborhood"
+        ]
+      },
+      "answer": {
+        "type": "dynamic",
+        "handler": "recommend_novel",
+        "responses": {
+          "ar": [
+            "هذه خيارات أقل تكرارًا وجديدة عليك نسبيًا: {{recommendations}}.",
+            "إذا تبغى تكسر الروتين، جرّب: {{recommendations}}."
+          ],
+          "en": [
+            "These options are less repetitive and relatively new for you: {{recommendations}}.",
+            "If you want something different, try: {{recommendations}}."
+          ]
+        },
+        "result_shape": "ranked_list"
+      },
+      "context": {
+        "applicable_pages": [
+          "الرئيسية",
+          "اكتشف",
+          "*"
+        ],
+        "followup_keys": [
+          "followup_more_local",
+          "followup_closer",
+          "followup_second_result"
+        ]
+      },
+      "priority": 97
+    },
+    {
+      "id": "discover_nearby",
+      "category": "discovery",
+      "purpose": "Recommend items near selected area or shared location without requiring precise location.",
+      "examples": {
+        "ar": [
+          "وش فيه قريب",
+          "وش قريب مني",
+          "أبغى شي قريب",
+          "وين أقرب مكان",
+          "وش فيه حولي",
+          "عطني أماكن قريبة",
+          "وش أقرب نشاط",
+          "أبغى شي في نفس الحي"
+        ],
+        "en": [
+          "what is nearby",
+          "what's close to me",
+          "I want something close",
+          "what is the nearest place",
+          "what is around me",
+          "show nearby places",
+          "what is the closest activity",
+          "something in the same neighborhood"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "قريب",
+          "قريب مني",
+          "أقرب",
+          "حولي",
+          "نفس الحي"
+        ],
+        "keywords_en": [
+          "nearby",
+          "close to me",
+          "nearest",
+          "around me",
+          "same neighborhood"
+        ],
+        "entities": [
+          "neighborhood",
+          "location"
+        ]
+      },
+      "answer": {
+        "type": "dynamic",
+        "handler": "recommend_nearby",
+        "responses": {
+          "ar": [
+            "بناءً على منطقتك الحالية، هذه أقرب الخيارات المناسبة: {{recommendations}}.",
+            "الأقرب لسياقك الحالي: {{recommendations}}."
+          ],
+          "en": [
+            "Based on your current area, these are the nearest suitable options: {{recommendations}}.",
+            "The closest matches for your current context are: {{recommendations}}."
+          ]
+        },
+        "result_shape": "ranked_list"
+      },
+      "context": {
+        "applicable_pages": [
+          "الرئيسية",
+          "اكتشف",
+          "*"
+        ],
+        "followup_keys": [
+          "followup_with_offer",
+          "followup_quieter",
+          "followup_second_result"
+        ]
+      },
+      "priority": 100
+    },
+    {
+      "id": "discover_free",
+      "category": "discovery",
+      "purpose": "Recommend free/no-fee content using price==0/null semantics carefully.",
+      "examples": {
+        "ar": [
+          "وش فيه مجاني",
+          "أبغى شي بدون رسوم",
+          "فيه شي ببلاش",
+          "عطني نشاط مجاني",
+          "وش التجارب المجانية",
+          "وين أروح بدون ما أدفع",
+          "شي مجاني الليلة"
+        ],
+        "en": [
+          "what is free",
+          "I want something with no fee",
+          "any free activities",
+          "show me free things",
+          "what experiences are free",
+          "where can I go without paying",
+          "free tonight"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "مجاني",
+          "بدون رسوم",
+          "ببلاش",
+          "ما أدفع"
+        ],
+        "keywords_en": [
+          "free",
+          "no fee",
+          "without paying"
+        ],
+        "entities": [
+          "price",
+          "time",
+          "party",
+          "neighborhood"
+        ]
+      },
+      "answer": {
+        "type": "dynamic",
+        "handler": "recommend_free",
+        "responses": {
+          "ar": [
+            "هذه أبرز الخيارات التي تظهر بدون رسوم في بيانات EyeMakkah الحالية: {{recommendations}}.",
+            "إذا تبغى خيارات مجانية، هذه الأنسب: {{recommendations}}."
+          ],
+          "en": [
+            "These are the strongest options currently represented as no-fee in EyeMakkah: {{recommendations}}.",
+            "If you want free options, these are the best matches: {{recommendations}}."
+          ]
+        },
+        "result_shape": "ranked_list"
+      },
+      "context": {
+        "applicable_pages": [
+          "اكتشف",
+          "الرئيسية",
+          "*"
+        ],
+        "followup_keys": [
+          "followup_nearby",
+          "followup_family_only",
+          "followup_second_result"
+        ]
+      },
+      "priority": 96
+    },
+    {
+      "id": "discover_no_booking",
+      "category": "discovery",
+      "purpose": "Recommend places/activities that do not require booking/registration in current model.",
+      "examples": {
+        "ar": [
+          "أبغى شي بدون حجز",
+          "وش فيه ما يحتاج حجز",
+          "وين أروح مباشرة",
+          "شي أقدر أروح له بدون تسجيل",
+          "أبغى نشاط بدون حجز",
+          "وش الخيارات السهلة بدون ترتيب"
+        ],
+        "en": [
+          "I want something without booking",
+          "what doesn't need booking",
+          "where can I just go",
+          "something I can do without registration",
+          "an activity with no booking",
+          "easy options with no booking"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "بدون حجز",
+          "ما يحتاج حجز",
+          "أروح مباشرة",
+          "بدون تسجيل"
+        ],
+        "keywords_en": [
+          "without booking",
+          "no booking",
+          "just go",
+          "without registration"
+        ],
+        "entities": [
+          "action_type",
+          "time",
+          "neighborhood"
+        ]
+      },
+      "answer": {
+        "type": "dynamic",
+        "handler": "recommend_no_booking",
+        "responses": {
+          "ar": [
+            "هذه خيارات ما تحتاج حجز/تسجيل في النموذج الحالي: {{recommendations}}.",
+            "إذا تبغى شيء قليل الاحتكاك وبدون حجز، جرّب: {{recommendations}}."
+          ],
+          "en": [
+            "These options do not require booking/registration in the current model: {{recommendations}}.",
+            "If you want low-friction options with no booking, try: {{recommendations}}."
+          ]
+        },
+        "result_shape": "ranked_list"
+      },
+      "context": {
+        "applicable_pages": [
+          "اكتشف",
+          "الرئيسية",
+          "*"
+        ],
+        "followup_keys": [
+          "followup_nearby",
+          "followup_with_offer",
+          "followup_second_result"
+        ]
+      },
+      "priority": 96
+    },
+    {
+      "id": "discover_build_outing",
+      "category": "discovery",
+      "purpose": "Build a multi-stop outing from current context using existing outing composition logic.",
+      "examples": {
+        "ar": [
+          "رتب لي طلعة",
+          "سوي لي خطة للمساء",
+          "رتب لي يومي",
+          "أبغى برنامج بسيط",
+          "رتب لي قهوة وبعدها عشاء",
+          "سوي لي طلعة ساعتين",
+          "ابني لي مشوار",
+          "وش أسوي خطوة خطوة"
+        ],
+        "en": [
+          "build me an outing",
+          "plan my evening",
+          "plan my day",
+          "give me a simple itinerary",
+          "coffee then dinner",
+          "make me a two-hour outing",
+          "build me a route",
+          "what should I do step by step"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "رتب",
+          "خطة",
+          "برنامج",
+          "قهوة وبعدها",
+          "طلعة",
+          "خطوة خطوة"
+        ],
+        "keywords_en": [
+          "build",
+          "plan",
+          "itinerary",
+          "coffee then",
+          "outing",
+          "step by step"
+        ],
+        "entities": [
+          "time_available",
+          "party",
+          "neighborhood",
+          "interest"
+        ]
+      },
+      "answer": {
+        "type": "dynamic",
+        "handler": "build_contextual_outing",
+        "responses": {
+          "ar": [
+            "رتبت لك طلعة مناسبة لسياقك الحالي: {{outing_steps}}. المدة التقريبية {{total_time}}.",
+            "هذا مسار مقترح لك: {{outing_steps}}."
+          ],
+          "en": [
+            "I built an outing for your current context: {{outing_steps}}. Approximate duration: {{total_time}}.",
+            "Here is a suggested route for you: {{outing_steps}}."
+          ]
+        },
+        "result_shape": "composed_plan"
+      },
+      "context": {
+        "applicable_pages": [
+          "الرئيسية",
+          "خطتي",
+          "*"
+        ],
+        "followup_keys": [
+          "followup_make_shorter",
+          "followup_with_offer",
+          "followup_swap_step",
+          "followup_add_to_plan"
+        ]
+      },
+      "priority": 100
+    },
+    {
+      "id": "food_restaurant_general",
+      "category": "food_cafe",
+      "purpose": "Recommend restaurants based on current context.",
+      "examples": {
+        "ar": [
+          "أبغى مطعم",
+          "وين آكل",
+          "اقترح لي مطعم",
+          "وش مطعم كويس",
+          "عطني مكان أتعشى",
+          "أبغى مكان للغدا",
+          "وين نروح ناكل",
+          "مطعم قريب"
+        ],
+        "en": [
+          "I want a restaurant",
+          "where should I eat",
+          "suggest a restaurant",
+          "what is a good restaurant",
+          "where should I have dinner",
+          "I need lunch",
+          "where should we eat",
+          "a nearby restaurant"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "مطعم",
+          "آكل",
+          "أتعشى",
+          "الغدا",
+          "ناكل"
+        ],
+        "keywords_en": [
+          "restaurant",
+          "eat",
+          "dinner",
+          "lunch"
+        ],
+        "entities": [
+          "neighborhood",
+          "party",
+          "time",
+          "price"
+        ]
+      },
+      "answer": {
+        "type": "dynamic",
+        "handler": "recommend_restaurants",
+        "responses": {
+          "ar": [
+            "هذه المطاعم الأنسب لسياقك الحالي: {{recommendations}}.",
+            "إذا تبغى مطعم الآن، جرّب: {{recommendations}}."
+          ],
+          "en": [
+            "These restaurants best match your current context: {{recommendations}}.",
+            "If you want a restaurant now, try: {{recommendations}}."
+          ]
+        },
+        "result_shape": "ranked_list"
+      },
+      "context": {
+        "applicable_pages": [
+          "الرئيسية",
+          "اكتشف",
+          "*"
+        ],
+        "followup_keys": [
+          "followup_with_offer",
+          "followup_cheaper",
+          "followup_family_only",
+          "followup_second_result"
+        ]
+      },
+      "priority": 100
+    },
+    {
+      "id": "food_hijazi_local",
+      "category": "food_cafe",
+      "purpose": "Recommend local/Hijazi/Makkah food experiences using represented content and community context.",
+      "examples": {
+        "ar": [
+          "أبغى أكل مكي",
+          "وين ألقى أكل حجازي",
+          "وش أجرب من الأكل المحلي",
+          "أبغى أكل شعبي",
+          "مطعم حجازي",
+          "وش تنصحني آكل في مكة",
+          "أبغى شي من أكل أهل مكة"
+        ],
+        "en": [
+          "I want Makkah food",
+          "where can I find Hijazi food",
+          "what local food should I try",
+          "I want traditional food",
+          "a Hijazi restaurant",
+          "what should I eat in Makkah",
+          "local Makkah food"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "أكل مكي",
+          "حجازي",
+          "محلي",
+          "شعبي",
+          "أهل مكة"
+        ],
+        "keywords_en": [
+          "Makkah food",
+          "Hijazi",
+          "local food",
+          "traditional food"
+        ],
+        "entities": [
+          "neighborhood",
+          "party",
+          "time"
+        ]
+      },
+      "answer": {
+        "type": "dynamic",
+        "handler": "recommend_local_food",
+        "responses": {
+          "ar": [
+            "إذا تبغى أكل مكي/حجازي، هذه أبرز الخيارات المرتبطة بالمحتوى الحالي: {{recommendations}}.",
+            "للتجربة المحلية، جرّب: {{recommendations}}."
+          ],
+          "en": [
+            "For Makkah/Hijazi food, these are the strongest matches in the current content: {{recommendations}}.",
+            "For a local food experience, try: {{recommendations}}."
+          ]
+        },
+        "result_shape": "ranked_list"
+      },
+      "context": {
+        "applicable_pages": [
+          "اكتشف",
+          "الرئيسية",
+          "*"
+        ],
+        "followup_keys": [
+          "followup_what_to_order",
+          "followup_with_offer",
+          "followup_second_result"
+        ]
+      },
+      "priority": 98
+    },
+    {
+      "id": "food_breakfast",
+      "category": "food_cafe",
+      "purpose": "Recommend breakfast / early food options.",
+      "examples": {
+        "ar": [
+          "وين أفطر",
+          "أبغى فطور",
+          "وش فيه فطور بدري",
+          "مطعم فطور",
+          "أبغى فول ومعصوب",
+          "وين آكل الصباح",
+          "وش يفتح للفطور"
+        ],
+        "en": [
+          "where should I have breakfast",
+          "I want breakfast",
+          "what opens early for breakfast",
+          "breakfast restaurant",
+          "I want foul and masoob",
+          "where can I eat in the morning",
+          "what is open for breakfast"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "أفطر",
+          "فطور",
+          "بدري",
+          "فول",
+          "معصوب",
+          "الصباح"
+        ],
+        "keywords_en": [
+          "breakfast",
+          "early",
+          "morning"
+        ],
+        "entities": [
+          "time",
+          "neighborhood",
+          "party"
+        ]
+      },
+      "answer": {
+        "type": "dynamic",
+        "handler": "recommend_breakfast",
+        "responses": {
+          "ar": [
+            "للفطور، هذه الخيارات المناسبة في السياق الحالي: {{recommendations}}.",
+            "إذا تبغى تبدأ يومك بفطور، جرّب: {{recommendations}}."
+          ],
+          "en": [
+            "For breakfast, these options fit the current context: {{recommendations}}.",
+            "If you want to start with breakfast, try: {{recommendations}}."
+          ]
+        },
+        "result_shape": "ranked_list"
+      },
+      "context": {
+        "applicable_pages": [
+          "الرئيسية",
+          "اكتشف",
+          "*"
+        ],
+        "followup_keys": [
+          "followup_nearby",
+          "followup_cheaper",
+          "followup_second_result"
+        ]
+      },
+      "priority": 94
+    },
+    {
+      "id": "food_family_restaurant",
+      "category": "food_cafe",
+      "purpose": "Recommend family-suitable restaurants.",
+      "examples": {
+        "ar": [
+          "أبغى مطعم للعائلة",
+          "مطعم مناسب للأطفال",
+          "وين نتعشى مع العيال",
+          "أبغى جلسة عائلية",
+          "مطعم عائلي",
+          "وين أروح مع الأسرة للأكل",
+          "أبغى مكان أكل للعائلة"
+        ],
+        "en": [
+          "I want a family restaurant",
+          "restaurant suitable for kids",
+          "where should we have dinner with the kids",
+          "family seating",
+          "family-friendly restaurant",
+          "where can the family eat"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "مطعم للعائلة",
+          "الأطفال",
+          "العيال",
+          "جلسة عائلية",
+          "الأسرة"
+        ],
+        "keywords_en": [
+          "family restaurant",
+          "kids",
+          "family seating",
+          "family-friendly"
+        ],
+        "entities": [
+          "party",
+          "kids",
+          "neighborhood",
+          "time"
+        ]
+      },
+      "answer": {
+        "type": "dynamic",
+        "handler": "recommend_family_food",
+        "responses": {
+          "ar": [
+            "هذه المطاعم/خيارات الأكل الأنسب للعائلة حسب السياق الحالي: {{recommendations}}.",
+            "للعائلة، هذه الخيارات أوضح من ناحية الملاءمة: {{recommendations}}."
+          ],
+          "en": [
+            "These restaurant/food options best fit a family context: {{recommendations}}.",
+            "For a family, these options have the clearest suitability signals: {{recommendations}}."
+          ]
+        },
+        "result_shape": "ranked_list"
+      },
+      "context": {
+        "applicable_pages": [
+          "الرئيسية",
+          "اكتشف",
+          "*"
+        ],
+        "followup_keys": [
+          "followup_with_offer",
+          "followup_quieter",
+          "followup_second_result"
+        ]
+      },
+      "priority": 100
+    },
+    {
+      "id": "cafe_general",
+      "category": "food_cafe",
+      "purpose": "Recommend cafés.",
+      "examples": {
+        "ar": [
+          "أبغى قهوة",
+          "وين أشرب قهوة",
+          "اقترح لي مقهى",
+          "أبغى كوفي",
+          "وين أقرب كوفي",
+          "أبغى جلسة قهوة",
+          "وش فيه مقاهي"
+        ],
+        "en": [
+          "I want coffee",
+          "where should I get coffee",
+          "suggest a cafe",
+          "I want a café",
+          "where is a nearby coffee shop",
+          "I want a coffee spot",
+          "what cafes are there"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "قهوة",
+          "مقهى",
+          "كوفي",
+          "مقاهي"
+        ],
+        "keywords_en": [
+          "coffee",
+          "cafe",
+          "café",
+          "coffee shop"
+        ],
+        "entities": [
+          "neighborhood",
+          "time",
+          "party",
+          "quiet"
+        ]
+      },
+      "answer": {
+        "type": "dynamic",
+        "handler": "recommend_cafes",
+        "responses": {
+          "ar": [
+            "هذه المقاهي الأنسب لسياقك الحالي: {{recommendations}}.",
+            "إذا تبغى قهوة، هذه الخيارات الأقوى: {{recommendations}}."
+          ],
+          "en": [
+            "These cafés best match your current context: {{recommendations}}.",
+            "If you want coffee, these are the strongest matches: {{recommendations}}."
+          ]
+        },
+        "result_shape": "ranked_list"
+      },
+      "context": {
+        "applicable_pages": [
+          "الرئيسية",
+          "اكتشف",
+          "*"
+        ],
+        "followup_keys": [
+          "followup_quieter",
+          "followup_nearby",
+          "followup_with_offer",
+          "followup_second_result"
+        ]
+      },
+      "priority": 100
+    },
+    {
+      "id": "cafe_quiet",
+      "category": "food_cafe",
+      "purpose": "Recommend quiet cafés / places suitable for study or solo time.",
+      "examples": {
+        "ar": [
+          "أبغى قهوة هادية",
+          "مقهى هادي",
+          "وين أقدر أجلس بهدوء",
+          "أبغى مكان دراسة",
+          "كوفي للمذاكرة",
+          "أبغى جلسة لحالي",
+          "وين مكان هادي"
+        ],
+        "en": [
+          "I want a quiet cafe",
+          "a calm coffee shop",
+          "where can I sit quietly",
+          "I need a study place",
+          "cafe for studying",
+          "I want somewhere on my own",
+          "a quiet place"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "قهوة هادية",
+          "مقهى هادي",
+          "دراسة",
+          "مذاكرة",
+          "جلسة لحالي",
+          "مكان هادي"
+        ],
+        "keywords_en": [
+          "quiet cafe",
+          "calm",
+          "study place",
+          "studying",
+          "on my own",
+          "quiet place"
+        ],
+        "entities": [
+          "quiet",
+          "students",
+          "solo",
+          "neighborhood",
+          "time"
+        ]
+      },
+      "answer": {
+        "type": "dynamic",
+        "handler": "recommend_quiet_cafes",
+        "responses": {
+          "ar": [
+            "لجلسة هادئة أو دراسة، هذه الخيارات الأنسب: {{recommendations}}.",
+            "إذا الهدوء أهم شيء عندك، جرّب: {{recommendations}}."
+          ],
+          "en": [
+            "For a quiet session or study, these are the best matches: {{recommendations}}.",
+            "If calm is your priority, try: {{recommendations}}."
+          ]
+        },
+        "result_shape": "ranked_list"
+      },
+      "context": {
+        "applicable_pages": [
+          "الرئيسية",
+          "اكتشف",
+          "*"
+        ],
+        "followup_keys": [
+          "followup_nearby",
+          "followup_with_offer",
+          "followup_second_result"
+        ]
+      },
+      "priority": 99
+    },
+    {
+      "id": "food_late_open",
+      "category": "food_cafe",
+      "purpose": "Recommend food/cafés that are represented as open late or suitable for late evening.",
+      "examples": {
+        "ar": [
+          "وش يفتح متأخر",
+          "أبغى مطعم آخر الليل",
+          "كوفي يفتح متأخر",
+          "وين آكل بعد ١١",
+          "وش فيه مفتوح متأخر",
+          "أبغى مكان بعد منتصف الليل"
+        ],
+        "en": [
+          "what is open late",
+          "I need a late-night restaurant",
+          "a cafe open late",
+          "where can I eat after 11",
+          "what stays open late",
+          "somewhere after midnight"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "يفتح متأخر",
+          "آخر الليل",
+          "بعد ١١",
+          "منتصف الليل",
+          "مفتوح متأخر"
+        ],
+        "keywords_en": [
+          "open late",
+          "late-night",
+          "after 11",
+          "midnight",
+          "stays open late"
+        ],
+        "entities": [
+          "time",
+          "hours",
+          "neighborhood"
+        ]
+      },
+      "answer": {
+        "type": "dynamic",
+        "handler": "recommend_late_open",
+        "responses": {
+          "ar": [
+            "حسب ساعات التشغيل الموجودة في النموذج، هذه الخيارات الأنسب لوقت متأخر: {{recommendations}}.",
+            "لآخر الليل، جرّب: {{recommendations}}."
+          ],
+          "en": [
+            "Based on the operating hours represented in the prototype, these are the strongest late options: {{recommendations}}.",
+            "For late night, try: {{recommendations}}."
+          ]
+        },
+        "result_shape": "ranked_list"
+      },
+      "context": {
+        "applicable_pages": [
+          "الرئيسية",
+          "اكتشف",
+          "*"
+        ],
+        "followup_keys": [
+          "followup_nearby",
+          "followup_with_offer",
+          "followup_second_result"
+        ]
+      },
+      "priority": 96
+    },
+    {
+      "id": "food_what_to_order",
+      "category": "food_cafe",
+      "purpose": "Use community-linked content to surface what people recommend ordering at a selected restaurant.",
+      "examples": {
+        "ar": [
+          "وش أطلب",
+          "وش تنصحني أطلب",
+          "ايش أفضل شي عندهم",
+          "وش الناس تطلب",
+          "وش أطلب من هذا المطعم",
+          "وش مشهورين فيه",
+          "وش أجرب عندهم"
+        ],
+        "en": [
+          "what should I order",
+          "what do you recommend I order",
+          "what is best there",
+          "what do people order",
+          "what should I get at this restaurant",
+          "what are they known for"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "وش أطلب",
+          "أفضل شي",
+          "الناس تطلب",
+          "مشهورين فيه",
+          "أجرب"
+        ],
+        "keywords_en": [
+          "what should I order",
+          "best there",
+          "people order",
+          "known for"
+        ],
+        "entities": [
+          "object",
+          "community_contribution"
+        ]
+      },
+      "answer": {
+        "type": "dynamic",
+        "handler": "food_order_recommendation",
+        "responses": {
+          "ar": [
+            "من مساهمات المجتمع المرتبطة بـ{{object}}، أبرز ما يُنصح به: {{order_suggestions}}.",
+            "للـ{{object}}، الناس ذكروا: {{order_suggestions}}."
+          ],
+          "en": [
+            "From community contributions linked to {{object}}, the strongest ordering suggestions are: {{order_suggestions}}.",
+            "For {{object}}, people mentioned: {{order_suggestions}}."
+          ]
+        },
+        "result_shape": "ranked_list"
+      },
+      "context": {
+        "applicable_pages": [
+          "اكتشف",
+          "المجتمع",
+          "*"
+        ],
+        "followup_keys": [
+          "followup_more_detail",
+          "followup_second_result"
+        ]
+      },
+      "priority": 98
+    },
+    {
+      "id": "family_general",
+      "category": "family_party",
+      "purpose": "Recommend family-suitable options across content types.",
+      "examples": {
+        "ar": [
+          "وين أروح مع العائلة",
+          "وش نسوي كعائلة",
+          "أبغى طلعة عائلية",
+          "وش فيه للعوائل",
+          "اقترح شي للأسرة",
+          "وين نطلع كلنا",
+          "أبغى شي عائلي"
+        ],
+        "en": [
+          "where should I go with family",
+          "what can we do as a family",
+          "I want a family outing",
+          "what is there for families",
+          "suggest something for the family",
+          "where can we all go",
+          "family-friendly activity"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "العائلة",
+          "عائلية",
+          "العوائل",
+          "الأسرة",
+          "كلنا"
+        ],
+        "keywords_en": [
+          "family",
+          "family outing",
+          "families",
+          "family-friendly"
+        ],
+        "entities": [
+          "party",
+          "kids",
+          "time",
+          "neighborhood"
+        ]
+      },
+      "answer": {
+        "type": "dynamic",
+        "handler": "recommend_family",
+        "responses": {
+          "ar": [
+            "للعائلة، هذه الخيارات الأنسب حسب الوقت والمنطقة: {{recommendations}}.",
+            "هذه اقتراحات عائلية مناسبة لسياقك: {{recommendations}}."
+          ],
+          "en": [
+            "For a family, these are the best matches for your time and area: {{recommendations}}.",
+            "These family-friendly suggestions fit your context: {{recommendations}}."
+          ]
+        },
+        "result_shape": "ranked_list"
+      },
+      "context": {
+        "applicable_pages": [
+          "الرئيسية",
+          "اكتشف",
+          "*"
+        ],
+        "followup_keys": [
+          "followup_with_offer",
+          "followup_kids_only",
+          "followup_nearby",
+          "followup_second_result"
+        ]
+      },
+      "priority": 100
+    },
+    {
+      "id": "family_kids",
+      "category": "family_party",
+      "purpose": "Recommend options explicitly suitable for kids.",
+      "examples": {
+        "ar": [
+          "وش فيه للأطفال",
+          "أبغى نشاط للأطفال",
+          "وين أودي العيال",
+          "شي للصغار",
+          "فعالية للأطفال",
+          "أبغى شي يناسب الأطفال",
+          "وش يسوون الأطفال"
+        ],
+        "en": [
+          "what is there for kids",
+          "I want an activity for children",
+          "where can I take the kids",
+          "something for children",
+          "kids event",
+          "something suitable for kids"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "للأطفال",
+          "العيال",
+          "الصغار",
+          "الأطفال"
+        ],
+        "keywords_en": [
+          "kids",
+          "children",
+          "child"
+        ],
+        "entities": [
+          "kids",
+          "party",
+          "time",
+          "neighborhood"
+        ]
+      },
+      "answer": {
+        "type": "dynamic",
+        "handler": "recommend_kids",
+        "responses": {
+          "ar": [
+            "للأطفال، هذه الخيارات اللي عندها ملاءمة واضحة للصغار: {{recommendations}}.",
+            "إذا معك أطفال، هذه أبرز الخيارات المناسبة: {{recommendations}}."
+          ],
+          "en": [
+            "For children, these options have explicit kid-suitability signals: {{recommendations}}.",
+            "If you're with kids, these are the strongest matches: {{recommendations}}."
+          ]
+        },
+        "result_shape": "ranked_list"
+      },
+      "context": {
+        "applicable_pages": [
+          "الرئيسية",
+          "اكتشف",
+          "*"
+        ],
+        "followup_keys": [
+          "followup_with_offer",
+          "followup_indoor_only",
+          "followup_second_result"
+        ]
+      },
+      "priority": 100
+    },
+    {
+      "id": "party_solo",
+      "category": "family_party",
+      "purpose": "Recommend options suitable for attending alone.",
+      "examples": {
+        "ar": [
+          "أنا لحالي وش أسوي",
+          "أبغى شي أروح له لحالي",
+          "وش يناسب شخص واحد",
+          "وين أروح بدون أحد",
+          "نشاط للحضور منفردًا",
+          "ما أبغى شي يحتاج مجموعة"
+        ],
+        "en": [
+          "I'm alone what can I do",
+          "I want something I can do on my own",
+          "what suits one person",
+          "where can I go alone",
+          "an activity for solo attendance",
+          "I don't want something that needs a group"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "لحالي",
+          "شخص واحد",
+          "بدون أحد",
+          "منفردًا",
+          "ما يحتاج مجموعة"
+        ],
+        "keywords_en": [
+          "alone",
+          "on my own",
+          "one person",
+          "solo",
+          "doesn't need a group"
+        ],
+        "entities": [
+          "solo",
+          "time",
+          "neighborhood"
+        ]
+      },
+      "answer": {
+        "type": "dynamic",
+        "handler": "recommend_solo",
+        "responses": {
+          "ar": [
+            "إذا بتروح لحالك، هذه الخيارات عندها ملاءمة واضحة للحضور المنفرد: {{recommendations}}.",
+            "لشخص واحد، جرّب: {{recommendations}}."
+          ],
+          "en": [
+            "If you're going solo, these options have clear solo-suitability signals: {{recommendations}}.",
+            "For one person, try: {{recommendations}}."
+          ]
+        },
+        "result_shape": "ranked_list"
+      },
+      "context": {
+        "applicable_pages": [
+          "الرئيسية",
+          "اكتشف",
+          "*"
+        ],
+        "followup_keys": [
+          "followup_quieter",
+          "followup_nearby",
+          "followup_second_result"
+        ]
+      },
+      "priority": 99
+    },
+    {
+      "id": "party_women",
+      "category": "family_party",
+      "purpose": "Recommend women-only options only where explicitly declared.",
+      "examples": {
+        "ar": [
+          "أبغى نشاط نسائي",
+          "وش فيه للنساء فقط",
+          "فيه شي مخصص للنساء",
+          "أبغى مجموعة نسائية",
+          "وين فيه نشاط للنساء",
+          "أبغى سباحة نسائية"
+        ],
+        "en": [
+          "I want a women-only activity",
+          "what is there for women only",
+          "anything specifically for women",
+          "I want a women's group",
+          "where is there a women-only activity",
+          "women-only swimming"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "نسائي",
+          "للنساء فقط",
+          "مخصص للنساء",
+          "مجموعة نسائية",
+          "سباحة نسائية"
+        ],
+        "keywords_en": [
+          "women-only",
+          "for women",
+          "women's group"
+        ],
+        "entities": [
+          "women_only",
+          "time",
+          "neighborhood"
+        ]
+      },
+      "answer": {
+        "type": "dynamic",
+        "handler": "recommend_women_only",
+        "responses": {
+          "ar": [
+            "هذه الخيارات مذكور عليها صراحةً أنها مخصصة للنساء في بيانات التطبيق: {{recommendations}}.",
+            "للخيارات النسائية فقط، هذه النتائج المتاحة: {{recommendations}}."
+          ],
+          "en": [
+            "These options are explicitly marked women-only in the app data: {{recommendations}}.",
+            "For women-only options, these are the available matches: {{recommendations}}."
+          ]
+        },
+        "result_shape": "ranked_list"
+      },
+      "context": {
+        "applicable_pages": [
+          "اكتشف",
+          "الرئيسية",
+          "*"
+        ],
+        "followup_keys": [
+          "followup_nearby",
+          "followup_second_result"
+        ]
+      },
+      "priority": 100
+    },
+    {
+      "id": "party_beginners",
+      "category": "family_party",
+      "purpose": "Recommend beginner-friendly activities.",
+      "examples": {
+        "ar": [
+          "أبغى شي للمبتدئين",
+          "نشاط ما يحتاج خبرة",
+          "أنا أول مرة أجرب",
+          "ورشة سهلة للمبتدئ",
+          "شي بسيط أبدأ فيه",
+          "أبغى نشاط بدون خبرة"
+        ],
+        "en": [
+          "I want something for beginners",
+          "an activity that needs no experience",
+          "it's my first time trying",
+          "an easy beginner workshop",
+          "something simple to start with",
+          "an activity with no experience needed"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "للمبتدئين",
+          "ما يحتاج خبرة",
+          "أول مرة أجرب",
+          "سهلة",
+          "بدون خبرة"
+        ],
+        "keywords_en": [
+          "beginners",
+          "no experience",
+          "first time",
+          "easy",
+          "beginner"
+        ],
+        "entities": [
+          "beginners",
+          "noexp",
+          "time",
+          "neighborhood"
+        ]
+      },
+      "answer": {
+        "type": "dynamic",
+        "handler": "recommend_beginner_friendly",
+        "responses": {
+          "ar": [
+            "للمبتدئين، هذه الخيارات تذكر بوضوح أنك ما تحتاج خبرة سابقة: {{recommendations}}.",
+            "إذا أول مرة تجرب، ابدأ بـ: {{recommendations}}."
+          ],
+          "en": [
+            "For beginners, these options explicitly indicate that no prior experience is needed: {{recommendations}}.",
+            "If it's your first time, start with: {{recommendations}}."
+          ]
+        },
+        "result_shape": "ranked_list"
+      },
+      "context": {
+        "applicable_pages": [
+          "اكتشف",
+          "الرئيسية",
+          "*"
+        ],
+        "followup_keys": [
+          "followup_shorter",
+          "followup_nearby",
+          "followup_second_result"
+        ]
+      },
+      "priority": 99
+    },
+    {
+      "id": "party_small_group",
+      "category": "family_party",
+      "purpose": "Recommend small-group / lower-social-friction activities.",
+      "examples": {
+        "ar": [
+          "أبغى مجموعة صغيرة",
+          "نشاط بعدد قليل",
+          "ما أبغى زحمة ناس",
+          "أبغى شي اجتماعي خفيف",
+          "مجموعة بسيطة",
+          "وش فيه نشاط صغير"
+        ],
+        "en": [
+          "I want a small group",
+          "an activity with few people",
+          "I don't want a big crowd",
+          "a light social activity",
+          "a small group",
+          "what small-group activities are there"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "مجموعة صغيرة",
+          "عدد قليل",
+          "زحمة ناس",
+          "اجتماعي خفيف",
+          "مجموعة بسيطة"
+        ],
+        "keywords_en": [
+          "small group",
+          "few people",
+          "big crowd",
+          "light social",
+          "small-group"
+        ],
+        "entities": [
+          "small",
+          "party",
+          "time"
+        ]
+      },
+      "answer": {
+        "type": "dynamic",
+        "handler": "recommend_small_group",
+        "responses": {
+          "ar": [
+            "إذا تفضّل مجموعة صغيرة، هذه الخيارات عندها إشارة ملاءمة لذلك: {{recommendations}}.",
+            "لجو اجتماعي أخف، جرّب: {{recommendations}}."
+          ],
+          "en": [
+            "If you prefer a small group, these options have explicit suitability signals for that: {{recommendations}}.",
+            "For a lighter social setting, try: {{recommendations}}."
+          ]
+        },
+        "result_shape": "ranked_list"
+      },
+      "context": {
+        "applicable_pages": [
+          "اكتشف",
+          "*"
+        ],
+        "followup_keys": [
+          "followup_solo_ok",
+          "followup_nearby",
+          "followup_second_result"
+        ]
+      },
+      "priority": 95
+    },
+    {
+      "id": "visitor_first_time",
+      "category": "visitor_resident",
+      "purpose": "Recommend first-visit suitable experiences and practical options.",
+      "examples": {
+        "ar": [
+          "أول مرة أزور مكة وش أسوي",
+          "أنا أول زيارة",
+          "وش تنصحني أول مرة",
+          "أول يوم لي بمكة",
+          "وين أبدأ كزائر جديد",
+          "أبغى أهم تجارب أول زيارة"
+        ],
+        "en": [
+          "it's my first time in Makkah what should I do",
+          "this is my first visit",
+          "what do you recommend for a first visit",
+          "my first day in Makkah",
+          "where should I start as a new visitor",
+          "best first-visit experiences"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "أول مرة",
+          "أول زيارة",
+          "أول يوم",
+          "زائر جديد",
+          "أبدأ"
+        ],
+        "keywords_en": [
+          "first time",
+          "first visit",
+          "first day",
+          "new visitor",
+          "where should I start"
+        ],
+        "entities": [
+          "first_time",
+          "visitor",
+          "time",
+          "party"
+        ]
+      },
+      "answer": {
+        "type": "dynamic",
+        "handler": "recommend_first_visit",
+        "responses": {
+          "ar": [
+            "لأول زيارة، هذه الخيارات عندها ملاءمة واضحة للزائر لأول مرة: {{recommendations}}.",
+            "إذا هذه أول مرة لك، ابدأ بـ: {{recommendations}}."
+          ],
+          "en": [
+            "For a first visit, these options have explicit first-time suitability signals: {{recommendations}}.",
+            "If this is your first time, start with: {{recommendations}}."
+          ]
+        },
+        "result_shape": "ranked_list"
+      },
+      "context": {
+        "applicable_pages": [
+          "الرئيسية",
+          "اكتشف",
+          "*"
+        ],
+        "followup_keys": [
+          "followup_half_day",
+          "followup_family_only",
+          "followup_second_result"
+        ]
+      },
+      "priority": 100
+    },
+    {
+      "id": "visitor_half_day",
+      "category": "visitor_resident",
+      "purpose": "Build/return options that fit a half-day visitor window.",
+      "examples": {
+        "ar": [
+          "عندي نص يوم بمكة",
+          "وش أسوي في نصف يوم",
+          "أنا زائر وعندي ٤ ساعات",
+          "رتب لي نصف يوم",
+          "أبغى برنامج قصير للزائر",
+          "عندي كم ساعة قبل أمشي"
+        ],
+        "en": [
+          "I have half a day in Makkah",
+          "what should I do in half a day",
+          "I'm visiting and have four hours",
+          "plan a half day",
+          "short visitor plan",
+          "I have a few hours before I leave"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "نص يوم",
+          "نصف يوم",
+          "٤ ساعات",
+          "برنامج قصير",
+          "كم ساعة"
+        ],
+        "keywords_en": [
+          "half a day",
+          "four hours",
+          "short visitor plan",
+          "few hours"
+        ],
+        "entities": [
+          "visitor",
+          "time_available",
+          "party",
+          "neighborhood"
+        ]
+      },
+      "answer": {
+        "type": "dynamic",
+        "handler": "visitor_half_day_plan",
+        "responses": {
+          "ar": [
+            "لنصف يوم، هذا ترتيب مناسب من محتوى EyeMakkah الحالي: {{outing_steps}}.",
+            "إذا معك عدة ساعات فقط، جرّب هذا المسار: {{outing_steps}}."
+          ],
+          "en": [
+            "For half a day, this is a suitable plan from current EyeMakkah content: {{outing_steps}}.",
+            "If you only have a few hours, try this route: {{outing_steps}}."
+          ]
+        },
+        "result_shape": "composed_plan"
+      },
+      "context": {
+        "applicable_pages": [
+          "الرئيسية",
+          "خطتي",
+          "*"
+        ],
+        "followup_keys": [
+          "followup_make_shorter",
+          "followup_with_offer",
+          "followup_swap_step"
+        ]
+      },
+      "priority": 100
+    },
+    {
+      "id": "visitor_after_umrah",
+      "category": "visitor_resident",
+      "purpose": "Recommend post-Umrah activities/experiences represented in the app without religious guidance.",
+      "examples": {
+        "ar": [
+          "خلصت العمرة وش أسوي",
+          "وش أسوي بعد العمرة",
+          "بعد العمرة وين أروح",
+          "باقي اليوم بعد العمرة",
+          "اقترح لي شي بعد العمرة",
+          "وش فيه للزائر بعد ما يخلص العمرة"
+        ],
+        "en": [
+          "I finished Umrah what can I do",
+          "what should I do after Umrah",
+          "where can I go after Umrah",
+          "I have the rest of the day after Umrah",
+          "suggest something after Umrah"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "بعد العمرة",
+          "خلصت العمرة",
+          "باقي اليوم"
+        ],
+        "keywords_en": [
+          "after Umrah",
+          "finished Umrah",
+          "rest of the day"
+        ],
+        "entities": [
+          "visitor",
+          "time",
+          "party"
+        ]
+      },
+      "answer": {
+        "type": "dynamic",
+        "handler": "recommend_after_umrah",
+        "responses": {
+          "ar": [
+            "بعد العمرة، أقدر أقترح لك تجارب ومطاعم وأماكن من EyeMakkah تناسب الوقت المتبقي: {{recommendations}}.",
+            "لبقية يومك بعد العمرة: {{recommendations}}."
+          ],
+          "en": [
+            "After Umrah, I can suggest EyeMakkah experiences, food, and places that fit your remaining time: {{recommendations}}.",
+            "For the rest of your day after Umrah: {{recommendations}}."
+          ]
+        },
+        "result_shape": "ranked_list"
+      },
+      "context": {
+        "applicable_pages": [
+          "الرئيسية",
+          "اكتشف",
+          "*"
+        ],
+        "followup_keys": [
+          "followup_quieter",
+          "followup_food_only",
+          "followup_second_result"
+        ]
+      },
+      "priority": 98
+    },
+    {
+      "id": "visitor_less_obvious",
+      "category": "visitor_resident",
+      "purpose": "Recommend less-obvious Makkah experiences for repeat visitors.",
+      "examples": {
+        "ar": [
+          "زرت الأماكن المعروفة وش بعد",
+          "أنا زائر متكرر",
+          "أبغى شي أقل شهرة",
+          "وش فيه غير الأماكن المشهورة",
+          "أبغى مكة بطريقة مختلفة",
+          "وش تنصح للي زار قبل"
+        ],
+        "en": [
+          "I've seen the obvious places what next",
+          "I'm a repeat visitor",
+          "I want something less famous",
+          "what is there beyond the famous places",
+          "I want a different side of Makkah",
+          "what do you recommend for someone who has visited before"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "زائر متكرر",
+          "أقل شهرة",
+          "غير الأماكن المشهورة",
+          "بطريقة مختلفة",
+          "زار قبل"
+        ],
+        "keywords_en": [
+          "repeat visitor",
+          "less famous",
+          "beyond famous places",
+          "different side",
+          "visited before"
+        ],
+        "entities": [
+          "visitor",
+          "repeat",
+          "completed",
+          "novelty"
+        ]
+      },
+      "answer": {
+        "type": "dynamic",
+        "handler": "recommend_repeat_visitor",
+        "responses": {
+          "ar": [
+            "بما أنك تبغى شيء أقل وضوحًا، هذه خيارات فيها novelty أعلى وأقل تكرارًا: {{recommendations}}.",
+            "للزيارة المتكررة، جرّب: {{recommendations}}."
+          ],
+          "en": [
+            "Since you want something less obvious, these options have higher novelty and less repetition: {{recommendations}}.",
+            "For a repeat visit, try: {{recommendations}}."
+          ]
+        },
+        "result_shape": "ranked_list"
+      },
+      "context": {
+        "applicable_pages": [
+          "الرئيسية",
+          "اكتشف",
+          "*"
+        ],
+        "followup_keys": [
+          "followup_more_local",
+          "followup_nearby",
+          "followup_second_result"
+        ]
+      },
+      "priority": 97
+    },
+    {
+      "id": "resident_local_life",
+      "category": "visitor_resident",
+      "purpose": "Recommend local-life content for residents rather than tourist-first content.",
+      "examples": {
+        "ar": [
+          "أنا من مكة وش تقترح",
+          "أبغى شي لأهل مكة",
+          "وش فيه للسكان مو للزوار بس",
+          "أبغى أكتشف الحي",
+          "وش فعاليات الحياة اليومية",
+          "أبغى شي محلي"
+        ],
+        "en": [
+          "I'm from Makkah what do you suggest",
+          "I want something for locals",
+          "what is there for residents not just visitors",
+          "I want to discover the neighborhood",
+          "local daily-life activities",
+          "I want something local"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "من مكة",
+          "لأهل مكة",
+          "للسكان",
+          "أكتشف الحي",
+          "الحياة اليومية",
+          "محلي"
+        ],
+        "keywords_en": [
+          "from Makkah",
+          "locals",
+          "residents",
+          "discover the neighborhood",
+          "local"
+        ],
+        "entities": [
+          "resident",
+          "neighborhood",
+          "interest",
+          "novelty"
+        ]
+      },
+      "answer": {
+        "type": "dynamic",
+        "handler": "recommend_resident_local",
+        "responses": {
+          "ar": [
+            "كمقيم، هذه خيارات أقرب للحياة المحلية والمجتمعات والأنشطة المتكررة: {{recommendations}}.",
+            "إذا تبغى شيء محلي أكثر من السياحي، جرّب: {{recommendations}}."
+          ],
+          "en": [
+            "As a resident, these options lean more toward local life, communities, and recurring activities: {{recommendations}}.",
+            "If you want something more local than tourist-oriented, try: {{recommendations}}."
+          ]
+        },
+        "result_shape": "ranked_list"
+      },
+      "context": {
+        "applicable_pages": [
+          "الرئيسية",
+          "المجتمع",
+          "اكتشف",
+          "*"
+        ],
+        "followup_keys": [
+          "followup_neighborhood_only",
+          "followup_with_offer",
+          "followup_second_result"
+        ]
+      },
+      "priority": 97
+    },
+    {
+      "id": "places_cultural",
+      "category": "places_activities",
+      "purpose": "Recommend cultural/history places and experiences.",
+      "examples": {
+        "ar": [
+          "أبغى شي ثقافي",
+          "وش فيه ثقافة وتاريخ",
+          "أبغى متحف",
+          "وين أروح لتجربة ثقافية",
+          "أبغى شي عن تاريخ مكة",
+          "وش المعارض الموجودة",
+          "أبغى تراث"
+        ],
+        "en": [
+          "I want something cultural",
+          "what culture and history is there",
+          "I want a museum",
+          "where can I go for a cultural experience",
+          "something about Makkah history",
+          "what exhibitions are there",
+          "I want heritage"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "ثقافي",
+          "تاريخ",
+          "متحف",
+          "معرض",
+          "تراث"
+        ],
+        "keywords_en": [
+          "cultural",
+          "history",
+          "museum",
+          "exhibition",
+          "heritage"
+        ],
+        "entities": [
+          "category",
+          "time",
+          "neighborhood"
+        ]
+      },
+      "answer": {
+        "type": "dynamic",
+        "handler": "recommend_culture",
+        "responses": {
+          "ar": [
+            "للثقافة والتاريخ، هذه أقوى الخيارات الحالية: {{recommendations}}.",
+            "إذا تبغى تجربة ثقافية، جرّب: {{recommendations}}."
+          ],
+          "en": [
+            "For culture and history, these are the strongest current matches: {{recommendations}}.",
+            "If you want a cultural experience, try: {{recommendations}}."
+          ]
+        },
+        "result_shape": "ranked_list"
+      },
+      "context": {
+        "applicable_pages": [
+          "اكتشف",
+          "الرئيسية",
+          "*"
+        ],
+        "followup_keys": [
+          "followup_first_time",
+          "followup_nearby",
+          "followup_second_result"
+        ]
+      },
+      "priority": 100
+    },
+    {
+      "id": "places_nature_mountains",
+      "category": "places_activities",
+      "purpose": "Recommend represented nature/mountain/outdoor experiences with suitability context.",
+      "examples": {
+        "ar": [
+          "أبغى جبل",
+          "وش فيه طبيعة",
+          "أبغى طلعة برية",
+          "وين أروح لمشي جبلي",
+          "أبغى مكان مفتوح",
+          "وش فيه مسارات جبلية",
+          "أبغى شي خارجي"
+        ],
+        "en": [
+          "I want a mountain",
+          "what nature options are there",
+          "I want an outdoor trip",
+          "where can I do a mountain walk",
+          "I want an open-air place",
+          "what mountain trails are there",
+          "I want something outdoors"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "جبل",
+          "طبيعة",
+          "برية",
+          "مشي جبلي",
+          "مكان مفتوح",
+          "خارجي"
+        ],
+        "keywords_en": [
+          "mountain",
+          "nature",
+          "outdoor",
+          "mountain walk",
+          "open-air"
+        ],
+        "entities": [
+          "category",
+          "outdoor",
+          "time",
+          "access"
+        ]
+      },
+      "answer": {
+        "type": "dynamic",
+        "handler": "recommend_nature",
+        "responses": {
+          "ar": [
+            "للطبيعة والأنشطة الخارجية، هذه الخيارات المتاحة في المحتوى الحالي: {{recommendations}}.",
+            "إذا تبغى شي خارجي، جرّب: {{recommendations}}."
+          ],
+          "en": [
+            "For nature and outdoor activities, these are the current content matches: {{recommendations}}.",
+            "If you want something outdoors, try: {{recommendations}}."
+          ]
+        },
+        "result_shape": "ranked_list"
+      },
+      "context": {
+        "applicable_pages": [
+          "اكتشف",
+          "*"
+        ],
+        "followup_keys": [
+          "followup_shorter",
+          "followup_easier_access",
+          "followup_second_result"
+        ]
+      },
+      "priority": 96
+    },
+    {
+      "id": "activities_workshop",
+      "category": "places_activities",
+      "purpose": "Recommend workshops and hands-on learning.",
+      "examples": {
+        "ar": [
+          "أبغى ورشة",
+          "وش فيه ورش اليوم",
+          "أبغى شي أتعلمه",
+          "نشاط عملي",
+          "ورشة خط",
+          "ورشة حرف",
+          "أبغى تجربة بيدي"
+        ],
+        "en": [
+          "I want a workshop",
+          "what workshops are on today",
+          "I want something to learn",
+          "a hands-on activity",
+          "calligraphy workshop",
+          "craft workshop",
+          "I want a hands-on experience"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "ورشة",
+          "أتعلمه",
+          "عملي",
+          "خط",
+          "حرف",
+          "بيدي"
+        ],
+        "keywords_en": [
+          "workshop",
+          "learn",
+          "hands-on",
+          "calligraphy",
+          "craft"
+        ],
+        "entities": [
+          "category",
+          "beginners",
+          "time"
+        ]
+      },
+      "answer": {
+        "type": "dynamic",
+        "handler": "recommend_workshops",
+        "responses": {
+          "ar": [
+            "للورش والتجارب العملية، هذه الخيارات الأنسب: {{recommendations}}.",
+            "إذا تبغى شي تتعلمه بيدك، جرّب: {{recommendations}}."
+          ],
+          "en": [
+            "For workshops and hands-on experiences, these are the best matches: {{recommendations}}.",
+            "If you want something hands-on, try: {{recommendations}}."
+          ]
+        },
+        "result_shape": "ranked_list"
+      },
+      "context": {
+        "applicable_pages": [
+          "اكتشف",
+          "الرئيسية",
+          "*"
+        ],
+        "followup_keys": [
+          "followup_beginner_only",
+          "followup_with_offer",
+          "followup_second_result"
+        ]
+      },
+      "priority": 99
+    },
+    {
+      "id": "activities_volunteering",
+      "category": "places_activities",
+      "purpose": "Recommend volunteering/initiative opportunities represented in app.",
+      "examples": {
+        "ar": [
+          "أبغى أتطوع",
+          "وش فيه تطوع",
+          "فيه فرصة خدمة زوار",
+          "أبغى مبادرة حي",
+          "وين أشارك بالتطوع",
+          "وش الفرص التطوعية"
+        ],
+        "en": [
+          "I want to volunteer",
+          "what volunteering is there",
+          "any visitor-service opportunity",
+          "I want a neighborhood initiative",
+          "where can I volunteer",
+          "what volunteering opportunities exist"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "أتطوع",
+          "تطوع",
+          "خدمة زوار",
+          "مبادرة حي",
+          "تطوعية"
+        ],
+        "keywords_en": [
+          "volunteer",
+          "volunteering",
+          "visitor service",
+          "neighborhood initiative"
+        ],
+        "entities": [
+          "category",
+          "time",
+          "neighborhood",
+          "provider"
+        ]
+      },
+      "answer": {
+        "type": "dynamic",
+        "handler": "recommend_volunteering",
+        "responses": {
+          "ar": [
+            "للتطوع والمبادرات، هذه الفرص الموجودة في المحتوى الحالي: {{recommendations}}.",
+            "إذا تبغى تشارك، جرّب: {{recommendations}}."
+          ],
+          "en": [
+            "For volunteering and initiatives, these are the current opportunities represented in EyeMakkah: {{recommendations}}.",
+            "If you want to participate, try: {{recommendations}}."
+          ]
+        },
+        "result_shape": "ranked_list"
+      },
+      "context": {
+        "applicable_pages": [
+          "المجتمع",
+          "اكتشف",
+          "*"
+        ],
+        "followup_keys": [
+          "followup_nearby",
+          "followup_this_week",
+          "followup_second_result"
+        ]
+      },
+      "priority": 100
+    },
+    {
+      "id": "activities_sport_walk",
+      "category": "places_activities",
+      "purpose": "Recommend walking/sport activities.",
+      "examples": {
+        "ar": [
+          "أبغى أمشي",
+          "وش فيه مشي",
+          "نشاط رياضي",
+          "أبغى نادي مشي",
+          "فيه دراجات",
+          "وين أتمرن",
+          "أبغى جري"
+        ],
+        "en": [
+          "I want to walk",
+          "what walking activities are there",
+          "sports activity",
+          "I want a walking club",
+          "any cycling",
+          "where can I exercise",
+          "I want to run"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "أمشي",
+          "مشي",
+          "رياضي",
+          "نادي مشي",
+          "دراجات",
+          "أتمرن",
+          "جري"
+        ],
+        "keywords_en": [
+          "walk",
+          "walking",
+          "sports",
+          "walking club",
+          "cycling",
+          "exercise",
+          "run"
+        ],
+        "entities": [
+          "category",
+          "club",
+          "time",
+          "neighborhood"
+        ]
+      },
+      "answer": {
+        "type": "dynamic",
+        "handler": "recommend_sport",
+        "responses": {
+          "ar": [
+            "للرياضة والمشي، هذه الخيارات الأنسب حاليًا: {{recommendations}}.",
+            "إذا تبغى حركة ونشاط، جرّب: {{recommendations}}."
+          ],
+          "en": [
+            "For sports and walking, these are the strongest current matches: {{recommendations}}.",
+            "If you want something active, try: {{recommendations}}."
+          ]
+        },
+        "result_shape": "ranked_list"
+      },
+      "context": {
+        "applicable_pages": [
+          "اكتشف",
+          "المجتمع",
+          "*"
+        ],
+        "followup_keys": [
+          "followup_group_small",
+          "followup_women_only",
+          "followup_second_result"
+        ]
+      },
+      "priority": 98
+    },
+    {
+      "id": "activities_event",
+      "category": "places_activities",
+      "purpose": "Recommend events with lifecycle-aware ranking.",
+      "examples": {
+        "ar": [
+          "وش فيه فعاليات",
+          "ايش الفعاليات الحالية",
+          "أبغى فعالية اليوم",
+          "وش يبدأ قريب",
+          "فيه حدث هذا الأسبوع",
+          "عطني فعاليات",
+          "وش فيه event"
+        ],
+        "en": [
+          "what events are there",
+          "what events are current",
+          "I want an event today",
+          "what starts soon",
+          "any event this week",
+          "show me events"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "فعاليات",
+          "فعالية اليوم",
+          "يبدأ قريب",
+          "حدث",
+          "event"
+        ],
+        "keywords_en": [
+          "events",
+          "event today",
+          "starts soon",
+          "event this week"
+        ],
+        "entities": [
+          "time",
+          "lifecycle",
+          "neighborhood"
+        ]
+      },
+      "answer": {
+        "type": "dynamic",
+        "handler": "recommend_events",
+        "responses": {
+          "ar": [
+            "هذه الفعاليات الأنسب ضمن حالتها الحالية ووقتك: {{recommendations}}.",
+            "أبرز الفعاليات المناسبة الآن: {{recommendations}}."
+          ],
+          "en": [
+            "These events best fit their current lifecycle state and your timing: {{recommendations}}.",
+            "The strongest relevant events right now are: {{recommendations}}."
+          ]
+        },
+        "result_shape": "ranked_list"
+      },
+      "context": {
+        "applicable_pages": [
+          "الرئيسية",
+          "اكتشف",
+          "*"
+        ],
+        "followup_keys": [
+          "followup_family_only",
+          "followup_free_only",
+          "followup_second_result"
+        ]
+      },
+      "priority": 100
+    },
+    {
+      "id": "activities_club_recurring",
+      "category": "places_activities",
+      "purpose": "Recommend recurring clubs/groups distinct from one-off activities.",
+      "examples": {
+        "ar": [
+          "أبغى نادي",
+          "وش فيه أندية",
+          "أبغى مجموعة مستمرة",
+          "فيه نادي مشي أسبوعي",
+          "أبغى شي يتكرر",
+          "مجموعة أقدر أرجع لها كل أسبوع",
+          "وش الأندية النشطة"
+        ],
+        "en": [
+          "I want a club",
+          "what clubs are there",
+          "I want a recurring group",
+          "is there a weekly walking club",
+          "I want something recurring",
+          "a group I can return to every week",
+          "what active clubs are there"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "نادي",
+          "أندية",
+          "مجموعة مستمرة",
+          "أسبوعي",
+          "يتكرر",
+          "الأندية النشطة"
+        ],
+        "keywords_en": [
+          "club",
+          "clubs",
+          "recurring group",
+          "weekly",
+          "recurring",
+          "active clubs"
+        ],
+        "entities": [
+          "club",
+          "community",
+          "recurrence",
+          "state"
+        ]
+      },
+      "answer": {
+        "type": "dynamic",
+        "handler": "recommend_active_clubs",
+        "responses": {
+          "ar": [
+            "هذه الأندية/المجموعات المتكررة النشطة حاليًا: {{recommendations}}.",
+            "إذا تبغى شيء مستمر مو فعالية مرة واحدة، جرّب: {{recommendations}}."
+          ],
+          "en": [
+            "These are the currently active recurring clubs/groups: {{recommendations}}.",
+            "If you want something ongoing rather than one-off, try: {{recommendations}}."
+          ]
+        },
+        "result_shape": "ranked_list"
+      },
+      "context": {
+        "applicable_pages": [
+          "المجتمع",
+          "اكتشف",
+          "*"
+        ],
+        "followup_keys": [
+          "followup_nearby",
+          "followup_community_link",
+          "followup_second_result"
+        ]
+      },
+      "priority": 99
+    },
+    {
+      "id": "places_market_shopping",
+      "category": "places_activities",
+      "purpose": "Recommend markets/shopping content.",
+      "examples": {
+        "ar": [
+          "أبغى سوق",
+          "وين أتسوق",
+          "وش فيه أسواق",
+          "أبغى سوق شعبي",
+          "وين سوق الحرف",
+          "أبغى تسوق محلي",
+          "وش الأسواق الموجودة"
+        ],
+        "en": [
+          "I want a market",
+          "where can I shop",
+          "what markets are there",
+          "I want a traditional market",
+          "where is the craft market",
+          "local shopping",
+          "what shopping places are there"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "سوق",
+          "أتسوق",
+          "أسواق",
+          "سوق شعبي",
+          "سوق الحرف",
+          "تسوق"
+        ],
+        "keywords_en": [
+          "market",
+          "shop",
+          "markets",
+          "traditional market",
+          "craft market",
+          "shopping"
+        ],
+        "entities": [
+          "category",
+          "neighborhood",
+          "time"
+        ]
+      },
+      "answer": {
+        "type": "dynamic",
+        "handler": "recommend_markets",
+        "responses": {
+          "ar": [
+            "للأسواق والتسوق، هذه الخيارات الأنسب: {{recommendations}}.",
+            "إذا تبغى سوق أو تجربة تسوق محلية، جرّب: {{recommendations}}."
+          ],
+          "en": [
+            "For markets and shopping, these are the strongest matches: {{recommendations}}.",
+            "If you want a market or local shopping experience, try: {{recommendations}}."
+          ]
+        },
+        "result_shape": "ranked_list"
+      },
+      "context": {
+        "applicable_pages": [
+          "اكتشف",
+          "*"
+        ],
+        "followup_keys": [
+          "followup_with_offer",
+          "followup_nearby",
+          "followup_second_result"
+        ]
+      },
+      "priority": 98
+    },
+    {
+      "id": "access_wheelchair",
+      "category": "access_practical",
+      "purpose": "Recommend objects with explicit wheelchair/accessibility suitability or practical access facts.",
+      "examples": {
+        "ar": [
+          "أبغى مكان مناسب للكرسي المتحرك",
+          "وش فيه وصول للكراسي",
+          "هل فيه مسار مناسب للكراسي",
+          "وين أروح بكرسي متحرك",
+          "أبغى مكان بدون عوائق قدر الإمكان"
+        ],
+        "en": [
+          "I need somewhere wheelchair-friendly",
+          "what has wheelchair access",
+          "is there a wheelchair-friendly route",
+          "where can I go with a wheelchair",
+          "I want a place with easier access"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "كرسي متحرك",
+          "للكراسي",
+          "وصول",
+          "بدون عوائق"
+        ],
+        "keywords_en": [
+          "wheelchair",
+          "wheelchair access",
+          "accessible",
+          "easier access"
+        ],
+        "entities": [
+          "accessible",
+          "stepfree",
+          "access"
+        ]
+      },
+      "answer": {
+        "type": "dynamic",
+        "handler": "recommend_accessible",
+        "responses": {
+          "ar": [
+            "هذه الخيارات عندها معلومات وصول أو ملاءمة للكراسي بشكل واضح: {{recommendations}}.",
+            "إذا سهولة الوصول أولوية، هذه النتائج الأقوى: {{recommendations}}."
+          ],
+          "en": [
+            "These options have explicit accessibility or wheelchair-related information: {{recommendations}}.",
+            "If ease of access is a priority, these are the strongest matches: {{recommendations}}."
+          ]
+        },
+        "result_shape": "ranked_list"
+      },
+      "context": {
+        "applicable_pages": [
+          "اكتشف",
+          "الرئيسية",
+          "*"
+        ],
+        "followup_keys": [
+          "followup_stepfree_only",
+          "followup_nearby",
+          "followup_second_result"
+        ]
+      },
+      "priority": 100
+    },
+    {
+      "id": "access_stepfree",
+      "category": "access_practical",
+      "purpose": "Recommend objects explicitly marked step-free.",
+      "examples": {
+        "ar": [
+          "أبغى بدون درج",
+          "وين مدخل بدون درج",
+          "مكان step free",
+          "وش الأماكن اللي ما فيها درج",
+          "أبغى وصول أسهل بدون سلالم"
+        ],
+        "en": [
+          "I want step-free",
+          "where has a step-free entrance",
+          "a step-free place",
+          "what places have no stairs",
+          "I need easier access without stairs"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "بدون درج",
+          "ما فيها درج",
+          "سلالم",
+          "وصول أسهل"
+        ],
+        "keywords_en": [
+          "step-free",
+          "no stairs",
+          "without stairs",
+          "easier access"
+        ],
+        "entities": [
+          "stepfree",
+          "access"
+        ]
+      },
+      "answer": {
+        "type": "dynamic",
+        "handler": "recommend_stepfree",
+        "responses": {
+          "ar": [
+            "هذه الخيارات مذكور عليها صراحةً «بدون درج» أو عندها معلومة وصول مكافئة: {{recommendations}}.",
+            "للوصول بدون درج، هذه النتائج المتاحة: {{recommendations}}."
+          ],
+          "en": [
+            "These options are explicitly marked step-free or have equivalent access information: {{recommendations}}.",
+            "For step-free access, these are the available matches: {{recommendations}}."
+          ]
+        },
+        "result_shape": "ranked_list"
+      },
+      "context": {
+        "applicable_pages": [
+          "اكتشف",
+          "*"
+        ],
+        "followup_keys": [
+          "followup_nearby",
+          "followup_second_result"
+        ]
+      },
+      "priority": 100
+    },
+    {
+      "id": "practical_duration",
+      "category": "access_practical",
+      "purpose": "Return duration or fit-to-time information for a selected object.",
+      "examples": {
+        "ar": [
+          "كم يحتاج وقت",
+          "كم مدة الزيارة",
+          "قد ايش ياخذ",
+          "ينفع بساعة",
+          "هل يكفي ساعتين",
+          "كم أجلس هناك",
+          "كم وقت النشاط"
+        ],
+        "en": [
+          "how long does it take",
+          "what is the visit duration",
+          "how much time does it need",
+          "can I do it in an hour",
+          "are two hours enough",
+          "how long should I stay",
+          "how long is the activity"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "كم يحتاج",
+          "مدة",
+          "ياخذ",
+          "يكفي",
+          "كم أجلس",
+          "وقت النشاط"
+        ],
+        "keywords_en": [
+          "how long",
+          "duration",
+          "time needed",
+          "enough",
+          "stay"
+        ],
+        "entities": [
+          "object",
+          "duration",
+          "time_available"
+        ]
+      },
+      "answer": {
+        "type": "dynamic",
+        "handler": "object_duration_fit",
+        "responses": {
+          "ar": [
+            "مدة {{object}} في بيانات EyeMakkah تقريبًا {{duration}}. بالنسبة لوقتك الحالي {{time_available}}، {{fit_note}}.",
+            "{{object}} يحتاج تقريبًا {{duration}}، و{{fit_note}}."
+          ],
+          "en": [
+            "The represented duration for {{object}} is about {{duration}}. Against your current {{time_available}} window, {{fit_note}}.",
+            "{{object}} takes about {{duration}}, and {{fit_note}}."
+          ]
+        },
+        "result_shape": "single_entity"
+      },
+      "context": {
+        "applicable_pages": [
+          "اكتشف",
+          "خطتي",
+          "*"
+        ],
+        "followup_keys": [
+          "followup_build_around_it",
+          "followup_add_to_plan"
+        ]
+      },
+      "priority": 99
+    },
+    {
+      "id": "practical_booking_requirement",
+      "category": "access_practical",
+      "purpose": "Explain whether a selected object requires booking/register/join/go semantics.",
+      "examples": {
+        "ar": [
+          "هل يحتاج حجز",
+          "لازم أسجل",
+          "أقدر أروح مباشرة",
+          "وش طريقة الدخول",
+          "هل لازم تذكرة",
+          "هل النشاط يحتاج انضمام",
+          "كيف أحجز هذا"
+        ],
+        "en": [
+          "does it need booking",
+          "do I have to register",
+          "can I just go",
+          "how do I enter",
+          "does it need a ticket",
+          "does the activity require joining",
+          "how do I book this"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "يحتاج حجز",
+          "أسجل",
+          "أروح مباشرة",
+          "تذكرة",
+          "انضمام",
+          "أحجز"
+        ],
+        "keywords_en": [
+          "need booking",
+          "register",
+          "just go",
+          "ticket",
+          "joining",
+          "book"
+        ],
+        "entities": [
+          "object",
+          "action_type"
+        ]
+      },
+      "answer": {
+        "type": "dynamic",
+        "handler": "object_action_requirement",
+        "responses": {
+          "ar": [
+            "بالنسبة لـ{{object}}، الإجراء الحالي في EyeMakkah هو {{action_label}}. {{action_note}}.",
+            "{{object}} يستخدم مسار {{action_label}} في التطبيق. {{action_note}}."
+          ],
+          "en": [
+            "For {{object}}, the current EyeMakkah action is {{action_label}}. {{action_note}}.",
+            "{{object}} uses the {{action_label}} path in the app. {{action_note}}."
+          ]
+        },
+        "result_shape": "single_entity"
+      },
+      "context": {
+        "applicable_pages": [
+          "اكتشف",
+          "*"
+        ],
+        "followup_keys": [
+          "followup_with_offer",
+          "followup_add_to_plan"
+        ]
+      },
+      "priority": 100
+    },
+    {
+      "id": "practical_source_freshness",
+      "category": "access_practical",
+      "purpose": "Return source/freshness/conflict status for a selected object/field.",
+      "examples": {
+        "ar": [
+          "هل المعلومة حديثة",
+          "متى آخر تحديث",
+          "مين مصدرها",
+          "هل فيه تعارض",
+          "هل ساعات العمل أكيدة",
+          "وش يقول المصدر",
+          "المعلومة قديمة؟"
+        ],
+        "en": [
+          "is the information recent",
+          "when was it last updated",
+          "who is the source",
+          "is there a conflict",
+          "are the hours reliable",
+          "what does the source say",
+          "is the information old"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "حديثة",
+          "آخر تحديث",
+          "مصدرها",
+          "تعارض",
+          "ساعات العمل",
+          "قديمة"
+        ],
+        "keywords_en": [
+          "recent",
+          "last updated",
+          "source",
+          "conflict",
+          "hours",
+          "old"
+        ],
+        "entities": [
+          "object",
+          "field",
+          "source_claim",
+          "freshness"
+        ]
+      },
+      "answer": {
+        "type": "dynamic",
+        "handler": "object_trust_summary",
+        "responses": {
+          "ar": [
+            "حالة المعلومة لـ{{object}}: {{trust_summary}}. المصدر/المصادر: {{sources}}.",
+            "بالنسبة لـ{{field_or_general}} في {{object}}: {{trust_summary}}."
+          ],
+          "en": [
+            "Information status for {{object}}: {{trust_summary}}. Source(s): {{sources}}.",
+            "For {{field_or_general}} on {{object}}: {{trust_summary}}."
+          ]
+        },
+        "result_shape": "single_entity"
+      },
+      "context": {
+        "applicable_pages": [
+          "اكتشف",
+          "خطتي",
+          "*"
+        ],
+        "followup_keys": [
+          "followup_show_sources",
+          "followup_compare_claims"
+        ]
+      },
+      "priority": 100
+    },
+    {
+      "id": "time_one_hour",
+      "category": "time_area",
+      "purpose": "Recommend things that fit roughly within one hour.",
+      "examples": {
+        "ar": [
+          "عندي ساعة وش أسوي",
+          "أبغى شي خلال ساعة",
+          "وش يناسب ساعة",
+          "ما عندي إلا ساعة",
+          "اقترح شي سريع",
+          "نشاط قصير"
+        ],
+        "en": [
+          "I have one hour what should I do",
+          "I need something within an hour",
+          "what fits in one hour",
+          "I only have an hour",
+          "suggest something quick",
+          "a short activity"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "عندي ساعة",
+          "خلال ساعة",
+          "يناسب ساعة",
+          "شي سريع",
+          "قصير"
+        ],
+        "keywords_en": [
+          "one hour",
+          "within an hour",
+          "fits in one hour",
+          "quick",
+          "short"
+        ],
+        "entities": [
+          "time_available",
+          "duration",
+          "neighborhood"
+        ]
+      },
+      "answer": {
+        "type": "dynamic",
+        "handler": "recommend_within_one_hour",
+        "responses": {
+          "ar": [
+            "إذا معك ساعة، هذه الخيارات الأقرب للمدة المتاحة: {{recommendations}}.",
+            "لوقت قصير، جرّب: {{recommendations}}."
+          ],
+          "en": [
+            "If you have one hour, these options fit the time window best: {{recommendations}}.",
+            "For a short window, try: {{recommendations}}."
+          ]
+        },
+        "result_shape": "ranked_list"
+      },
+      "context": {
+        "applicable_pages": [
+          "الرئيسية",
+          "اكتشف",
+          "*"
+        ],
+        "followup_keys": [
+          "followup_nearby",
+          "followup_with_offer",
+          "followup_second_result"
+        ]
+      },
+      "priority": 100
+    },
+    {
+      "id": "time_two_hours",
+      "category": "time_area",
+      "purpose": "Recommend things or a compact outing for two hours.",
+      "examples": {
+        "ar": [
+          "عندي ساعتين وش أسوي",
+          "أبغى طلعة ساعتين",
+          "وش يناسب ساعتين",
+          "رتب لي ساعتين",
+          "عندي ساعتين قبل أمشي",
+          "شي يكفي ساعتين"
+        ],
+        "en": [
+          "I have two hours what should I do",
+          "I want a two-hour outing",
+          "what fits in two hours",
+          "plan two hours for me",
+          "I have two hours before I leave",
+          "something that fits two hours"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "ساعتين",
+          "طلعة ساعتين",
+          "رتب لي ساعتين",
+          "قبل أمشي"
+        ],
+        "keywords_en": [
+          "two hours",
+          "two-hour outing",
+          "plan two hours",
+          "before I leave"
+        ],
+        "entities": [
+          "time_available",
+          "duration",
+          "neighborhood",
+          "party"
+        ]
+      },
+      "answer": {
+        "type": "dynamic",
+        "handler": "recommend_for_two_hours",
+        "responses": {
+          "ar": [
+            "لساعتين، هذه أفضل الخيارات/التركيبات المناسبة: {{recommendations}}.",
+            "إذا معك ساعتين، جرّب: {{recommendations}}."
+          ],
+          "en": [
+            "For two hours, these are the strongest fitting options/combinations: {{recommendations}}.",
+            "If you have two hours, try: {{recommendations}}."
+          ]
+        },
+        "result_shape": "ranked_list"
+      },
+      "context": {
+        "applicable_pages": [
+          "الرئيسية",
+          "اكتشف",
+          "*"
+        ],
+        "followup_keys": [
+          "followup_build_outing",
+          "followup_with_offer",
+          "followup_second_result"
+        ]
+      },
+      "priority": 100
+    },
+    {
+      "id": "time_whole_evening",
+      "category": "time_area",
+      "purpose": "Build a fuller evening outing.",
+      "examples": {
+        "ar": [
+          "عندي المساء كله",
+          "رتب لي المساء كامل",
+          "أبغى خطة للمساء",
+          "من المغرب لين الليل وش أسوي",
+          "عندي وقت طويل الليلة",
+          "سوي لي طلعة كاملة"
+        ],
+        "en": [
+          "I have the whole evening",
+          "plan my full evening",
+          "I want an evening plan",
+          "what should I do from evening to night",
+          "I have a long evening",
+          "build me a full outing"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "المساء كله",
+          "المساء كامل",
+          "من المغرب",
+          "وقت طويل الليلة",
+          "طلعة كاملة"
+        ],
+        "keywords_en": [
+          "whole evening",
+          "full evening",
+          "evening to night",
+          "long evening",
+          "full outing"
+        ],
+        "entities": [
+          "time_available",
+          "party",
+          "neighborhood",
+          "interest"
+        ]
+      },
+      "answer": {
+        "type": "dynamic",
+        "handler": "build_evening_outing",
+        "responses": {
+          "ar": [
+            "بما أن عندك المساء كله، هذا مسار مقترح متكامل: {{outing_steps}}. المدة {{total_time}}.",
+            "للمساء كامل، أقترح: {{outing_steps}}."
+          ],
+          "en": [
+            "Since you have the whole evening, here is a fuller suggested route: {{outing_steps}}. Duration: {{total_time}}.",
+            "For the full evening, I suggest: {{outing_steps}}."
+          ]
+        },
+        "result_shape": "composed_plan"
+      },
+      "context": {
+        "applicable_pages": [
+          "الرئيسية",
+          "خطتي",
+          "*"
+        ],
+        "followup_keys": [
+          "followup_with_offer",
+          "followup_make_shorter",
+          "followup_swap_step",
+          "followup_add_to_plan"
+        ]
+      },
+      "priority": 100
+    },
+    {
+      "id": "area_specific_discovery",
+      "category": "time_area",
+      "purpose": "Recommend across content types inside a named/selected neighborhood.",
+      "examples": {
+        "ar": [
+          "وش فيه بالعوالي",
+          "وش أسوي في العزيزية",
+          "عطني شي في النسيم",
+          "وش فيه بأجياد",
+          "أبغى اقتراحات في جرول",
+          "وش موجود بالمسفلة",
+          "وش فيه في حيّي"
+        ],
+        "en": [
+          "what is there in Al Awali",
+          "what can I do in Al Aziziyah",
+          "show me something in An Naseem",
+          "what is there in Ajyad",
+          "suggestions in Jarwal",
+          "what is in Al Misfalah",
+          "what is there in my neighborhood"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "بالعوالي",
+          "في العزيزية",
+          "في النسيم",
+          "بأجياد",
+          "في جرول",
+          "بالمسفلة",
+          "في حيّي"
+        ],
+        "keywords_en": [
+          "in Al Awali",
+          "in Al Aziziyah",
+          "in An Naseem",
+          "in Ajyad",
+          "in Jarwal",
+          "in my neighborhood"
+        ],
+        "entities": [
+          "neighborhood",
+          "time",
+          "party",
+          "interest"
+        ]
+      },
+      "answer": {
+        "type": "dynamic",
+        "handler": "recommend_in_area",
+        "responses": {
+          "ar": [
+            "في {{neighborhood}}، هذه أبرز الخيارات المناسبة لسياقك: {{recommendations}}.",
+            "إذا تبغى تبقى داخل {{neighborhood}}، جرّب: {{recommendations}}."
+          ],
+          "en": [
+            "In {{neighborhood}}, these are the strongest matches for your context: {{recommendations}}.",
+            "If you want to stay within {{neighborhood}}, try: {{recommendations}}."
+          ]
+        },
+        "result_shape": "ranked_list"
+      },
+      "context": {
+        "applicable_pages": [
+          "الرئيسية",
+          "اكتشف",
+          "*"
+        ],
+        "followup_keys": [
+          "followup_food_only",
+          "followup_activities_only",
+          "followup_with_offer",
+          "followup_second_result"
+        ]
+      },
+      "priority": 100
+    },
+    {
+      "id": "area_compare_nearby_options",
+      "category": "time_area",
+      "purpose": "Compare or rank options by distance/proximity inside current selected area/context.",
+      "examples": {
+        "ar": [
+          "وش الأقرب بينهم",
+          "رتبهم حسب القرب",
+          "مين أقرب واحد",
+          "أبغى الأقرب أول",
+          "قارن المسافات",
+          "وش أقرب خيارين"
+        ],
+        "en": [
+          "which is closest",
+          "rank them by proximity",
+          "which one is nearest",
+          "put the closest first",
+          "compare distances",
+          "what are the two closest options"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "الأقرب",
+          "حسب القرب",
+          "أقرب واحد",
+          "المسافات",
+          "أقرب خيارين"
+        ],
+        "keywords_en": [
+          "closest",
+          "proximity",
+          "nearest",
+          "distances",
+          "two closest"
+        ],
+        "entities": [
+          "last_ranked_results",
+          "neighborhood",
+          "location"
+        ]
+      },
+      "answer": {
+        "type": "dynamic",
+        "handler": "rank_previous_by_proximity",
+        "responses": {
+          "ar": [
+            "حسب القرب في سياقك الحالي: {{ranked_results}}.",
+            "ترتيب الخيارات من الأقرب: {{ranked_results}}."
+          ],
+          "en": [
+            "By proximity in your current context: {{ranked_results}}.",
+            "Ranking the options from closest: {{ranked_results}}."
+          ]
+        },
+        "result_shape": "ranked_list"
+      },
+      "context": {
+        "applicable_pages": [
+          "*"
+        ],
+        "followup_keys": [
+          "followup_with_offer",
+          "followup_second_result"
+        ]
+      },
+      "priority": 100
+    }
+  ]
+}

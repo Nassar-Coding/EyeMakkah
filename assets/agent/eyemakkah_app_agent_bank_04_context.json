@@ -1,0 +1,2546 @@
+{
+  "file": "eyemakkah_app_agent_bank_04_context.json",
+  "version": "1.0.0",
+  "phase": 1,
+  "part": "04_context",
+  "source_alignment": {
+    "app_branch": "claude/upbeat-bell-hkmvzy",
+    "parts_aligned": [
+      "eyemakkah_app_agent_bank_01_core.json",
+      "eyemakkah_app_agent_bank_02_discovery.json",
+      "eyemakkah_app_agent_bank_03_actions_business.json"
+    ],
+    "note": "This file closes the four-part app-agent bank with short-session context, follow-up routing, aliases, and optional contextual suggestions. No app code is modified here."
+  },
+  "product": {
+    "name_ar": "تطبيق EyeMakkah",
+    "name_en": "EyeMakkah App",
+    "assistant_name_ar": "مساعد EyeMakkah",
+    "assistant_name_en": "EyeMakkah Assistant"
+  },
+  "purpose": "Conversation context, follow-up routing, entity aliases, contextual suggestions, and short-session memory for the free-text EyeMakkah consumer assistant.",
+  "integration_contract": {
+    "free_text_first": true,
+    "suggestions_are_optional": true,
+    "max_contextual_suggestions": 2,
+    "context_inputs": [
+      "current_page",
+      "user_context",
+      "last_intent",
+      "last_result",
+      "last_ranked_results",
+      "last_entities",
+      "last_object",
+      "last_offer",
+      "last_plan_item",
+      "last_outing",
+      "last_action"
+    ],
+    "truthfulness": [
+      "Do not claim live LLM/API connectivity.",
+      "Do not invent unresolved objects, offers, prices, availability, crowding, bookings, or operational status.",
+      "Do not expose personal data, exact user locations, attendee identities, or nearby-user lists.",
+      "Do not convert community contributions into official facts.",
+      "Do not collapse Save, Add to Plan, Join, Booking handoff, Confirmed, Attended, or Completed into one state.",
+      "Do not recommend expired offers/events or paused/dormant groups as active."
+    ]
+  },
+  "stats": {
+    "intent_count": 20,
+    "utterances_ar": 195,
+    "utterances_en": 186,
+    "utterances_total": 381,
+    "by_category": {
+      "conversation_context": 20
+    },
+    "by_answer_type": {
+      "contextual_dynamic": 20
+    },
+    "contextual_suggestion_pages": 6,
+    "alias_groups": 12,
+    "alias_entries_total": 404,
+    "referenced_followup_keys_parts_01_03": 59,
+    "unmapped_followup_keys": 0
+  },
+  "cumulative_bank_stats": {
+    "part_01_intents": 50,
+    "part_02_intents": 45,
+    "part_03_intents": 35,
+    "part_04_intents": 20,
+    "total_intents": 150,
+    "part_01_utterances": 670,
+    "part_02_utterances": 592,
+    "part_03_utterances": 480,
+    "part_04_utterances": 381,
+    "total_example_utterances": 2123
+  },
+  "routing": {
+    "context_state_schema": {
+      "current_page": "string",
+      "user_context": {
+        "mode": "resident|visitor|null",
+        "neighborhood": "string|null",
+        "party": "solo|family|kids|group|null",
+        "time_available": "string|null",
+        "interests": "array",
+        "accessibility": "array",
+        "language": "ar|en"
+      },
+      "last_intent": "string|null",
+      "last_result": "object|null",
+      "last_ranked_results": "array|null",
+      "last_entities": "array",
+      "last_object": "object|null",
+      "last_offer": "object|null",
+      "last_plan_item": "object|null",
+      "last_outing": "object|null",
+      "last_action": "object|null",
+      "turn_count": "integer"
+    },
+    "resolution_order": [
+      "normalize language and text using Part 01 guidance",
+      "resolve explicit named objects and entities using aliases plus normalized current inventory titles",
+      "detect explicit action verbs and action targets",
+      "detect explicit context changes such as neighborhood, party, time, mode, category, or offer requirement",
+      "match high-confidence standalone intents from Parts 01–03",
+      "for short/referential text, match Part 04 follow-up intents",
+      "reuse prior intent only when the follow-up clearly depends on it",
+      "apply explicit new entities/context over old conversational entities",
+      "ask one concise clarification if multiple referents remain plausible",
+      "never invent a missing object, offer, state, source, price, ranking, or value"
+    ],
+    "confidence": {
+      "exact_or_alias": 0.92,
+      "strong_example_similarity": 0.82,
+      "keyword_plus_entity": 0.76,
+      "keyword_plus_context": 0.72,
+      "followup_with_valid_context": 0.76,
+      "action_verb_plus_referent": 0.84,
+      "clarify_below": 0.62
+    },
+    "guardrails": [
+      "Do not resolve 'هذا/ذاك/هو/it/that/this' when multiple plausible objects remain.",
+      "An explicit new object, area, time, party, category, or offer requirement overrides an older one.",
+      "A short follow-up may reuse the previous intent only when its meaning depends on the previous turn.",
+      "Do not use precise location unless the user has actually shared/granted it; selected neighborhood is sufficient for many proximity answers.",
+      "Never infer a sensitive trait from behavior or community membership.",
+      "If an offer filter removes all results, say no matching active offer is represented rather than inventing one.",
+      "If the user says 'احجزه', booking handoff semantics from Part 03 apply; never jump directly to Confirmed.",
+      "If the user says 'ضفه لخطتي', preserve Save/Join/Booking states unless separately requested.",
+      "If an item is expired, ended, paused, or dormant, it must not be surfaced as an active recommendation.",
+      "Contextual suggestions are optional UI aids and are never treated as user intent until selected."
+    ],
+    "followup_key_aliases": {
+      "followup_why": "followup_why",
+      "followup_second_result": "followup_second_result",
+      "followup_third_result": "followup_third_result",
+      "followup_more_detail": "followup_more_detail",
+      "followup_make_shorter": "followup_make_shorter",
+      "followup_show_more_ranked": "followup_show_more_ranked",
+      "followup_closer": "followup_closer",
+      "followup_nearby": "followup_closer",
+      "followup_quieter": "followup_quieter",
+      "followup_cheaper": "followup_cheaper",
+      "followup_with_offer": "followup_with_offer",
+      "followup_family_only": "followup_family_only",
+      "followup_make_it_family": "followup_family_only",
+      "followup_kids_only": "followup_kids_only",
+      "followup_beginner_only": "followup_beginner_only",
+      "followup_accessible_only": "followup_accessible_only",
+      "followup_easier_access": "followup_accessible_only",
+      "followup_stepfree_only": "followup_accessible_only",
+      "followup_food_only": "followup_category_only",
+      "followup_restaurants_only": "followup_category_only",
+      "followup_activities_only": "followup_category_only",
+      "followup_stays_only": "followup_category_only",
+      "followup_neighborhood_only": "followup_area_change_repeat",
+      "followup_free_only": "discover_free",
+      "followup_what_to_order": "food_what_to_order",
+      "followup_indoor_only": "discover_what_to_do_now",
+      "followup_solo_ok": "party_solo",
+      "followup_half_day": "visitor_half_day",
+      "followup_first_time": "visitor_first_time",
+      "followup_shorter": "time_one_hour",
+      "followup_this_week": "discover_weekend",
+      "followup_group_small": "party_small_group",
+      "followup_women_only": "party_women",
+      "followup_community_link": "community_to_activity",
+      "followup_build_around_it": "plan_build_around_item",
+      "followup_show_sources": "practical_source_freshness",
+      "followup_compare_claims": "practical_source_freshness",
+      "followup_build_outing": "discover_build_outing",
+      "followup_family_package": "offers_family_packages",
+      "followup_offer_terms": "offers_terms_details",
+      "followup_book_now": "action_start_booking_handoff",
+      "followup_confirm_booking": "action_confirm_booking_explicit",
+      "followup_add_to_plan": "plan_add_item",
+      "followup_plan_when": "plan_today",
+      "followup_open_details": "action_open_details",
+      "followup_today_only": "plan_today",
+      "followup_upcoming_only": "plan_upcoming",
+      "followup_confirmed_only": "plan_confirmed",
+      "followup_completed_only": "plan_completed",
+      "followup_what_next": "plan_what_next",
+      "followup_open_second": "action_open_details",
+      "followup_contribute": "community_contribute_experience",
+      "followup_join_community": "community_join_leave",
+      "followup_open_thread": "action_open_details",
+      "followup_join_activity": "action_join_activity",
+      "followup_add_all_to_plan": "plan_add_item",
+      "followup_swap_step": "followup_different_option",
+      "followup_more_local": "resident_local_life",
+      "followup_offer_nearby": "offers_nearby",
+      "followup_offer_expiring": "offers_expiring_soon",
+      "followup_offer_category": "followup_category_only",
+      "followup_near_haram": "followup_area_change_repeat",
+      "followup_show_recent": "community_active_discussions"
+    },
+    "followup_key_validation": {
+      "referenced_keys": [
+        "followup_activities_only",
+        "followup_add_all_to_plan",
+        "followup_add_to_plan",
+        "followup_beginner_only",
+        "followup_book_now",
+        "followup_build_around_it",
+        "followup_build_outing",
+        "followup_cheaper",
+        "followup_closer",
+        "followup_community_link",
+        "followup_compare_claims",
+        "followup_completed_only",
+        "followup_confirm_booking",
+        "followup_confirmed_only",
+        "followup_contribute",
+        "followup_easier_access",
+        "followup_family_only",
+        "followup_family_package",
+        "followup_first_time",
+        "followup_food_only",
+        "followup_free_only",
+        "followup_group_small",
+        "followup_half_day",
+        "followup_indoor_only",
+        "followup_join_activity",
+        "followup_join_community",
+        "followup_kids_only",
+        "followup_make_it_family",
+        "followup_make_shorter",
+        "followup_more_detail",
+        "followup_more_local",
+        "followup_near_haram",
+        "followup_nearby",
+        "followup_neighborhood_only",
+        "followup_offer_category",
+        "followup_offer_expiring",
+        "followup_offer_nearby",
+        "followup_offer_terms",
+        "followup_open_details",
+        "followup_open_second",
+        "followup_open_thread",
+        "followup_plan_when",
+        "followup_quieter",
+        "followup_restaurants_only",
+        "followup_second_result",
+        "followup_shorter",
+        "followup_show_recent",
+        "followup_show_sources",
+        "followup_solo_ok",
+        "followup_stays_only",
+        "followup_stepfree_only",
+        "followup_swap_step",
+        "followup_this_week",
+        "followup_today_only",
+        "followup_upcoming_only",
+        "followup_what_next",
+        "followup_what_to_order",
+        "followup_with_offer",
+        "followup_women_only"
+      ],
+      "unmapped_keys": []
+    }
+  },
+  "contextual_suggestions": {
+    "rules": {
+      "max_visible": 2,
+      "min_visible": 0,
+      "free_text_input_is_primary": true,
+      "do_not_render_as_fixed_question_bank": true,
+      "selection_inputs": [
+        "current_page",
+        "user_context",
+        "last_intent",
+        "last_result",
+        "last_ranked_results",
+        "last_entities",
+        "last_action"
+      ],
+      "priority_order": [
+        "followup_to_last_answer",
+        "active_object_or_plan_context",
+        "page_specific",
+        "user_context_specific",
+        "offer_relevance"
+      ],
+      "hide_when": [
+        "clarification_required",
+        "error_or_recovery_state",
+        "no_relevant_suggestion"
+      ],
+      "avoid_repeat_for_turns": 2
+    },
+    "by_page": {
+      "الرئيسية": {
+        "ar": [
+          "وش أسوي الليلة؟",
+          "وش فيه قريب وعليه عرض؟",
+          "رتب لي طلعة على وقتي",
+          "وش يناسبني اليوم؟"
+        ],
+        "en": [
+          "What should I do tonight?",
+          "What's nearby with an offer?",
+          "Build an outing for my available time",
+          "What fits me today?"
+        ]
+      },
+      "اكتشف": {
+        "ar": [
+          "أبغى شي مختلف",
+          "وش الأقرب؟",
+          "خلها للعائلة",
+          "وش عليه عرض؟"
+        ],
+        "en": [
+          "I want something different",
+          "What's closest?",
+          "Make it family-friendly",
+          "What has an offer?"
+        ]
+      },
+      "المجتمع": {
+        "ar": [
+          "وش الناس تقول عنه؟",
+          "فيه نشاط مرتبط بالمجتمع؟",
+          "وش تنصح المجتمعات القريبة من اهتماماتي؟"
+        ],
+        "en": [
+          "What do people say about it?",
+          "Is there an activity linked to this community?",
+          "Which communities fit my interests?"
+        ]
+      },
+      "خطتي": {
+        "ar": [
+          "وش عندي اليوم؟",
+          "وش يناسب بعد هذا؟",
+          "رتب شي حوله",
+          "وش المكتمل عندي؟"
+        ],
+        "en": [
+          "What do I have today?",
+          "What fits after this?",
+          "Build something around it",
+          "What have I completed?"
+        ]
+      },
+      "تفاصيل": {
+        "ar": [
+          "وش الناس تقول عنه؟",
+          "عليه عرض؟",
+          "كم يحتاج وقت؟",
+          "ضفه لخطتي"
+        ],
+        "en": [
+          "What do people say about it?",
+          "Does it have an offer?",
+          "How long does it take?",
+          "Add it to My Plan"
+        ]
+      },
+      "الحساب": {
+        "ar": [
+          "وش سياقي الحالي؟",
+          "كيف التخصيص يشتغل؟"
+        ],
+        "en": [
+          "What's my current context?",
+          "How does personalization work?"
+        ]
+      }
+    },
+    "after_answer_type": {
+      "ranked_list": {
+        "ar": [
+          "والثاني؟",
+          "ليش هذا الأول؟"
+        ],
+        "en": [
+          "What about the second one?",
+          "Why is this first?"
+        ]
+      },
+      "single_entity": {
+        "ar": [
+          "اعطني تفاصيل أكثر",
+          "عليه عرض؟"
+        ],
+        "en": [
+          "Give me more detail",
+          "Does it have an offer?"
+        ]
+      },
+      "composed_plan": {
+        "ar": [
+          "غير لي خطوة",
+          "ضفها لخطتي"
+        ],
+        "en": [
+          "Swap one step",
+          "Add it to My Plan"
+        ]
+      },
+      "offer": {
+        "ar": [
+          "وش شروط العرض؟",
+          "ودني للحجز"
+        ],
+        "en": [
+          "What are the offer terms?",
+          "Take me to booking"
+        ]
+      },
+      "community_summary": {
+        "ar": [
+          "وش أحدث تعليق؟",
+          "فيه نشاط مرتبط؟"
+        ],
+        "en": [
+          "What's the latest contribution?",
+          "Is there a linked activity?"
+        ]
+      }
+    }
+  },
+  "aliases": {
+    "pages": {
+      "الرئيسية": [
+        "الرئيسية",
+        "الهوم",
+        "home",
+        "الصفحة الرئيسية"
+      ],
+      "اكتشف": [
+        "اكتشف",
+        "discover",
+        "التصفح",
+        "صفحة اكتشف"
+      ],
+      "المجتمع": [
+        "المجتمع",
+        "community",
+        "المجتمعات",
+        "صفحة المجتمع"
+      ],
+      "خطتي": [
+        "خطتي",
+        "my plan",
+        "الخطة",
+        "صفحتي",
+        "خطة اليوم"
+      ],
+      "الحساب": [
+        "الحساب",
+        "حسابي",
+        "profile",
+        "الملف الشخصي",
+        "الإعدادات"
+      ]
+    },
+    "modes": {
+      "مقيم": [
+        "مقيم",
+        "ساكن",
+        "من سكان مكة",
+        "resident",
+        "local",
+        "Makkah resident"
+      ],
+      "زائر": [
+        "زائر",
+        "زيارة",
+        "جاي مكة",
+        "visitor",
+        "visiting",
+        "guest"
+      ]
+    },
+    "neighborhoods": {
+      "العوالي": [
+        "عوالي",
+        "العوالي",
+        "Al Awali",
+        "Awali",
+        "alawali"
+      ],
+      "العزيزية": [
+        "عزيزيه",
+        "العزيزيه",
+        "العزيزية",
+        "Aziziyah",
+        "Al Aziziyah",
+        "aziziya"
+      ],
+      "الششة": [
+        "الششه",
+        "ششة",
+        "الششة",
+        "Shisha",
+        "Al Shisha"
+      ],
+      "الشوقية": [
+        "الشوقيه",
+        "شوقية",
+        "الشوقية",
+        "Shawqiyah",
+        "Ash Shawqiyah"
+      ],
+      "النسيم": [
+        "نسيم",
+        "النسيم",
+        "Naseem",
+        "An Naseem",
+        "nasim"
+      ],
+      "بطحاء قريش": [
+        "بطحاء",
+        "بطحا قريش",
+        "بطحاء قريش",
+        "Batha Quraysh",
+        "Batha Quraish"
+      ],
+      "المسفلة": [
+        "المسفله",
+        "مسفلة",
+        "المسفلة",
+        "Misfalah",
+        "Al Misfalah"
+      ],
+      "أجياد": [
+        "اجياد",
+        "أجياد",
+        "Ajyad"
+      ],
+      "الهجرة": [
+        "الهجره",
+        "الهجرة",
+        "Hijrah",
+        "Al Hijrah"
+      ],
+      "الزاهر": [
+        "زاهر",
+        "الزاهر",
+        "Zahir",
+        "Az Zahir"
+      ],
+      "الكعكية": [
+        "الكعكيه",
+        "كعكية",
+        "الكعكية",
+        "Kakiyah",
+        "Al Kakiyah"
+      ],
+      "جرول": [
+        "جرول",
+        "Jarwal"
+      ],
+      "الرصيفة": [
+        "الرصيفه",
+        "رصيفة",
+        "الرصيفة",
+        "Rusayfah",
+        "Ar Rusayfah"
+      ],
+      "التنعيم": [
+        "التنعيم",
+        "تنعيم",
+        "Tanim",
+        "At Tanim"
+      ],
+      "محيط الحرم": [
+        "الحرم",
+        "حول الحرم",
+        "محيط الحرم",
+        "Haram area",
+        "near Haram"
+      ]
+    },
+    "party": {
+      "فردي": [
+        "لحالي",
+        "لوحدي",
+        "فردي",
+        "شخص واحد",
+        "solo",
+        "alone",
+        "one person"
+      ],
+      "عائلة": [
+        "عائلة",
+        "العائلة",
+        "العوائل",
+        "الأسرة",
+        "family",
+        "families"
+      ],
+      "مع أطفال": [
+        "أطفال",
+        "عيال",
+        "الصغار",
+        "kids",
+        "children",
+        "with kids"
+      ],
+      "مجموعة": [
+        "مجموعة",
+        "قروب",
+        "group",
+        "friends",
+        "مع أصحابي"
+      ]
+    },
+    "time_windows": {
+      "ساعة": [
+        "ساعة",
+        "ساعة وحدة",
+        "1 ساعة",
+        "one hour",
+        "1 hour"
+      ],
+      "ساعتان": [
+        "ساعتين",
+        "ساعتان",
+        "2 ساعة",
+        "two hours",
+        "2 hours"
+      ],
+      "المساء": [
+        "المساء",
+        "الليلة",
+        "هذا المساء",
+        "evening",
+        "tonight"
+      ],
+      "نصف يوم": [
+        "نص يوم",
+        "نصف يوم",
+        "half day",
+        "half a day",
+        "أربع ساعات",
+        "4 hours"
+      ],
+      "نهاية الأسبوع": [
+        "الويكند",
+        "نهاية الأسبوع",
+        "الجمعة والسبت",
+        "weekend"
+      ]
+    },
+    "content_types": {
+      "restaurant": [
+        "مطعم",
+        "مطاعم",
+        "أكل",
+        "restaurant",
+        "restaurants",
+        "food"
+      ],
+      "cafe": [
+        "مقهى",
+        "مقاهي",
+        "كوفي",
+        "قهوة",
+        "cafe",
+        "cafes",
+        "coffee"
+      ],
+      "place": [
+        "مكان",
+        "أماكن",
+        "place",
+        "places"
+      ],
+      "experience": [
+        "تجربة",
+        "تجارب",
+        "experience",
+        "experiences"
+      ],
+      "activity": [
+        "نشاط",
+        "أنشطة",
+        "activity",
+        "activities"
+      ],
+      "event": [
+        "فعالية",
+        "فعاليات",
+        "حدث",
+        "event",
+        "events"
+      ],
+      "club": [
+        "نادي",
+        "أندية",
+        "club",
+        "clubs"
+      ],
+      "community": [
+        "مجتمع",
+        "مجتمعات",
+        "community",
+        "communities"
+      ],
+      "market": [
+        "سوق",
+        "أسواق",
+        "تسوق",
+        "market",
+        "markets",
+        "shopping"
+      ],
+      "service": [
+        "خدمة",
+        "خدمات",
+        "service",
+        "services"
+      ],
+      "stay": [
+        "فندق",
+        "إقامة",
+        "سكن",
+        "شقق",
+        "hotel",
+        "stay",
+        "accommodation"
+      ]
+    },
+    "categories": {
+      "الثقافة والتاريخ": [
+        "ثقافة",
+        "ثقافي",
+        "تاريخ",
+        "متحف",
+        "معرض",
+        "culture",
+        "history",
+        "museum"
+      ],
+      "التراث والمسارات": [
+        "تراث",
+        "مسار",
+        "مسارات",
+        "heritage",
+        "trail",
+        "trails"
+      ],
+      "الطبيعة والجبال": [
+        "طبيعة",
+        "جبل",
+        "جبال",
+        "nature",
+        "mountain",
+        "mountains"
+      ],
+      "العائلات والأطفال": [
+        "عائلات",
+        "أطفال",
+        "family",
+        "kids"
+      ],
+      "التعلم والورش": [
+        "ورشة",
+        "ورش",
+        "تعلم",
+        "workshop",
+        "workshops",
+        "learning"
+      ],
+      "الحرف والمهارات": [
+        "حرف",
+        "مهارات",
+        "خط",
+        "سدو",
+        "craft",
+        "skills",
+        "calligraphy"
+      ],
+      "التطوع والمبادرات": [
+        "تطوع",
+        "مبادرة",
+        "volunteer",
+        "volunteering",
+        "initiative"
+      ],
+      "الرياضة والمشي": [
+        "رياضة",
+        "مشي",
+        "جري",
+        "دراجات",
+        "sport",
+        "walking",
+        "running",
+        "cycling"
+      ]
+    },
+    "suitability": {
+      "quiet": [
+        "هادي",
+        "هادئ",
+        "أهدأ",
+        "رايق",
+        "quiet",
+        "calm"
+      ],
+      "family": [
+        "عائلي",
+        "للعائلة",
+        "family-friendly",
+        "family"
+      ],
+      "kids": [
+        "للأطفال",
+        "للعيال",
+        "kids",
+        "children"
+      ],
+      "solo": [
+        "لحالي",
+        "فردي",
+        "solo",
+        "alone"
+      ],
+      "beginner": [
+        "مبتدئ",
+        "للمبتدئين",
+        "بدون خبرة",
+        "beginner",
+        "no experience"
+      ],
+      "women_only": [
+        "نسائي",
+        "للنساء",
+        "women-only",
+        "women only"
+      ],
+      "accessible": [
+        "كرسي متحرك",
+        "سهولة وصول",
+        "accessible",
+        "wheelchair"
+      ],
+      "stepfree": [
+        "بدون درج",
+        "بدون سلالم",
+        "step-free",
+        "no stairs"
+      ],
+      "outdoor": [
+        "خارجي",
+        "مكان مفتوح",
+        "outdoor",
+        "open-air"
+      ],
+      "indoor": [
+        "داخلي",
+        "مكان مغلق",
+        "indoor"
+      ]
+    },
+    "offers": {
+      "discount": [
+        "خصم",
+        "تخفيض",
+        "discount",
+        "deal"
+      ],
+      "percentage_discount": [
+        "10%",
+        "١٠٪",
+        "عشرة بالمية",
+        "percentage discount"
+      ],
+      "family_package": [
+        "باقة عائلية",
+        "بكج عائلي",
+        "family package",
+        "family bundle"
+      ],
+      "bundle": [
+        "باقة",
+        "بكج",
+        "bundle",
+        "package"
+      ],
+      "app_exclusive": [
+        "حصري التطبيق",
+        "حصري EyeMakkah",
+        "من التطبيق",
+        "app exclusive",
+        "app-only"
+      ],
+      "limited_time": [
+        "لفترة محدودة",
+        "ينتهي قريب",
+        "limited time",
+        "ending soon"
+      ]
+    },
+    "plan_states": {
+      "now": [
+        "الآن",
+        "الحين",
+        "now"
+      ],
+      "today": [
+        "اليوم",
+        "today"
+      ],
+      "upcoming": [
+        "قادم",
+        "الجاي",
+        "upcoming",
+        "next"
+      ],
+      "confirmed": [
+        "مؤكد",
+        "confirmed"
+      ],
+      "interested": [
+        "مهتم",
+        "interested"
+      ],
+      "saved": [
+        "محفوظ",
+        "حفظ",
+        "saved"
+      ],
+      "completed": [
+        "مكتمل",
+        "خلصت",
+        "completed",
+        "done"
+      ]
+    },
+    "actions": {
+      "save": [
+        "احفظ",
+        "حفظ",
+        "save"
+      ],
+      "add_to_plan": [
+        "أضف لخطتي",
+        "ضف لخطتي",
+        "add to my plan",
+        "plan it"
+      ],
+      "join": [
+        "انضم",
+        "سجلني",
+        "join",
+        "going"
+      ],
+      "book": [
+        "احجز",
+        "حجز",
+        "book",
+        "booking"
+      ],
+      "open": [
+        "افتح",
+        "ورني",
+        "open",
+        "show"
+      ],
+      "directions": [
+        "اتجاهات",
+        "كيف أوصل",
+        "directions",
+        "route"
+      ],
+      "contribute": [
+        "شارك تجربتي",
+        "أكتب نصيحة",
+        "share experience",
+        "add a tip"
+      ]
+    },
+    "known_places": {
+      "المسجد الحرام": [
+        "الحرم",
+        "المسجد الحرام",
+        "Masjid al-Haram",
+        "Grand Mosque"
+      ],
+      "حي حراء الثقافي": [
+        "حراء",
+        "حي حراء",
+        "حي حراء الثقافي",
+        "Hira Cultural District"
+      ],
+      "متحف برج الساعة": [
+        "برج الساعة",
+        "متحف برج الساعة",
+        "Clock Tower Museum"
+      ],
+      "جبل النور": [
+        "جبل النور",
+        "غار حراء",
+        "Jabal al-Nour",
+        "Jabal Al Noor"
+      ],
+      "جبل ثور": [
+        "جبل ثور",
+        "Jabal Thawr",
+        "Mount Thawr"
+      ],
+      "عين زبيدة": [
+        "عين زبيدة",
+        "Ayn Zubaydah",
+        "Zubaida"
+      ],
+      "الحديبية": [
+        "الحديبية",
+        "Hudaybiyyah",
+        "Hudaibiyah"
+      ],
+      "مجمع كسوة الكعبة المشرفة": [
+        "الكسوة",
+        "مجمع الكسوة",
+        "كسوة الكعبة",
+        "Kiswah complex"
+      ],
+      "مكتبة مكة المكرمة": [
+        "مكتبة مكة",
+        "مكتبة مكة المكرمة",
+        "Makkah Library"
+      ],
+      "سوق العتيبية": [
+        "العتيبية",
+        "سوق العتيبية",
+        "Otaybiyah Market"
+      ]
+    }
+  },
+  "intents": [
+    {
+      "id": "followup_why",
+      "category": "conversation_context",
+      "purpose": "Explain why the previous recommendation/result was selected, using only the ranking/context signals available for that result.",
+      "examples": {
+        "ar": [
+          "ليش",
+          "طيب ليش",
+          "ليه",
+          "ليش هذا",
+          "ليش اخترته",
+          "ليش اقترحته",
+          "وش السبب",
+          "ليش يناسبني",
+          "ليش هو الأول",
+          "وش اللي خلاه مناسب",
+          "اشرح لي ليش",
+          "ليش طلع لي هذا",
+          "ليه هذا بالذات",
+          "وش سبب الترشيح"
+        ],
+        "en": [
+          "why",
+          "okay why",
+          "why this",
+          "why did you choose it",
+          "why did you suggest it",
+          "what is the reason",
+          "why does it fit me",
+          "why is it first",
+          "what made it suitable",
+          "explain why",
+          "why did this show up",
+          "why this one specifically"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "ليش",
+          "ليه",
+          "السبب",
+          "اخترته",
+          "اقترحته",
+          "يناسبني",
+          "الترشيح"
+        ],
+        "keywords_en": [
+          "why",
+          "reason",
+          "choose",
+          "suggest",
+          "fit",
+          "first"
+        ],
+        "entities": []
+      },
+      "answer": {
+        "type": "contextual_dynamic",
+        "handler": "followup_explain_previous_recommendation",
+        "responses": {
+          "ar": [
+            "رشحته لأن {{reason_summary}}، بناءً على سياقك الحالي والبيانات المتاحة عن {{entity}}.",
+            "أهم سبب للترشيح: {{reason_summary}}."
+          ],
+          "en": [
+            "I recommended it because {{reason_summary}}, based on your current context and the available data for {{entity}}.",
+            "The main reason for the recommendation is: {{reason_summary}}."
+          ]
+        },
+        "result_shape": "single_answer"
+      },
+      "context": {
+        "required_context": [
+          "last_intent",
+          "last_result"
+        ],
+        "updates_context": false,
+        "applicable_pages": [
+          "*"
+        ]
+      },
+      "priority": 100
+    },
+    {
+      "id": "followup_second_result",
+      "category": "conversation_context",
+      "purpose": "Return the second result from the previous ranking without rerunning an unrelated query.",
+      "examples": {
+        "ar": [
+          "والثاني",
+          "طيب والثاني",
+          "وش الثاني",
+          "مين الثاني",
+          "ايش المرتبة الثانية",
+          "اللي بعده",
+          "اعطني الثاني",
+          "النتيجة الثانية",
+          "ثاني واحد",
+          "طيب وش بعد الأول",
+          "افتح لي الثاني بعدين",
+          "وش الخيار الثاني"
+        ],
+        "en": [
+          "what about the second one",
+          "okay and the second",
+          "what is second",
+          "who is second",
+          "what is in second place",
+          "what comes next",
+          "give me the second one",
+          "the second result",
+          "number two",
+          "what comes after the first",
+          "what is option two"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "والثاني",
+          "الثاني",
+          "المرتبة الثانية",
+          "اللي بعده",
+          "النتيجة الثانية",
+          "ثاني"
+        ],
+        "keywords_en": [
+          "second",
+          "second one",
+          "second place",
+          "next",
+          "number two",
+          "option two"
+        ],
+        "entities": []
+      },
+      "answer": {
+        "type": "contextual_dynamic",
+        "handler": "followup_second_ranked",
+        "responses": {
+          "ar": [
+            "الخيار الثاني هو {{entity}}، وسبب ملاءمته المختصر: {{reason}}.",
+            "الثاني في نفس الترتيب: {{entity}}."
+          ],
+          "en": [
+            "The second option is {{entity}}. Brief fit reason: {{reason}}.",
+            "Second in the same ranking: {{entity}}."
+          ]
+        },
+        "result_shape": "single_answer"
+      },
+      "context": {
+        "required_context": [
+          "last_ranked_results"
+        ],
+        "updates_context": false,
+        "applicable_pages": [
+          "*"
+        ]
+      },
+      "priority": 100
+    },
+    {
+      "id": "followup_third_result",
+      "category": "conversation_context",
+      "purpose": "Return the third result from the previous ranking.",
+      "examples": {
+        "ar": [
+          "والثالث",
+          "طيب والثالث",
+          "وش الثالث",
+          "مين الثالث",
+          "ايش المرتبة الثالثة",
+          "اعطني الثالث",
+          "النتيجة الثالثة",
+          "ثالث واحد",
+          "وش بعد الثاني",
+          "الخيار الثالث"
+        ],
+        "en": [
+          "what about the third one",
+          "okay and the third",
+          "what is third",
+          "who is third",
+          "what is in third place",
+          "give me the third one",
+          "the third result",
+          "number three",
+          "what comes after second",
+          "the third option"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "والثالث",
+          "الثالث",
+          "المرتبة الثالثة",
+          "اعطني الثالث",
+          "بعد الثاني"
+        ],
+        "keywords_en": [
+          "third",
+          "third one",
+          "third place",
+          "number three",
+          "after second"
+        ],
+        "entities": []
+      },
+      "answer": {
+        "type": "contextual_dynamic",
+        "handler": "followup_third_ranked",
+        "responses": {
+          "ar": [
+            "الخيار الثالث هو {{entity}}، وسبب ملاءمته المختصر: {{reason}}.",
+            "الثالث في نفس الترتيب: {{entity}}."
+          ],
+          "en": [
+            "The third option is {{entity}}. Brief fit reason: {{reason}}.",
+            "Third in the same ranking: {{entity}}."
+          ]
+        },
+        "result_shape": "single_answer"
+      },
+      "context": {
+        "required_context": [
+          "last_ranked_results"
+        ],
+        "updates_context": false,
+        "applicable_pages": [
+          "*"
+        ]
+      },
+      "priority": 99
+    },
+    {
+      "id": "followup_compare_top_two",
+      "category": "conversation_context",
+      "purpose": "Compare the top two prior results using decision-useful attributes from the same context.",
+      "examples": {
+        "ar": [
+          "قارنهم",
+          "طيب قارنهم",
+          "قارن الاثنين",
+          "وش الفرق بينهم",
+          "مين أنسب لي",
+          "قارن الأول والثاني",
+          "وش يميز كل واحد",
+          "اعطني مقارنة",
+          "وش الفرق بين الأول والثاني",
+          "أيهم أقرب",
+          "أيهم أهدأ"
+        ],
+        "en": [
+          "compare them",
+          "okay compare them",
+          "compare the two",
+          "what is the difference",
+          "which fits me better",
+          "compare first and second",
+          "what is different about each",
+          "give me a comparison",
+          "difference between first and second",
+          "which is closer",
+          "which is quieter"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "قارنهم",
+          "قارن",
+          "الفرق بينهم",
+          "الأول والثاني",
+          "يميز",
+          "أيهم"
+        ],
+        "keywords_en": [
+          "compare",
+          "difference",
+          "first and second",
+          "which one"
+        ],
+        "entities": []
+      },
+      "answer": {
+        "type": "contextual_dynamic",
+        "handler": "followup_compare_top_two",
+        "responses": {
+          "ar": [
+            "مقارنة الأول والثاني ضمن نفس السياق: {{comparison_summary}}.",
+            "الفرق الأهم بينهم: {{comparison_summary}}."
+          ],
+          "en": [
+            "Comparing the top two in the same context: {{comparison_summary}}.",
+            "The most useful difference between them is: {{comparison_summary}}."
+          ]
+        },
+        "result_shape": "comparison"
+      },
+      "context": {
+        "required_context": [
+          "last_ranked_results"
+        ],
+        "updates_context": false,
+        "applicable_pages": [
+          "*"
+        ]
+      },
+      "priority": 100
+    },
+    {
+      "id": "followup_more_detail",
+      "category": "conversation_context",
+      "purpose": "Expand the previous answer without changing the target or context.",
+      "examples": {
+        "ar": [
+          "فصل أكثر",
+          "اعطني تفاصيل أكثر",
+          "وضح أكثر",
+          "اشرح أكثر",
+          "ادخل بالتفاصيل",
+          "أبغى تفاصيل",
+          "زيدني معلومات",
+          "طيب كمل",
+          "قول لي أكثر",
+          "وش بعد عنه",
+          "فصّل لي هذا"
+        ],
+        "en": [
+          "give me more detail",
+          "explain more",
+          "expand on that",
+          "go into more detail",
+          "show me the details",
+          "tell me more",
+          "continue",
+          "what else about it",
+          "break it down"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "فصل",
+          "تفاصيل",
+          "وضح",
+          "اشرح",
+          "زيدني",
+          "كمل",
+          "أكثر"
+        ],
+        "keywords_en": [
+          "detail",
+          "explain",
+          "expand",
+          "tell me more",
+          "continue",
+          "break down"
+        ],
+        "entities": []
+      },
+      "answer": {
+        "type": "contextual_dynamic",
+        "handler": "followup_expand_previous",
+        "responses": {
+          "ar": [
+            "تفصيل إضافي على نفس النتيجة: {{expanded_detail}}.",
+            "عن {{entity}} تحديدًا: {{expanded_detail}}."
+          ],
+          "en": [
+            "More detail on the same result: {{expanded_detail}}.",
+            "For {{entity}} specifically: {{expanded_detail}}."
+          ]
+        },
+        "result_shape": "single_answer"
+      },
+      "context": {
+        "required_context": [
+          "last_result"
+        ],
+        "updates_context": false,
+        "applicable_pages": [
+          "*"
+        ]
+      },
+      "priority": 96
+    },
+    {
+      "id": "followup_make_shorter",
+      "category": "conversation_context",
+      "purpose": "Compress the previous answer without changing its meaning.",
+      "examples": {
+        "ar": [
+          "اختصر",
+          "اختصرها",
+          "اعطني الزبدة",
+          "باختصار",
+          "قولها بسرعة",
+          "اختصر الجواب",
+          "خلاصة",
+          "سطر واحد",
+          "بس الزبدة",
+          "لا تطول"
+        ],
+        "en": [
+          "make it shorter",
+          "summarize that",
+          "give me the short version",
+          "in brief",
+          "just the takeaway",
+          "one line",
+          "keep it concise",
+          "don't make it long"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "اختصر",
+          "الزبدة",
+          "باختصار",
+          "خلاصة",
+          "سطر واحد",
+          "لا تطول"
+        ],
+        "keywords_en": [
+          "shorter",
+          "summarize",
+          "short version",
+          "brief",
+          "takeaway",
+          "one line",
+          "concise"
+        ],
+        "entities": []
+      },
+      "answer": {
+        "type": "contextual_dynamic",
+        "handler": "followup_shorten_previous",
+        "responses": {
+          "ar": [
+            "الخلاصة: {{short_summary}}.",
+            "باختصار: {{short_summary}}."
+          ],
+          "en": [
+            "In short: {{short_summary}}.",
+            "The takeaway: {{short_summary}}."
+          ]
+        },
+        "result_shape": "single_answer"
+      },
+      "context": {
+        "required_context": [
+          "last_result"
+        ],
+        "updates_context": false,
+        "applicable_pages": [
+          "*"
+        ]
+      },
+      "priority": 92
+    },
+    {
+      "id": "followup_show_more_ranked",
+      "category": "conversation_context",
+      "purpose": "Show more results from the same ranked set or rerun the same intent with a larger result count.",
+      "examples": {
+        "ar": [
+          "اعطني أكثر",
+          "وريني باقي النتائج",
+          "كمل القائمة",
+          "وش بعد",
+          "اعطني خمسة",
+          "أبغى خيارات أكثر",
+          "كمل الترتيب",
+          "وريني الباقي",
+          "غير هالثلاثة وش فيه",
+          "فيه خيارات ثانية"
+        ],
+        "en": [
+          "show me more",
+          "show the rest",
+          "continue the list",
+          "what comes next",
+          "give me five",
+          "I want more options",
+          "continue the ranking",
+          "show the remaining ones",
+          "what else is there",
+          "any other options"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "أكثر",
+          "باقي النتائج",
+          "كمل",
+          "خمسة",
+          "خيارات أكثر",
+          "الباقي",
+          "خيارات ثانية"
+        ],
+        "keywords_en": [
+          "more",
+          "rest",
+          "continue",
+          "five",
+          "more options",
+          "remaining",
+          "other options"
+        ],
+        "entities": []
+      },
+      "answer": {
+        "type": "contextual_dynamic",
+        "handler": "followup_expand_ranking",
+        "responses": {
+          "ar": [
+            "خيارات إضافية ضمن نفس السياق: {{ranked_results}}.",
+            "تكملة النتائج: {{ranked_results}}."
+          ],
+          "en": [
+            "More options in the same context: {{ranked_results}}.",
+            "Continuing the results: {{ranked_results}}."
+          ]
+        },
+        "result_shape": "ranked_list"
+      },
+      "context": {
+        "required_context": [
+          "last_intent",
+          "last_ranked_results"
+        ],
+        "updates_context": false,
+        "applicable_pages": [
+          "*"
+        ]
+      },
+      "priority": 97
+    },
+    {
+      "id": "followup_different_option",
+      "category": "conversation_context",
+      "purpose": "Ask for a materially different alternative while preserving the main task unless the user changes it.",
+      "examples": {
+        "ar": [
+          "غيره",
+          "شي ثاني",
+          "أبغى بديل",
+          "مو هذا عطيني غيره",
+          "شي مختلف",
+          "ورني خيار ثاني مختلف",
+          "بدل هذا",
+          "غير الاقتراح",
+          "لا هذا غيره",
+          "أبغى شيء مختلف تمامًا"
+        ],
+        "en": [
+          "another one",
+          "something else",
+          "I want an alternative",
+          "not this give me another",
+          "something different",
+          "show me a different option",
+          "replace this",
+          "change the suggestion",
+          "not this one",
+          "something completely different"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "غيره",
+          "شي ثاني",
+          "بديل",
+          "شي مختلف",
+          "بدل",
+          "غير الاقتراح"
+        ],
+        "keywords_en": [
+          "another",
+          "something else",
+          "alternative",
+          "different",
+          "replace",
+          "change suggestion"
+        ],
+        "entities": []
+      },
+      "answer": {
+        "type": "contextual_dynamic",
+        "handler": "followup_alternative",
+        "responses": {
+          "ar": [
+            "تمام، أستبعد {{previous_entity}} وأعطيك بديلًا مختلفًا: {{recommendations}}.",
+            "بديل مختلف عن السابق: {{recommendations}}."
+          ],
+          "en": [
+            "Okay. I'll exclude {{previous_entity}} and give you a different alternative: {{recommendations}}.",
+            "A different alternative from the previous result: {{recommendations}}."
+          ]
+        },
+        "result_shape": "ranked_list"
+      },
+      "context": {
+        "required_context": [
+          "last_intent",
+          "last_result"
+        ],
+        "updates_context": true,
+        "applicable_pages": [
+          "*"
+        ]
+      },
+      "priority": 100
+    },
+    {
+      "id": "followup_closer",
+      "category": "conversation_context",
+      "purpose": "Refine the previous recommendation request toward closer options.",
+      "examples": {
+        "ar": [
+          "أقرب",
+          "طيب أقرب",
+          "أبغى شي أقرب",
+          "وش الأقرب",
+          "قريب مني أكثر",
+          "نفس الشي بس أقرب",
+          "خلها في الحي",
+          "أبغى أقرب خيار",
+          "شي حولي أكثر",
+          "أقرب واحد"
+        ],
+        "en": [
+          "closer",
+          "something closer",
+          "what is closest",
+          "closer to me",
+          "same thing but closer",
+          "keep it in the neighborhood",
+          "give me the nearest option",
+          "more nearby",
+          "the closest one"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "أقرب",
+          "قريب مني",
+          "في الحي",
+          "حولي"
+        ],
+        "keywords_en": [
+          "closer",
+          "closest",
+          "nearby",
+          "in the neighborhood"
+        ],
+        "entities": [
+          "neighborhood",
+          "location"
+        ]
+      },
+      "answer": {
+        "type": "contextual_dynamic",
+        "handler": "followup_refine_proximity",
+        "responses": {
+          "ar": [
+            "بنفس طلبك السابق لكن مع أولوية القرب: {{recommendations}}.",
+            "الأقرب لك ضمن نفس الطلب: {{recommendations}}."
+          ],
+          "en": [
+            "Keeping the same request but prioritizing proximity: {{recommendations}}.",
+            "Closest options under the same request: {{recommendations}}."
+          ]
+        },
+        "result_shape": "ranked_list"
+      },
+      "context": {
+        "required_context": [
+          "last_intent"
+        ],
+        "updates_context": true,
+        "applicable_pages": [
+          "*"
+        ]
+      },
+      "priority": 100
+    },
+    {
+      "id": "followup_quieter",
+      "category": "conversation_context",
+      "purpose": "Refine previous results toward quieter/calmer options.",
+      "examples": {
+        "ar": [
+          "أهدأ",
+          "طيب شي أهدأ",
+          "أبغى هادي",
+          "نفسه بس أهدأ",
+          "بعيد عن الزحمة",
+          "شي رايق",
+          "مكان أهدى",
+          "أبغى هدوء أكثر",
+          "مو زحمة"
+        ],
+        "en": [
+          "quieter",
+          "something calmer",
+          "I want quiet",
+          "same but quieter",
+          "away from crowds",
+          "something relaxed",
+          "a calmer place",
+          "more quiet",
+          "not crowded"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "أهدأ",
+          "هادي",
+          "الزحمة",
+          "رايق",
+          "هدوء"
+        ],
+        "keywords_en": [
+          "quieter",
+          "calmer",
+          "quiet",
+          "crowds",
+          "relaxed"
+        ],
+        "entities": [
+          "quiet"
+        ]
+      },
+      "answer": {
+        "type": "contextual_dynamic",
+        "handler": "followup_refine_quiet",
+        "responses": {
+          "ar": [
+            "بنفس السياق لكن مع أولوية الهدوء: {{recommendations}}.",
+            "خيارات أهدأ من السابقة: {{recommendations}}."
+          ],
+          "en": [
+            "Same context, now prioritizing calm: {{recommendations}}.",
+            "Quieter options than before: {{recommendations}}."
+          ]
+        },
+        "result_shape": "ranked_list"
+      },
+      "context": {
+        "required_context": [
+          "last_intent"
+        ],
+        "updates_context": true,
+        "applicable_pages": [
+          "*"
+        ]
+      },
+      "priority": 100
+    },
+    {
+      "id": "followup_cheaper",
+      "category": "conversation_context",
+      "purpose": "Refine prior options toward lower represented price/cost without inventing prices.",
+      "examples": {
+        "ar": [
+          "أرخص",
+          "طيب الأرخص",
+          "أبغى شي أرخص",
+          "نفسه بس أرخص",
+          "ميزانيتي أقل",
+          "شي أوفر",
+          "أقل سعر",
+          "وش الأرخص بينهم",
+          "بديل أرخص"
+        ],
+        "en": [
+          "cheaper",
+          "what is the cheapest",
+          "I want something cheaper",
+          "same but cheaper",
+          "lower budget",
+          "more affordable",
+          "lowest price",
+          "which is cheapest",
+          "cheaper alternative"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "أرخص",
+          "الأرخص",
+          "ميزانيتي أقل",
+          "أوفر",
+          "أقل سعر"
+        ],
+        "keywords_en": [
+          "cheaper",
+          "cheapest",
+          "lower budget",
+          "affordable",
+          "lowest price"
+        ],
+        "entities": [
+          "price"
+        ]
+      },
+      "answer": {
+        "type": "contextual_dynamic",
+        "handler": "followup_refine_price",
+        "responses": {
+          "ar": [
+            "بنفس طلبك السابق لكن مع أولوية السعر الأقل من البيانات المتاحة: {{recommendations}}.",
+            "خيارات أوفر ضمن نفس السياق: {{recommendations}}."
+          ],
+          "en": [
+            "Keeping the same request but prioritizing lower represented cost: {{recommendations}}.",
+            "More affordable options in the same context: {{recommendations}}."
+          ]
+        },
+        "result_shape": "ranked_list"
+      },
+      "context": {
+        "required_context": [
+          "last_intent"
+        ],
+        "updates_context": true,
+        "applicable_pages": [
+          "*"
+        ]
+      },
+      "priority": 100
+    },
+    {
+      "id": "followup_with_offer",
+      "category": "conversation_context",
+      "purpose": "Refine prior options to items with an active offer/discount.",
+      "examples": {
+        "ar": [
+          "وعليه عرض؟",
+          "طيب بعرض",
+          "أبغى اللي عليه خصم",
+          "نفسه بس عليه عرض",
+          "فيه واحد بخصم",
+          "خلها عروض بس",
+          "أبغى خصم",
+          "وش منهم عليه عرض",
+          "بس اللي عليهم عروض"
+        ],
+        "en": [
+          "with an offer",
+          "what about a deal",
+          "I want one with a discount",
+          "same but with an offer",
+          "is one discounted",
+          "offers only",
+          "I want a discount",
+          "which of these has an offer",
+          "only ones with deals"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "عليه عرض",
+          "بعرض",
+          "خصم",
+          "عروض بس",
+          "عليهم عروض"
+        ],
+        "keywords_en": [
+          "with an offer",
+          "deal",
+          "discount",
+          "offers only",
+          "with deals"
+        ],
+        "entities": [
+          "offer"
+        ]
+      },
+      "answer": {
+        "type": "contextual_dynamic",
+        "handler": "followup_refine_active_offer",
+        "responses": {
+          "ar": [
+            "من نفس النوع، هذه الخيارات اللي عليها عرض نشط: {{recommendations}}.",
+            "إذا العرض شرط، هذه النتائج المناسبة: {{recommendations}}."
+          ],
+          "en": [
+            "Within the same type, these options have an active offer: {{recommendations}}.",
+            "If an offer is required, these are the matching results: {{recommendations}}."
+          ]
+        },
+        "result_shape": "ranked_list"
+      },
+      "context": {
+        "required_context": [
+          "last_intent"
+        ],
+        "updates_context": true,
+        "applicable_pages": [
+          "*"
+        ]
+      },
+      "priority": 100
+    },
+    {
+      "id": "followup_family_only",
+      "category": "conversation_context",
+      "purpose": "Refine prior options for family suitability.",
+      "examples": {
+        "ar": [
+          "للعائلة",
+          "طيب للعائلة",
+          "خلها عائلية",
+          "مع العائلة",
+          "نفسه بس للعائلة",
+          "أبغى شي للأسرة",
+          "يكون مناسب للعوائل",
+          "مع الأهل"
+        ],
+        "en": [
+          "for family",
+          "okay for family",
+          "make it family-friendly",
+          "with family",
+          "same but for family",
+          "something for the family",
+          "family suitable",
+          "with the family"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "للعائلة",
+          "عائلية",
+          "الأسرة",
+          "العوائل",
+          "الأهل"
+        ],
+        "keywords_en": [
+          "family",
+          "family-friendly",
+          "for the family",
+          "family suitable"
+        ],
+        "entities": [
+          "party"
+        ]
+      },
+      "answer": {
+        "type": "contextual_dynamic",
+        "handler": "followup_refine_family",
+        "responses": {
+          "ar": [
+            "بنفس الطلب لكن للعائلة: {{recommendations}}.",
+            "خيارات عائلية ضمن نفس السياق: {{recommendations}}."
+          ],
+          "en": [
+            "Same request, now filtered for family suitability: {{recommendations}}.",
+            "Family-suitable options in the same context: {{recommendations}}."
+          ]
+        },
+        "result_shape": "ranked_list"
+      },
+      "context": {
+        "required_context": [
+          "last_intent"
+        ],
+        "updates_context": true,
+        "applicable_pages": [
+          "*"
+        ]
+      },
+      "priority": 100
+    },
+    {
+      "id": "followup_kids_only",
+      "category": "conversation_context",
+      "purpose": "Refine prior options for explicit kids suitability.",
+      "examples": {
+        "ar": [
+          "للأطفال",
+          "طيب للأطفال",
+          "معي عيال",
+          "خلها للصغار",
+          "نفسه بس يناسب أطفال",
+          "أبغى شي للأطفال",
+          "يناسب بنتي",
+          "يناسب ولدي"
+        ],
+        "en": [
+          "for kids",
+          "okay for children",
+          "I'm with kids",
+          "make it for children",
+          "same but kid-friendly",
+          "I want something for kids",
+          "suitable for my child"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "للأطفال",
+          "عيال",
+          "الصغار",
+          "يناسب أطفال",
+          "بنتي",
+          "ولدي"
+        ],
+        "keywords_en": [
+          "kids",
+          "children",
+          "kid-friendly",
+          "child"
+        ],
+        "entities": [
+          "party",
+          "kids"
+        ]
+      },
+      "answer": {
+        "type": "contextual_dynamic",
+        "handler": "followup_refine_kids",
+        "responses": {
+          "ar": [
+            "بنفس السياق لكن مع شرط ملاءمة الأطفال: {{recommendations}}.",
+            "خيارات مناسبة للأطفال من نفس نوع الطلب: {{recommendations}}."
+          ],
+          "en": [
+            "Same context, now requiring explicit kid suitability: {{recommendations}}.",
+            "Kid-suitable options under the same request: {{recommendations}}."
+          ]
+        },
+        "result_shape": "ranked_list"
+      },
+      "context": {
+        "required_context": [
+          "last_intent"
+        ],
+        "updates_context": true,
+        "applicable_pages": [
+          "*"
+        ]
+      },
+      "priority": 100
+    },
+    {
+      "id": "followup_beginner_only",
+      "category": "conversation_context",
+      "purpose": "Refine prior activity/workshop results to beginner/no-experience options.",
+      "examples": {
+        "ar": [
+          "للمبتدئين",
+          "طيب للمبتدئ",
+          "ما عندي خبرة",
+          "خلها سهلة",
+          "نفسه بس للمبتدئين",
+          "أول مرة أجرب",
+          "شي ما يحتاج خبرة"
+        ],
+        "en": [
+          "for beginners",
+          "okay for a beginner",
+          "I have no experience",
+          "make it easy",
+          "same but beginner-friendly",
+          "first time trying",
+          "something with no experience needed"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "للمبتدئين",
+          "ما عندي خبرة",
+          "سهلة",
+          "أول مرة",
+          "ما يحتاج خبرة"
+        ],
+        "keywords_en": [
+          "beginners",
+          "no experience",
+          "easy",
+          "first time",
+          "beginner-friendly"
+        ],
+        "entities": [
+          "beginners"
+        ]
+      },
+      "answer": {
+        "type": "contextual_dynamic",
+        "handler": "followup_refine_beginner",
+        "responses": {
+          "ar": [
+            "بنفس الطلب لكن للمبتدئين: {{recommendations}}.",
+            "خيارات ما تحتاج خبرة سابقة: {{recommendations}}."
+          ],
+          "en": [
+            "Same request, now filtered for beginners: {{recommendations}}.",
+            "Options that do not require prior experience: {{recommendations}}."
+          ]
+        },
+        "result_shape": "ranked_list"
+      },
+      "context": {
+        "required_context": [
+          "last_intent"
+        ],
+        "updates_context": true,
+        "applicable_pages": [
+          "*"
+        ]
+      },
+      "priority": 99
+    },
+    {
+      "id": "followup_accessible_only",
+      "category": "conversation_context",
+      "purpose": "Refine prior options using explicit accessibility/step-free/wheelchair signals.",
+      "examples": {
+        "ar": [
+          "أسهل وصول",
+          "طيب مناسب للكرسي",
+          "بدون درج",
+          "خلها أسهل للحركة",
+          "نفسه بس وصوله أسهل",
+          "أبغى accessible",
+          "يناسب كرسي متحرك",
+          "ما فيه سلالم"
+        ],
+        "en": [
+          "easier access",
+          "wheelchair-friendly",
+          "step-free",
+          "make it easier to access",
+          "same but easier access",
+          "I want accessible options",
+          "suitable for a wheelchair",
+          "no stairs"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "أسهل وصول",
+          "للكرسي",
+          "بدون درج",
+          "أسهل للحركة",
+          "كرسي متحرك",
+          "سلالم"
+        ],
+        "keywords_en": [
+          "accessible",
+          "wheelchair",
+          "step-free",
+          "easier access",
+          "no stairs"
+        ],
+        "entities": [
+          "accessibility"
+        ]
+      },
+      "answer": {
+        "type": "contextual_dynamic",
+        "handler": "followup_refine_accessibility",
+        "responses": {
+          "ar": [
+            "بنفس السياق لكن مع أولوية سهولة الوصول: {{recommendations}}.",
+            "هذه الخيارات عندها إشارات وصول أوضح: {{recommendations}}."
+          ],
+          "en": [
+            "Same context, now prioritizing accessibility: {{recommendations}}.",
+            "These options have clearer accessibility signals: {{recommendations}}."
+          ]
+        },
+        "result_shape": "ranked_list"
+      },
+      "context": {
+        "required_context": [
+          "last_intent"
+        ],
+        "updates_context": true,
+        "applicable_pages": [
+          "*"
+        ]
+      },
+      "priority": 100
+    },
+    {
+      "id": "followup_category_only",
+      "category": "conversation_context",
+      "purpose": "Keep the previous task but constrain it to an explicit content type/category.",
+      "examples": {
+        "ar": [
+          "بس مطاعم",
+          "قهوة بس",
+          "أنشطة فقط",
+          "تجارب بس",
+          "فنادق فقط",
+          "بس فعاليات",
+          "خلها أماكن ثقافية",
+          "مجتمعات بس",
+          "خدمات فقط",
+          "أسواق بس",
+          "إقامة فقط"
+        ],
+        "en": [
+          "restaurants only",
+          "cafes only",
+          "activities only",
+          "experiences only",
+          "hotels only",
+          "events only",
+          "culture only",
+          "communities only",
+          "services only",
+          "markets only",
+          "stays only"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "بس مطاعم",
+          "قهوة بس",
+          "أنشطة فقط",
+          "تجارب بس",
+          "فنادق فقط",
+          "فعاليات",
+          "مجتمعات بس",
+          "خدمات فقط",
+          "أسواق بس"
+        ],
+        "keywords_en": [
+          "restaurants only",
+          "cafes only",
+          "activities only",
+          "experiences only",
+          "hotels only",
+          "events only",
+          "communities only",
+          "services only",
+          "markets only"
+        ],
+        "entities": [
+          "category",
+          "object_type"
+        ]
+      },
+      "answer": {
+        "type": "contextual_dynamic",
+        "handler": "followup_refine_category",
+        "responses": {
+          "ar": [
+            "أبقي نفس طلبك السابق لكن أقصره على {{category}}: {{recommendations}}.",
+            "ضمن {{category}} فقط: {{recommendations}}."
+          ],
+          "en": [
+            "I'll keep the previous request but restrict it to {{category}}: {{recommendations}}.",
+            "Within {{category}} only: {{recommendations}}."
+          ]
+        },
+        "result_shape": "ranked_list"
+      },
+      "context": {
+        "required_context": [
+          "last_intent"
+        ],
+        "updates_context": true,
+        "applicable_pages": [
+          "*"
+        ]
+      },
+      "priority": 100
+    },
+    {
+      "id": "followup_area_change_repeat",
+      "category": "conversation_context",
+      "purpose": "Apply a newly named neighborhood/area to the previous intent and rerun it.",
+      "examples": {
+        "ar": [
+          "طيب بالعوالي؟",
+          "وفي العزيزية؟",
+          "خلها بالنسيم",
+          "وش عنها بأجياد",
+          "طيب بجرول",
+          "نفس السؤال بالشوقية",
+          "في المسفلة؟",
+          "طيب في محيط الحرم",
+          "لو بالعوالي"
+        ],
+        "en": [
+          "what about Al Awali",
+          "and in Al Aziziyah",
+          "make it An Naseem",
+          "what about Ajyad",
+          "how about Jarwal",
+          "same question in Al Shawqiyah",
+          "in Al Misfalah",
+          "what about the Haram area",
+          "if in Al Awali"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "بالعوالي",
+          "العزيزية",
+          "النسيم",
+          "أجياد",
+          "جرول",
+          "الشوقية",
+          "المسفلة",
+          "محيط الحرم"
+        ],
+        "keywords_en": [
+          "Al Awali",
+          "Al Aziziyah",
+          "An Naseem",
+          "Ajyad",
+          "Jarwal",
+          "Al Shawqiyah",
+          "Al Misfalah",
+          "Haram area"
+        ],
+        "entities": [
+          "neighborhood"
+        ]
+      },
+      "answer": {
+        "type": "contextual_dynamic",
+        "handler": "followup_repeat_with_new_area",
+        "responses": {
+          "ar": [
+            "أعيد نفس طلبك السابق لكن على {{neighborhood}}: {{result}}.",
+            "في {{neighborhood}}، النتيجة لنفس السؤال: {{result}}."
+          ],
+          "en": [
+            "I'll rerun the same request for {{neighborhood}}: {{result}}.",
+            "In {{neighborhood}}, the answer to the same request is: {{result}}."
+          ]
+        },
+        "result_shape": "single_answer"
+      },
+      "context": {
+        "required_context": [
+          "last_intent"
+        ],
+        "updates_context": true,
+        "applicable_pages": [
+          "*"
+        ]
+      },
+      "priority": 100
+    },
+    {
+      "id": "followup_time_change_repeat",
+      "category": "conversation_context",
+      "purpose": "Apply a newly stated time window to the previous intent and rerun it.",
+      "examples": {
+        "ar": [
+          "طيب لو عندي ساعة",
+          "ولو ساعتين؟",
+          "طيب الليلة",
+          "هذا المساء؟",
+          "طيب الويكند",
+          "لو عندي نص يوم",
+          "بكرة؟",
+          "طيب بعد المغرب",
+          "قبل العشاء؟"
+        ],
+        "en": [
+          "what if I have one hour",
+          "what about two hours",
+          "what about tonight",
+          "this evening",
+          "what about the weekend",
+          "if I have half a day",
+          "tomorrow",
+          "after sunset",
+          "before dinner"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "عندي ساعة",
+          "ساعتين",
+          "الليلة",
+          "هذا المساء",
+          "الويكند",
+          "نص يوم",
+          "بكرة",
+          "بعد المغرب",
+          "قبل العشاء"
+        ],
+        "keywords_en": [
+          "one hour",
+          "two hours",
+          "tonight",
+          "this evening",
+          "weekend",
+          "half a day",
+          "tomorrow",
+          "after sunset",
+          "before dinner"
+        ],
+        "entities": [
+          "time_available",
+          "time"
+        ]
+      },
+      "answer": {
+        "type": "contextual_dynamic",
+        "handler": "followup_repeat_with_new_time",
+        "responses": {
+          "ar": [
+            "أعيد نفس طلبك السابق لكن بوقت {{time_context}}: {{result}}.",
+            "مع وقت {{time_context}}، النتيجة تصبح: {{result}}."
+          ],
+          "en": [
+            "I'll rerun the same request using {{time_context}}: {{result}}.",
+            "With {{time_context}}, the result becomes: {{result}}."
+          ]
+        },
+        "result_shape": "single_answer"
+      },
+      "context": {
+        "required_context": [
+          "last_intent"
+        ],
+        "updates_context": true,
+        "applicable_pages": [
+          "*"
+        ]
+      },
+      "priority": 100
+    },
+    {
+      "id": "followup_same_question_current_context",
+      "category": "conversation_context",
+      "purpose": "Repeat the previous intent after the user changes app context through UI or a prior context action.",
+      "examples": {
+        "ar": [
+          "طيب الحين؟",
+          "والحين وش النتيجة",
+          "بعد التغيير وش صار",
+          "جاوبني مرة ثانية",
+          "أعدها",
+          "وش صار الآن",
+          "بعد ما غيرت الحي",
+          "بعد ما غيرت الوقت",
+          "الحين ايش تقترح",
+          "طيب بعد التعديل"
+        ],
+        "en": [
+          "what about now",
+          "what is the result now",
+          "after the change what happened",
+          "run it again",
+          "repeat it",
+          "what happens now",
+          "after I changed the area",
+          "after I changed the time",
+          "what do you suggest now",
+          "after the update"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "الحين",
+          "بعد التغيير",
+          "مرة ثانية",
+          "أعدها",
+          "بعد ما غيرت",
+          "بعد التعديل"
+        ],
+        "keywords_en": [
+          "now",
+          "after the change",
+          "again",
+          "repeat",
+          "after I changed",
+          "after the update"
+        ],
+        "entities": []
+      },
+      "answer": {
+        "type": "contextual_dynamic",
+        "handler": "followup_repeat_current_context",
+        "responses": {
+          "ar": [
+            "بعد تحديث السياق، جواب نفس طلبك السابق هو: {{result}}.",
+            "بالسياق الحالي الآن: {{result}}."
+          ],
+          "en": [
+            "With the updated context, the answer to your previous request is: {{result}}.",
+            "Under the current context now: {{result}}."
+          ]
+        },
+        "result_shape": "single_answer"
+      },
+      "context": {
+        "required_context": [
+          "last_intent"
+        ],
+        "updates_context": true,
+        "applicable_pages": [
+          "*"
+        ]
+      },
+      "priority": 98
+    }
+  ]
+}

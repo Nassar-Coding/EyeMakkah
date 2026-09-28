@@ -1,0 +1,3237 @@
+{
+  "file": "eyemakkah_app_agent_bank_01_core.json",
+  "version": "1.0.0",
+  "phase": 1,
+  "part": "01_core",
+  "product": {
+    "name_ar": "تطبيق EyeMakkah",
+    "name_en": "EyeMakkah App",
+    "assistant_name_ar": "مساعد EyeMakkah",
+    "assistant_name_en": "EyeMakkah Assistant"
+  },
+  "source_alignment": {
+    "app_branch": "claude/upbeat-bell-hkmvzy",
+    "scope_reviewed": [
+      "Home",
+      "Discover",
+      "Search",
+      "Community",
+      "My Plan",
+      "Profile/context",
+      "Trust/provenance",
+      "Offers and booking handoff semantics"
+    ],
+    "note": "Intent semantics are aligned to the current EyeMakkah consumer-app information model. This file defines the bank only and does not modify or integrate the app."
+  },
+  "purpose": "Core bilingual intent bank for a natural free-text EyeMakkah consumer assistant. Covers social conversation, agent identity, app help, user-context controls, fallbacks, and out-of-scope handling. No LLM/API is required and no app code integration is performed in this phase.",
+  "integration_contract": {
+    "languages": [
+      "ar",
+      "en"
+    ],
+    "free_text_first": true,
+    "question_bank_visibility": "hidden_internal_bank",
+    "match_order": [
+      "high_priority_exact_or_entity_match",
+      "normalized_example_similarity",
+      "keyword_and_entity_match",
+      "contextual_followup_match",
+      "fallback"
+    ],
+    "fixed_responses": "Select among response variants to reduce scripted repetition.",
+    "dynamic_responses": "Resolve {{placeholder}} values from current EyeMakkah state.",
+    "action_intents": "Actions describe future integration behavior and should update only the relevant user context while preserving unrelated context.",
+    "truthfulness": [
+      "Do not claim live LLM/API connectivity when none exists.",
+      "Do not claim live operational data, availability, crowding, or booking confirmation without a real source.",
+      "Do not expose exact user locations, attendee identities, or personal/sensitive information.",
+      "Do not infer health, religion, nationality, identity, or other sensitive traits from behavior.",
+      "Save, Add to Plan, Join, Booking, Confirmed, and Completed remain distinct states.",
+      "When an external booking is opened, record only the handoff state unless a real callback or explicit user confirmation exists.",
+      "When information is stale or conflicting, preserve the source/freshness context instead of inventing certainty."
+    ]
+  },
+  "normalization_guidance": {
+    "ar": [
+      "trim whitespace",
+      "normalize Arabic alef variants",
+      "normalize ya/alif-maqsura where useful for matching",
+      "remove tatweel",
+      "normalize light punctuation",
+      "tolerate missing hamza and common informal spelling",
+      "support common Saudi colloquial variants",
+      "tolerate repeated letters and minor spelling errors",
+      "preserve numbers, times, named neighborhoods, place names, offer names, and Plan references"
+    ],
+    "en": [
+      "lowercase",
+      "trim whitespace",
+      "normalize light punctuation",
+      "tolerate contractions and minor spelling errors",
+      "preserve numbers, times, named entities, offer names, and Plan references"
+    ]
+  },
+  "supported_context_entities": {
+    "modes_ar": [
+      "مقيم",
+      "زائر"
+    ],
+    "neighborhoods_ar": [
+      "العوالي",
+      "العزيزية",
+      "الششة",
+      "الشوقية",
+      "النسيم",
+      "بطحاء قريش",
+      "المسفلة",
+      "أجياد",
+      "الهجرة",
+      "الزاهر",
+      "الكعكية",
+      "جرول",
+      "الرصيفة",
+      "التنعيم",
+      "محيط الحرم"
+    ],
+    "party_ar": [
+      "فردي",
+      "عائلة",
+      "مع أطفال",
+      "مجموعة"
+    ],
+    "time_context_ar": [
+      "ساعة",
+      "ساعتان",
+      "المساء كله",
+      "وقت قصير",
+      "نصف يوم"
+    ],
+    "languages": [
+      "ar",
+      "en"
+    ],
+    "primary_navigation_ar": [
+      "الرئيسية",
+      "اكتشف",
+      "المجتمع",
+      "خطتي"
+    ]
+  },
+  "bank_plan": {
+    "part_01": "Core conversation, identity, app help, user context, fallbacks and boundaries.",
+    "planned_part_02": "Discovery and recommendation intents: now/tonight, food, cafés, family, visitors, activities, places, accessibility, time and area.",
+    "planned_part_03": "Offers/discounts, booking/actions, Plan operations, community participation and multi-step outing intents.",
+    "planned_part_04": "Conversation follow-ups, aliases, entity routing, contextual suggestions and short-session memory.",
+    "target_total_intents_across_all_parts": 150
+  },
+  "stats": {
+    "intent_count": 50,
+    "utterances_ar": 360,
+    "utterances_en": 310,
+    "utterances_total": 670,
+    "by_category": {
+      "social": 10,
+      "identity": 7,
+      "app_help": 14,
+      "user_context": 11,
+      "fallback": 3,
+      "out_of_scope": 5
+    },
+    "by_answer_type": {
+      "fixed": 44,
+      "dynamic": 1,
+      "action": 5
+    }
+  },
+  "intents": [
+    {
+      "id": "greeting_general",
+      "category": "social",
+      "purpose": "Natural greeting and conversation opening.",
+      "examples": {
+        "ar": [
+          "هلا",
+          "هلا والله",
+          "مرحبا",
+          "مرحبًا",
+          "أهلين",
+          "السلام عليكم",
+          "يا هلا",
+          "يا مرحبا",
+          "صباح الخير",
+          "مساء الخير",
+          "هاي",
+          "هلو"
+        ],
+        "en": [
+          "hi",
+          "hello",
+          "hey",
+          "hello there",
+          "good morning",
+          "good evening",
+          "good afternoon",
+          "salam"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "هلا",
+          "مرحبا",
+          "السلام",
+          "صباح",
+          "مساء",
+          "هاي"
+        ],
+        "keywords_en": [
+          "hi",
+          "hello",
+          "hey",
+          "morning",
+          "evening",
+          "salam"
+        ],
+        "entities": []
+      },
+      "answer": {
+        "type": "fixed",
+        "handler": null,
+        "responses": {
+          "ar": [
+            "هلا، أنا مساعد EyeMakkah. وش ودك تسوي في مكة اليوم؟",
+            "وعليكم السلام. قل لي بطريقتك وش تحتاج، وأنا أساعدك من داخل EyeMakkah.",
+            "يا هلا. أقدر أساعدك تلقى مكان، تجربة، عرض، مجتمع، أو ترتّب خطتك."
+          ],
+          "en": [
+            "Hello. I'm the EyeMakkah Assistant. What would you like to do in Makkah today?",
+            "Hi. Tell me naturally what you need and I'll help using EyeMakkah.",
+            "Hello. I can help you find a place, experience, offer, community, or build your plan."
+          ]
+        }
+      },
+      "context": {
+        "applicable_pages": [
+          "*"
+        ],
+        "followup_keys": []
+      },
+      "priority": 98
+    },
+    {
+      "id": "how_are_you",
+      "category": "social",
+      "purpose": "Handle casual wellbeing questions naturally.",
+      "examples": {
+        "ar": [
+          "كيف حالك",
+          "كيفك",
+          "شلونك",
+          "وش أخبارك",
+          "كيف الأمور",
+          "عساك طيب",
+          "كيف يومك",
+          "علومك"
+        ],
+        "en": [
+          "how are you",
+          "how are you doing",
+          "how's it going",
+          "how are things",
+          "how's your day",
+          "you good"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "كيفك",
+          "كيف حالك",
+          "شلونك",
+          "أخبارك"
+        ],
+        "keywords_en": [
+          "how are you",
+          "how's it going",
+          "you good"
+        ],
+        "entities": []
+      },
+      "answer": {
+        "type": "fixed",
+        "handler": null,
+        "responses": {
+          "ar": [
+            "بخير وجاهز أساعدك. وش ودك تسوي أو تعرف في مكة؟",
+            "تمام، وأنا حاضر. اكتب اللي في بالك بطريقتك.",
+            "كل شيء تمام. وش تحتاج من EyeMakkah؟"
+          ],
+          "en": [
+            "I'm ready to help. What would you like to do or know in Makkah?",
+            "Doing well. Just ask naturally.",
+            "All good. What do you need from EyeMakkah?"
+          ]
+        }
+      },
+      "context": {
+        "applicable_pages": [
+          "*"
+        ],
+        "followup_keys": []
+      },
+      "priority": 90
+    },
+    {
+      "id": "thanks",
+      "category": "social",
+      "purpose": "Acknowledge thanks without breaking the conversation.",
+      "examples": {
+        "ar": [
+          "شكرا",
+          "شكرًا",
+          "يعطيك العافية",
+          "مشكور",
+          "تسلم",
+          "الله يعطيك العافية",
+          "ما قصرت",
+          "ممتاز شكرا",
+          "شكراً لك"
+        ],
+        "en": [
+          "thanks",
+          "thank you",
+          "thank you so much",
+          "much appreciated",
+          "appreciate it",
+          "great thanks"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "شكرا",
+          "العافية",
+          "مشكور",
+          "تسلم",
+          "ما قصرت"
+        ],
+        "keywords_en": [
+          "thanks",
+          "thank you",
+          "appreciate"
+        ],
+        "entities": []
+      },
+      "answer": {
+        "type": "fixed",
+        "handler": null,
+        "responses": {
+          "ar": [
+            "العفو، حياك. إذا ودك نكمل من نفس السياق أنا حاضر.",
+            "الله يعافيك. كمل بسؤالك اللي بعده.",
+            "حياك، أنا معك."
+          ],
+          "en": [
+            "You're welcome. We can continue from the same context.",
+            "Happy to help. Go ahead with your next question.",
+            "Anytime. I'm with you."
+          ]
+        }
+      },
+      "context": {
+        "applicable_pages": [
+          "*"
+        ],
+        "followup_keys": []
+      },
+      "priority": 75
+    },
+    {
+      "id": "goodbye",
+      "category": "social",
+      "purpose": "Handle farewells.",
+      "examples": {
+        "ar": [
+          "مع السلامة",
+          "سلام",
+          "أشوفك",
+          "في أمان الله",
+          "نشوفك بعدين",
+          "تصبح على خير",
+          "إلى اللقاء"
+        ],
+        "en": [
+          "bye",
+          "goodbye",
+          "see you",
+          "see you later",
+          "talk later",
+          "good night",
+          "catch you later"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "مع السلامة",
+          "إلى اللقاء",
+          "في أمان الله",
+          "تصبح"
+        ],
+        "keywords_en": [
+          "bye",
+          "goodbye",
+          "see you",
+          "good night"
+        ],
+        "entities": []
+      },
+      "answer": {
+        "type": "fixed",
+        "handler": null,
+        "responses": {
+          "ar": [
+            "مع السلامة، وحياك بأي وقت.",
+            "في أمان الله.",
+            "نشوفك على خير."
+          ],
+          "en": [
+            "Goodbye. Come back anytime.",
+            "See you later.",
+            "Take care."
+          ]
+        }
+      },
+      "context": {
+        "applicable_pages": [
+          "*"
+        ],
+        "followup_keys": []
+      },
+      "priority": 70
+    },
+    {
+      "id": "acknowledgement_yes",
+      "category": "social",
+      "purpose": "Handle brief confirmation while preserving prior context.",
+      "examples": {
+        "ar": [
+          "ايه",
+          "ايوه",
+          "نعم",
+          "تمام",
+          "أوكي",
+          "ممتاز",
+          "حلو",
+          "صح",
+          "بالضبط",
+          "يب",
+          "تمام كذا"
+        ],
+        "en": [
+          "yes",
+          "yeah",
+          "yep",
+          "ok",
+          "okay",
+          "correct",
+          "exactly",
+          "that's right"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "نعم",
+          "تمام",
+          "أوكي",
+          "صح",
+          "بالضبط"
+        ],
+        "keywords_en": [
+          "yes",
+          "okay",
+          "correct",
+          "exactly"
+        ],
+        "entities": []
+      },
+      "answer": {
+        "type": "fixed",
+        "handler": null,
+        "responses": {
+          "ar": [
+            "تمام. كمل وأنا معك.",
+            "ممتاز، وش بعد؟",
+            "تمام، نكمل من نفس السياق."
+          ],
+          "en": [
+            "Great. Go ahead.",
+            "Okay. What's next?",
+            "Got it. We'll continue from the same context."
+          ]
+        }
+      },
+      "context": {
+        "applicable_pages": [
+          "*"
+        ],
+        "followup_keys": []
+      },
+      "priority": 45
+    },
+    {
+      "id": "acknowledgement_no",
+      "category": "social",
+      "purpose": "Handle brief rejection/correction.",
+      "examples": {
+        "ar": [
+          "لا",
+          "مو كذا",
+          "غلط",
+          "مو صحيح",
+          "لا مو هذا",
+          "غير كذا",
+          "لا أقصد شي ثاني",
+          "لا قصدي غير",
+          "مو هذا قصدي"
+        ],
+        "en": [
+          "no",
+          "nope",
+          "not that",
+          "that's not it",
+          "wrong",
+          "I meant something else",
+          "that's not what I meant"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "لا",
+          "غلط",
+          "مو صحيح",
+          "قصدي",
+          "مو هذا"
+        ],
+        "keywords_en": [
+          "no",
+          "wrong",
+          "meant",
+          "not that"
+        ],
+        "entities": []
+      },
+      "answer": {
+        "type": "fixed",
+        "handler": null,
+        "responses": {
+          "ar": [
+            "تمام. اكتب لي وش تقصد بطريقتك وأنا أعدل المسار.",
+            "مفهوم. وضّح المقصود بجملة قصيرة وأنا أكمل معك.",
+            "تمام، وش تقصد بالضبط؟"
+          ],
+          "en": [
+            "Understood. Tell me what you meant and I'll adjust.",
+            "Got it. Rephrase it briefly and I'll continue.",
+            "Okay. What did you mean exactly?"
+          ]
+        }
+      },
+      "context": {
+        "applicable_pages": [
+          "*"
+        ],
+        "followup_keys": []
+      },
+      "priority": 60
+    },
+    {
+      "id": "compliment_agent",
+      "category": "social",
+      "purpose": "Respond naturally to praise.",
+      "examples": {
+        "ar": [
+          "رهيب",
+          "كفو",
+          "شغل ممتاز",
+          "مرة ممتاز",
+          "جميل",
+          "حلو مرة",
+          "ذكي",
+          "ما شاء الله",
+          "عجبني",
+          "مبدع"
+        ],
+        "en": [
+          "awesome",
+          "nice",
+          "very good",
+          "excellent",
+          "smart",
+          "love it",
+          "well done",
+          "great job"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "رهيب",
+          "كفو",
+          "عجبني",
+          "مبدع",
+          "ممتاز"
+        ],
+        "keywords_en": [
+          "awesome",
+          "excellent",
+          "nice",
+          "smart",
+          "love it"
+        ],
+        "entities": []
+      },
+      "answer": {
+        "type": "fixed",
+        "handler": null,
+        "responses": {
+          "ar": [
+            "يسعدني إنه ناسبك. نكمل؟",
+            "كفو منك. وش تبغى بعد؟",
+            "حلو، خلنا نكمل من نفس السياق."
+          ],
+          "en": [
+            "Glad it works for you. Shall we continue?",
+            "Thanks. What would you like next?",
+            "Great. We can continue from the same context."
+          ]
+        }
+      },
+      "context": {
+        "applicable_pages": [
+          "*"
+        ],
+        "followup_keys": []
+      },
+      "priority": 35
+    },
+    {
+      "id": "frustration",
+      "category": "social",
+      "purpose": "Recover when the user says the assistant misunderstood.",
+      "examples": {
+        "ar": [
+          "ما فهمتني",
+          "مو فاهم",
+          "أنت ما فهمت",
+          "غلطت",
+          "هذا مو اللي أقصده",
+          "هذا مو المطلوب",
+          "الجواب غلط",
+          "ركز معي",
+          "مو قاعد تفهمني"
+        ],
+        "en": [
+          "you didn't understand",
+          "that's not what I meant",
+          "wrong answer",
+          "you got it wrong",
+          "not what I asked",
+          "please focus",
+          "you don't get me"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "ما فهمت",
+          "غلط",
+          "مو المطلوب",
+          "ركز",
+          "مو أقصده"
+        ],
+        "keywords_en": [
+          "didn't understand",
+          "wrong",
+          "not what",
+          "focus",
+          "don't get"
+        ],
+        "entities": []
+      },
+      "answer": {
+        "type": "fixed",
+        "handler": null,
+        "responses": {
+          "ar": [
+            "واضح أني أخذت سؤالك باتجاه غير اللي تقصده. اكتبه بجملة قصيرة وأنا أضبطه.",
+            "تمام، أعطني المقصود بصياغتك وأنا أعدل بدون ما أفقد السياق.",
+            "وصلت. قل لي وش الجزء اللي تبغاه تحديدًا."
+          ],
+          "en": [
+            "I took your question in the wrong direction. Give me the exact point and I'll correct course.",
+            "Understood. Rephrase the target and I'll keep the useful context.",
+            "Got it. Tell me exactly what you need."
+          ]
+        }
+      },
+      "context": {
+        "applicable_pages": [
+          "*"
+        ],
+        "followup_keys": []
+      },
+      "priority": 85
+    },
+    {
+      "id": "casual_laughter",
+      "category": "social",
+      "purpose": "Handle laughter/emotive chat.",
+      "examples": {
+        "ar": [
+          "هههه",
+          "ههههه",
+          "😂",
+          "ضحكتني",
+          "لول",
+          "هههه تمام",
+          "ههههههه"
+        ],
+        "en": [
+          "lol",
+          "haha",
+          "hahaha",
+          "😂",
+          "that's funny",
+          "lol okay"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "هههه",
+          "لول",
+          "😂"
+        ],
+        "keywords_en": [
+          "lol",
+          "haha",
+          "😂"
+        ],
+        "entities": []
+      },
+      "answer": {
+        "type": "fixed",
+        "handler": null,
+        "responses": {
+          "ar": [
+            "😄 نكمل؟",
+            "هههه، تمام. وش ودك بعد؟"
+          ],
+          "en": [
+            "😄 Shall we continue?",
+            "Haha. What's next?"
+          ]
+        }
+      },
+      "context": {
+        "applicable_pages": [
+          "*"
+        ],
+        "followup_keys": []
+      },
+      "priority": 25
+    },
+    {
+      "id": "smalltalk_weather_redirect",
+      "category": "social",
+      "purpose": "Handle weather small-talk honestly when no live weather source is part of the prototype.",
+      "examples": {
+        "ar": [
+          "الجو كيف",
+          "وش رايك بالجو",
+          "اليوم حر",
+          "الجو حلو اليوم",
+          "وش الطقس اليوم",
+          "مناسب أطلع الحين بسبب الجو؟"
+        ],
+        "en": [
+          "how's the weather",
+          "what do you think of the weather",
+          "it's hot today",
+          "nice weather today",
+          "what's the weather today",
+          "is the weather good to go out"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "الجو",
+          "الطقس",
+          "حر",
+          "برد"
+        ],
+        "keywords_en": [
+          "weather",
+          "hot",
+          "cold"
+        ],
+        "entities": []
+      },
+      "answer": {
+        "type": "fixed",
+        "handler": null,
+        "responses": {
+          "ar": [
+            "الطقس الحي مو ضمن بيانات نسخة EyeMakkah الحالية. أقدر أساعدك تختار شيء داخلي أو خارجي حسب تفضيلك والوقت المتاح.",
+            "ما عندي طقس حي في هذا النموذج، لكن أقدر أفلتر لك تجارب داخلية أو خارجية من محتوى EyeMakkah."
+          ],
+          "en": [
+            "Live weather is not part of the current EyeMakkah prototype. I can still help you choose indoor or outdoor options based on your preference and available time.",
+            "I don't have live weather in this prototype, but I can filter EyeMakkah experiences by indoor/outdoor context."
+          ]
+        }
+      },
+      "context": {
+        "applicable_pages": [
+          "*"
+        ],
+        "followup_keys": []
+      },
+      "priority": 30
+    },
+    {
+      "id": "agent_identity",
+      "category": "identity",
+      "purpose": "Explain who the assistant is.",
+      "examples": {
+        "ar": [
+          "من أنت",
+          "مين أنت",
+          "وش أنت",
+          "عرف نفسك",
+          "أنت مين",
+          "ايش اسمك",
+          "ما اسمك",
+          "من المساعد"
+        ],
+        "en": [
+          "who are you",
+          "what are you",
+          "what's your name",
+          "what is your name",
+          "introduce yourself",
+          "who am I talking to"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "من أنت",
+          "مين أنت",
+          "اسمك",
+          "عرف نفسك",
+          "المساعد"
+        ],
+        "keywords_en": [
+          "who are you",
+          "your name",
+          "introduce",
+          "assistant"
+        ],
+        "entities": []
+      },
+      "answer": {
+        "type": "fixed",
+        "handler": null,
+        "responses": {
+          "ar": [
+            "أنا مساعد EyeMakkah. أساعد السكان والزوار يكتشفون أماكن وتجارب وأنشطة وعروض ومجتمعات، ويرتبون خطتهم باستخدام محتوى EyeMakkah وسياقهم الحالي.",
+            "أنا المساعد داخل تطبيق EyeMakkah. اكتب لي وش تحتاج بطريقتك، وأنا أحاول أوصلك لأفضل خيار أو خطوة داخل التطبيق."
+          ],
+          "en": [
+            "I'm the EyeMakkah Assistant. I help residents and visitors discover places, experiences, activities, offers, communities, and build their plan using EyeMakkah content and current context.",
+            "I'm the assistant inside the EyeMakkah app. Ask naturally and I'll help you move to a useful option or next step."
+          ]
+        }
+      },
+      "context": {
+        "applicable_pages": [
+          "*"
+        ],
+        "followup_keys": []
+      },
+      "priority": 99
+    },
+    {
+      "id": "agent_capabilities",
+      "category": "identity",
+      "purpose": "Explain what the consumer assistant can help with.",
+      "examples": {
+        "ar": [
+          "وش تقدر تسوي",
+          "ايش تقدر تسوي",
+          "كيف تساعدني",
+          "وش أقدر أسألك",
+          "وش ممكن أسألك عنه",
+          "وش خدماتك",
+          "وش دورك",
+          "كيف تفيدني"
+        ],
+        "en": [
+          "what can you do",
+          "how can you help",
+          "what can I ask you",
+          "what do you help with",
+          "what are your capabilities",
+          "how are you useful"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "تقدر",
+          "تسوي",
+          "تساعدني",
+          "أسألك",
+          "دورك",
+          "تفيدني"
+        ],
+        "keywords_en": [
+          "can you do",
+          "help",
+          "ask you",
+          "capabilities",
+          "useful"
+        ],
+        "entities": []
+      },
+      "answer": {
+        "type": "fixed",
+        "handler": null,
+        "responses": {
+          "ar": [
+            "أقدر أساعدك تلقى شيء تسويه، مطعم أو مقهى، تجربة أو نشاط، عرض أو خصم، مجتمع مناسب، وأرتب لك اقتراحات حسب وقتك وحيّك واهتماماتك وخطتك.",
+            "اسألني بطريقتك عن الأماكن، الأكل، الأنشطة، العروض، المجتمعات أو «خطتي». وأقدر أتابع معك بأسئلة قصيرة مثل «غيره»، «أقرب»، «عليه عرض؟» أو «ضف الثاني لخطتي»."
+          ],
+          "en": [
+            "I can help you find things to do, restaurants and cafés, experiences, activities, offers, communities, and suggestions based on your time, area, interests, and Plan.",
+            "Ask naturally about places, food, activities, offers, communities, or My Plan. I can also follow short turns such as 'another one', 'closer', 'with an offer?', or 'add the second one to My Plan'."
+          ]
+        }
+      },
+      "context": {
+        "applicable_pages": [
+          "*"
+        ],
+        "followup_keys": []
+      },
+      "priority": 97
+    },
+    {
+      "id": "agent_scope_limits",
+      "category": "identity",
+      "purpose": "Explain the assistant's product boundaries.",
+      "examples": {
+        "ar": [
+          "وش ما تقدر تسوي",
+          "وش حدودك",
+          "ايش خارج نطاقك",
+          "هل تجاوب على كل شي",
+          "هل تعرف كل شيء",
+          "وش الأشياء اللي ما تعرفها"
+        ],
+        "en": [
+          "what can't you do",
+          "what are your limits",
+          "is anything out of scope",
+          "can you answer anything",
+          "do you know everything",
+          "what don't you know"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "حدودك",
+          "خارج نطاقك",
+          "كل شي",
+          "ما تعرف"
+        ],
+        "keywords_en": [
+          "limits",
+          "out of scope",
+          "anything",
+          "don't know"
+        ],
+        "entities": []
+      },
+      "answer": {
+        "type": "fixed",
+        "handler": null,
+        "responses": {
+          "ar": [
+            "أنا مخصص لتجربة EyeMakkah وما أختلق بيانات غير موجودة. ما أقدر أؤكد طقسًا أو ازدحامًا أو توفرًا أو حجزًا حيًا إذا التطبيق ما عنده مصدر فعلي لها.",
+            "نطاقي هو محتوى EyeMakkah وسياق الاستخدام الحالي. إذا طلبت شيء خارج البيانات المتاحة، أقول لك مباشرة بدل ما أخمّن."
+          ],
+          "en": [
+            "I'm scoped to the EyeMakkah experience and won't invent unavailable data. I cannot confirm live weather, crowds, availability, or bookings unless the app has a real source for them.",
+            "My scope is EyeMakkah content and the current app context. If something is outside the available data, I'll say so rather than guess."
+          ]
+        }
+      },
+      "context": {
+        "applicable_pages": [
+          "*"
+        ],
+        "followup_keys": []
+      },
+      "priority": 85
+    },
+    {
+      "id": "agent_data_source",
+      "category": "identity",
+      "purpose": "Explain the assistant's information sources truthfully.",
+      "examples": {
+        "ar": [
+          "من وين تجيب معلوماتك",
+          "من وين المعلومات",
+          "مصدر إجاباتك",
+          "على إيش تعتمد",
+          "هل البيانات حقيقية",
+          "هل المعلومات مباشرة",
+          "هل المعلومات لايف",
+          "وش مصادر توصياتك"
+        ],
+        "en": [
+          "where does your information come from",
+          "what data do you use",
+          "what is your data source",
+          "is the data live",
+          "is this real data",
+          "what are your recommendation sources"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "مصدر",
+          "المعلومات",
+          "البيانات",
+          "حقيقية",
+          "لايف",
+          "توصياتك"
+        ],
+        "keywords_en": [
+          "source",
+          "data",
+          "live",
+          "real",
+          "recommendation"
+        ],
+        "entities": []
+      },
+      "answer": {
+        "type": "fixed",
+        "handler": null,
+        "responses": {
+          "ar": [
+            "إجاباتي تعتمد على محتوى EyeMakkah الموجود في النموذج الحالي: الأماكن والتجارب والأنشطة والعروض والمجتمعات و«خطتي» وسياق المستخدم، مع معلومات مصدر/حداثة عندما تكون متاحة. بعض المحتوى تشغيلي تجريبي وليس بيانات حية.",
+            "في هذه النسخة أستخدم بيانات ومحتوى الـPrototype الحالي، وليس شبكة بيانات تشغيلية حية."
+          ],
+          "en": [
+            "My answers use content available in the current EyeMakkah prototype: places, experiences, activities, offers, communities, My Plan, and user context, plus source/freshness information where available. Some operational content is illustrative rather than live.",
+            "In this version I use the current prototype's content and state, not a live operational data network."
+          ]
+        }
+      },
+      "context": {
+        "applicable_pages": [
+          "*"
+        ],
+        "followup_keys": []
+      },
+      "priority": 100
+    },
+    {
+      "id": "agent_llm_api_question",
+      "category": "identity",
+      "purpose": "Answer honestly about LLM/API connectivity.",
+      "examples": {
+        "ar": [
+          "هل أنت مربوط ب api",
+          "هل مربوط بذكاء اصطناعي",
+          "هل أنت llm",
+          "هل الردود من ChatGPT",
+          "هل عندك مودل حي",
+          "هل تستخدم نموذج ذكاء اصطناعي حي",
+          "هل أنت شات جي بي تي"
+        ],
+        "en": [
+          "are you connected to an api",
+          "are you powered by an llm",
+          "is this chatgpt",
+          "are you using a live ai model",
+          "is there a live model behind this",
+          "are you an LLM"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "api",
+          "llm",
+          "مودل",
+          "نموذج حي",
+          "ChatGPT",
+          "شات جي بي تي"
+        ],
+        "keywords_en": [
+          "api",
+          "llm",
+          "chatgpt",
+          "live model"
+        ],
+        "entities": []
+      },
+      "answer": {
+        "type": "fixed",
+        "handler": null,
+        "responses": {
+          "ar": [
+            "في نسخة الـPrototype الحالية، تجربة المساعد مبنية على بنك نوايا ومنطق سياقي مرتبط ببيانات EyeMakkah، وليست مرتبطة بـLLM أو API حي في الخلفية.",
+            "هذه النسخة تحاكي تجربة Agent بشكل طبيعي، لكن المطابقة والإجابات الحالية تأتي من بنك intents وhandlers محددة وليست من نموذج توليدي حي."
+          ],
+          "en": [
+            "In the current prototype, the assistant uses an intent bank and contextual logic tied to EyeMakkah data rather than a live LLM/API backend.",
+            "This version behaves like an agent, but current matching and answers come from intents and predefined handlers rather than a live generative model."
+          ]
+        }
+      },
+      "context": {
+        "applicable_pages": [
+          "*"
+        ],
+        "followup_keys": []
+      },
+      "priority": 100
+    },
+    {
+      "id": "agent_language_support",
+      "category": "identity",
+      "purpose": "Explain Arabic/English support.",
+      "examples": {
+        "ar": [
+          "تتكلم عربي",
+          "تدعم الإنجليزي",
+          "أقدر أكلمك إنجليزي",
+          "ترد عربي وإنجليزي",
+          "وش اللغات",
+          "تفهم لهجة",
+          "تفهم سعودي"
+        ],
+        "en": [
+          "do you speak Arabic",
+          "do you support English",
+          "can I ask in Arabic",
+          "can I ask in English",
+          "what languages do you support",
+          "do you understand dialect",
+          "do you understand Saudi Arabic"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "عربي",
+          "إنجليزي",
+          "اللغات",
+          "لهجة",
+          "سعودي"
+        ],
+        "keywords_en": [
+          "Arabic",
+          "English",
+          "languages",
+          "dialect",
+          "Saudi"
+        ],
+        "entities": []
+      },
+      "answer": {
+        "type": "fixed",
+        "handler": null,
+        "responses": {
+          "ar": [
+            "نعم. تقدر تكلمني بالعربي أو الإنجليزي، وأفهم صياغات عربية طبيعية ولهجة سعودية بسيطة وأخطاء كتابة شائعة ضمن نطاق التطبيق.",
+            "اسأل بالعربي أو الإنجليزي، وما تحتاج تصيغ السؤال بطريقة رسمية."
+          ],
+          "en": [
+            "Yes. You can ask in Arabic or English, including natural Arabic phrasing, simple Saudi colloquial wording, and common typos within the app scope.",
+            "Ask in Arabic or English. You don't need to phrase the question formally."
+          ]
+        }
+      },
+      "context": {
+        "applicable_pages": [
+          "*"
+        ],
+        "followup_keys": []
+      },
+      "priority": 85
+    },
+    {
+      "id": "agent_context_memory",
+      "category": "identity",
+      "purpose": "Explain short-session conversation memory.",
+      "examples": {
+        "ar": [
+          "تتذكر سؤالي السابق",
+          "تفهم السياق",
+          "تفهم سؤالي السابق",
+          "إذا قلت ليش تفهم",
+          "لو قلت غيره تفهم",
+          "هل تتابع الكلام",
+          "تتذكر النتائج",
+          "لو قلت الثاني تعرف"
+        ],
+        "en": [
+          "do you remember my previous question",
+          "do you understand context",
+          "can you follow up",
+          "if I say why will you know what I mean",
+          "if I say another one do you understand",
+          "do you remember the results",
+          "if I say the second one do you know"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "تتذكر",
+          "السياق",
+          "سؤالي السابق",
+          "تتابع",
+          "غيره",
+          "الثاني"
+        ],
+        "keywords_en": [
+          "remember",
+          "context",
+          "previous question",
+          "follow up",
+          "another one",
+          "second"
+        ],
+        "entities": []
+      },
+      "answer": {
+        "type": "fixed",
+        "handler": null,
+        "responses": {
+          "ar": [
+            "أقدر أتابع سياق المحادثة القصير داخل جلسة المساعد، مثل آخر سؤال ونتيجة والعناصر المقترحة وسياقك الحالي، عشان أفهم متابعات مثل «ليش؟»، «غيره»، «أقرب» أو «الثاني».",
+            "المتابعات القصيرة تعتمد على آخر Intent ونتيجة وentities وسياق المستخدم داخل الجلسة الحالية."
+          ],
+          "en": [
+            "I can follow short conversational context inside the assistant session, including the previous question, results, suggested objects, and current user context. That lets me understand turns such as 'why?', 'another one', 'closer', or 'the second one'.",
+            "Short follow-ups use the latest intent, result, entities, and user context in the current session."
+          ]
+        }
+      },
+      "context": {
+        "applicable_pages": [
+          "*"
+        ],
+        "followup_keys": []
+      },
+      "priority": 90
+    },
+    {
+      "id": "app_what_is_eyemakkah",
+      "category": "app_help",
+      "purpose": "Explain the current EyeMakkah consumer app.",
+      "examples": {
+        "ar": [
+          "وش هي EyeMakkah",
+          "ايش EyeMakkah",
+          "وش التطبيق",
+          "ايش هذا التطبيق",
+          "ما هي EyeMakkah",
+          "اشرح لي EyeMakkah",
+          "وش هدف التطبيق",
+          "وش فكرة EyeMakkah"
+        ],
+        "en": [
+          "what is EyeMakkah",
+          "what is this app",
+          "explain EyeMakkah",
+          "what is the purpose of the app",
+          "what is EyeMakkah for"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "EyeMakkah",
+          "التطبيق",
+          "هدف",
+          "فكرة"
+        ],
+        "keywords_en": [
+          "EyeMakkah",
+          "app",
+          "purpose"
+        ],
+        "entities": []
+      },
+      "answer": {
+        "type": "fixed",
+        "handler": null,
+        "responses": {
+          "ar": [
+            "EyeMakkah هو مجتمع رقمي لمكة يساعد السكان والزوار يكتشفون أماكن وتجارب وخدمات ومجتمعات، ينتقلون من الاكتشاف إلى المشاركة، ويحافظون على قراراتهم داخل «خطتي».",
+            "فكرة EyeMakkah مو مجرد دليل أماكن؛ هو تجربة تربط الاكتشاف بالمجتمع والمشاركة والخطة، وتتحسن حسب سياق واستخدام الشخص."
+          ],
+          "en": [
+            "EyeMakkah is a digital community for Makkah that helps residents and visitors discover places, experiences, services, and communities, then move from discovery into participation and My Plan.",
+            "EyeMakkah is more than a directory. It connects discovery, community, participation, and planning around the user's context."
+          ]
+        }
+      },
+      "context": {
+        "applicable_pages": [
+          "*"
+        ],
+        "followup_keys": []
+      },
+      "priority": 95
+    },
+    {
+      "id": "app_navigation_overview",
+      "category": "app_help",
+      "purpose": "Explain the four primary app areas.",
+      "examples": {
+        "ar": [
+          "وش الصفحات الرئيسية",
+          "وش الأقسام",
+          "وش التابات",
+          "وش موجود تحت",
+          "اشرح القائمة",
+          "وش أقدر أفتح من تحت",
+          "وش التنقل الرئيسي"
+        ],
+        "en": [
+          "what are the main pages",
+          "what sections are there",
+          "what are the tabs",
+          "what is in the bottom navigation",
+          "explain the navigation"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "الصفحات",
+          "الأقسام",
+          "التابات",
+          "القائمة",
+          "التنقل"
+        ],
+        "keywords_en": [
+          "pages",
+          "sections",
+          "tabs",
+          "navigation"
+        ],
+        "entities": []
+      },
+      "answer": {
+        "type": "fixed",
+        "handler": null,
+        "responses": {
+          "ar": [
+            "التنقل الرئيسي في EyeMakkah أربع مناطق: «الرئيسية» للاقتراحات والسياق، «اكتشف» للتصفح والبحث، «المجتمع» للأسئلة والتوصيات والمشاركة، و«خطتي» لما حفظته أو تنوي فعله أو أكملته.",
+            "عندك أربع تبويبات رئيسية: الرئيسية، اكتشف، المجتمع، خطتي. والحساب موجود خلف صورة الملف الشخصي."
+          ],
+          "en": [
+            "EyeMakkah has four primary areas: Home for contextual suggestions, Discover for browsing and search, Community for questions and contributions, and My Plan for what you saved, intend to do, or completed.",
+            "The four main tabs are Home, Discover, Community, and My Plan. Profile sits behind the avatar."
+          ]
+        }
+      },
+      "context": {
+        "applicable_pages": [
+          "*"
+        ],
+        "followup_keys": []
+      },
+      "priority": 90
+    },
+    {
+      "id": "app_home_help",
+      "category": "app_help",
+      "purpose": "Explain Home.",
+      "examples": {
+        "ar": [
+          "وش في الرئيسية",
+          "اشرح الصفحة الرئيسية",
+          "وش تسوي الرئيسية",
+          "وش أستفيد من الرئيسية",
+          "الرئيسية تعرض ايش"
+        ],
+        "en": [
+          "what is on Home",
+          "explain the home page",
+          "what does Home do",
+          "what can I see on Home"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "الرئيسية",
+          "الصفحة الرئيسية"
+        ],
+        "keywords_en": [
+          "home",
+          "home page"
+        ],
+        "entities": []
+      },
+      "answer": {
+        "type": "fixed",
+        "handler": null,
+        "responses": {
+          "ar": [
+            "الرئيسية تجمع لك اقتراحات حسب سياقك مثل الوقت والحي والاهتمامات وخطتك، وتعرض محتوى يبدأ قريبًا، اقتراحات للمساء، مجتمع، عروض، وأماكن أو تجارب مناسبة.",
+            "الرئيسية مو قائمة ثابتة؛ المفروض تتغير حسب وقتك وسياقك وما عندك في «خطتي»."
+          ],
+          "en": [
+            "Home brings together contextual suggestions based on time, area, interests, and My Plan, including things starting soon, evening ideas, community content, offers, and relevant places or experiences.",
+            "Home is not meant to be a static list; it adapts to your context and Plan."
+          ]
+        }
+      },
+      "context": {
+        "applicable_pages": [
+          "*"
+        ],
+        "followup_keys": []
+      },
+      "priority": 85
+    },
+    {
+      "id": "app_discover_help",
+      "category": "app_help",
+      "purpose": "Explain Discover.",
+      "examples": {
+        "ar": [
+          "وش في اكتشف",
+          "اشرح اكتشف",
+          "وش أقدر أسوي في اكتشف",
+          "كيف أتصفح",
+          "وش فايدة صفحة اكتشف"
+        ],
+        "en": [
+          "what is Discover",
+          "explain Discover",
+          "what can I do in Discover",
+          "how do I browse",
+          "what is the Discover page for"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "اكتشف",
+          "أتصفح",
+          "تصفح"
+        ],
+        "keywords_en": [
+          "discover",
+          "browse"
+        ],
+        "entities": []
+      },
+      "answer": {
+        "type": "fixed",
+        "handler": null,
+        "responses": {
+          "ar": [
+            "«اكتشف» للتصفح عبر الأماكن والمطاعم والمقاهي والتجارب والأنشطة والفعاليات والخدمات حسب الفئة والحي والوقت والنية مثل «الليلة» أو «للعائلة» أو «بدون حجز».",
+            "استخدم «اكتشف» إذا ودك تتصفح بدون سؤال محدد أو تضيق النتائج حسب نوع الشيء اللي تبيه."
+          ],
+          "en": [
+            "Discover lets you browse places, restaurants, cafés, experiences, activities, events, and services by category, area, time, and intent such as tonight, family-friendly, or no booking.",
+            "Use Discover when you want to browse broadly or narrow results by what you're looking for."
+          ]
+        }
+      },
+      "context": {
+        "applicable_pages": [
+          "*"
+        ],
+        "followup_keys": []
+      },
+      "priority": 85
+    },
+    {
+      "id": "app_community_help",
+      "category": "app_help",
+      "purpose": "Explain Community and its role.",
+      "examples": {
+        "ar": [
+          "وش المجتمع",
+          "اشرح المجتمع",
+          "وش أقدر أسوي بالمجتمع",
+          "وش فايدة المجتمع",
+          "هل أقدر أسأل الناس",
+          "وش موجود بالمجتمع"
+        ],
+        "en": [
+          "what is Community",
+          "explain Community",
+          "what can I do in Community",
+          "what is Community for",
+          "can I ask people"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "المجتمع",
+          "أسأل الناس",
+          "المجتمعات"
+        ],
+        "keywords_en": [
+          "community",
+          "ask people",
+          "communities"
+        ],
+        "entities": []
+      },
+      "answer": {
+        "type": "fixed",
+        "handler": null,
+        "responses": {
+          "ar": [
+            "«المجتمع» يجمع معرفة وتجارب الناس: أسئلة، إجابات، توصيات، تقارير تجربة، نصائح، تحديثات وصور، مع مجتمعات للأحياء والزوار والحج والعمرة والأكل والثقافة والتطوع والهوايات والحياة في مكة.",
+            "تقدر تنتقل من نقاش داخل المجتمع إلى مكان أو نشاط، ومن نشاط مكتمل ترجع وتشارك معلومة تساعد غيرك."
+          ],
+          "en": [
+            "Community brings together lived knowledge: questions, answers, recommendations, experience reports, tips, updates, and photos across neighborhoods, visitors, Hajj & Umrah, food, culture, volunteering, hobbies, and life in Makkah.",
+            "You can move from a community discussion into a place or activity, then contribute back after completing something."
+          ]
+        }
+      },
+      "context": {
+        "applicable_pages": [
+          "*"
+        ],
+        "followup_keys": []
+      },
+      "priority": 90
+    },
+    {
+      "id": "app_plan_help",
+      "category": "app_help",
+      "purpose": "Explain My Plan as continuity, not favorites.",
+      "examples": {
+        "ar": [
+          "وش خطتي",
+          "اشرح خطتي",
+          "وش فايدة خطتي",
+          "هل خطتي مفضلة",
+          "وش أحط في خطتي",
+          "وش الفرق بين خطتي والحفظ"
+        ],
+        "en": [
+          "what is My Plan",
+          "explain My Plan",
+          "what is My Plan for",
+          "is My Plan just favorites",
+          "what goes into My Plan",
+          "what is the difference between My Plan and save"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "خطتي",
+          "فايدة خطتي",
+          "مفضلة",
+          "الحفظ"
+        ],
+        "keywords_en": [
+          "My Plan",
+          "favorites",
+          "save"
+        ],
+        "entities": []
+      },
+      "answer": {
+        "type": "fixed",
+        "handler": null,
+        "responses": {
+          "ar": [
+            "«خطتي» مو مجرد مفضلة. هي سطح استمرارية يوضح ما هو الآن، اليوم، قادم، مؤكد، مهتم به، محفوظ لوقت لاحق أو مكتمل.",
+            "الحفظ يعني إن الشيء يهمك. الإضافة إلى «خطتي» تعني أنك بدأت تحوله لقرار أو ترتيب فعلي، وله حالات مختلفة بعد ذلك."
+          ],
+          "en": [
+            "My Plan is not just favorites. It tracks what is now, today, upcoming, confirmed, interesting, saved for later, or completed.",
+            "Saving means something interests you. Adding it to My Plan means you're starting to turn it into an actual decision or plan."
+          ]
+        }
+      },
+      "context": {
+        "applicable_pages": [
+          "*"
+        ],
+        "followup_keys": []
+      },
+      "priority": 95
+    },
+    {
+      "id": "app_search_help",
+      "category": "app_help",
+      "purpose": "Explain Search scope.",
+      "examples": {
+        "ar": [
+          "وش أقدر أبحث",
+          "البحث يشمل ايش",
+          "كيف أبحث",
+          "وش يبحث التطبيق",
+          "هل البحث يشمل المجتمع",
+          "أقدر أبحث عن سؤال"
+        ],
+        "en": [
+          "what can I search",
+          "what does search cover",
+          "how do I search",
+          "does search include Community",
+          "can I search questions"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "أبحث",
+          "البحث",
+          "يشمل"
+        ],
+        "keywords_en": [
+          "search",
+          "what can I search",
+          "cover"
+        ],
+        "entities": []
+      },
+      "answer": {
+        "type": "fixed",
+        "handler": null,
+        "responses": {
+          "ar": [
+            "البحث في EyeMakkah مو للأماكن فقط؛ يقدر يرجع أماكن ومطاعم وتجارب وأنشطة ومجتمعات وخدمات ومساهمات مرتبطة بما كتبته.",
+            "اكتب الشيء بطريقتك مثل «قهوة هادئة»، «حراء»، «للعائلة» أو «تطوع»، والبحث يحاول يطابق أكثر من نوع محتوى."
+          ],
+          "en": [
+            "Search is not limited to places. It can return places, restaurants, experiences, activities, communities, services, and relevant contributions.",
+            "Search naturally, for example 'quiet coffee', 'Hira', 'family-friendly', or 'volunteering', and EyeMakkah can match across multiple content types."
+          ]
+        }
+      },
+      "context": {
+        "applicable_pages": [
+          "*"
+        ],
+        "followup_keys": []
+      },
+      "priority": 85
+    },
+    {
+      "id": "app_save_vs_plan_help",
+      "category": "app_help",
+      "purpose": "Explain Save versus Add to Plan.",
+      "examples": {
+        "ar": [
+          "وش الفرق بين حفظ وخطتي",
+          "الحفظ نفس خطتي",
+          "إذا حفظت ينضاف لخطتي",
+          "وش يعني حفظ",
+          "وش يعني أضف إلى خطتي",
+          "save و plan نفس الشي"
+        ],
+        "en": [
+          "what is the difference between save and My Plan",
+          "is saving the same as My Plan",
+          "does save add it to My Plan",
+          "what does save mean",
+          "what does add to My Plan mean"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "الفرق",
+          "حفظ",
+          "خطتي",
+          "save",
+          "plan"
+        ],
+        "keywords_en": [
+          "difference",
+          "save",
+          "My Plan",
+          "plan"
+        ],
+        "entities": []
+      },
+      "answer": {
+        "type": "fixed",
+        "handler": null,
+        "responses": {
+          "ar": [
+            "لا. «حفظ» يعني احتفظت بالشيء للرجوع له. «أضف إلى خطتي» خطوة أقوى وتدخل العنصر في مسار التخطيط والاستمرارية. الحفظ ≠ الخطة ≠ الانضمام ≠ الحجز.",
+            "إذا حفظت شيئًا ما ما يعني أنك قررت تروح له أو حجزته. EyeMakkah يحافظ على هذه الحالات منفصلة."
+          ],
+          "en": [
+            "No. Save means keeping something for later. Add to My Plan is a stronger planning step. Save ≠ Plan ≠ Join ≠ Booking.",
+            "Saving something does not mean you decided to go or booked it. EyeMakkah keeps those states separate."
+          ]
+        }
+      },
+      "context": {
+        "applicable_pages": [
+          "*"
+        ],
+        "followup_keys": []
+      },
+      "priority": 100
+    },
+    {
+      "id": "app_booking_handoff_help",
+      "category": "app_help",
+      "purpose": "Explain external booking handoff semantics.",
+      "examples": {
+        "ar": [
+          "كيف الحجز",
+          "هل تحجزون من التطبيق",
+          "إذا ضغطت حجز يعني تم",
+          "وش يعني انتقلت لإكمال الحجز",
+          "هل EyeMakkah يؤكد الحجز",
+          "الحجز داخل التطبيق ولا برا"
+        ],
+        "en": [
+          "how does booking work",
+          "do you book inside the app",
+          "if I tap book is it confirmed",
+          "what does left to complete booking mean",
+          "does EyeMakkah confirm bookings",
+          "is booking inside or outside the app"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "الحجز",
+          "تم الحجز",
+          "إكمال الحجز",
+          "يؤكد"
+        ],
+        "keywords_en": [
+          "booking",
+          "confirmed",
+          "complete booking"
+        ],
+        "entities": []
+      },
+      "answer": {
+        "type": "fixed",
+        "handler": null,
+        "responses": {
+          "ar": [
+            "بعض الحجوزات تنتقل لمقدم الخدمة أو منصة خارجية. EyeMakkah يسجل «انتقلت لإكمال الحجز» فقط، ولا يعتبر الحجز مؤكدًا إلا إذا وصل تأكيد فعلي أو أكده المستخدم صراحة.",
+            "الضغط على زر حجز خارجي مو نفسه «تم الحجز». التطبيق يحافظ على الفرق بين الانتقال للحجز والتأكيد."
+          ],
+          "en": [
+            "Some bookings hand off to an external provider. EyeMakkah records that you left to complete booking, but does not mark it confirmed unless there is a real callback or explicit user confirmation.",
+            "Tapping an external booking action is not the same as a confirmed booking. EyeMakkah keeps those states separate."
+          ]
+        }
+      },
+      "context": {
+        "applicable_pages": [
+          "*"
+        ],
+        "followup_keys": []
+      },
+      "priority": 100
+    },
+    {
+      "id": "app_trust_source_help",
+      "category": "app_help",
+      "purpose": "Explain source, freshness, and conflicting information.",
+      "examples": {
+        "ar": [
+          "كيف أعرف المعلومة صحيحة",
+          "وش مصدر المعلومة",
+          "وش يعني معلومة رسمية",
+          "وش يعني من المجتمع",
+          "وش يعني معلومات متعارضة",
+          "وش يعني قديمة",
+          "كيف أعرف آخر تحديث"
+        ],
+        "en": [
+          "how do I know if information is reliable",
+          "what is the source",
+          "what does official information mean",
+          "what does from community mean",
+          "what does conflicting information mean",
+          "how do I know when it was updated"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "مصدر",
+          "رسمية",
+          "المجتمع",
+          "متعارضة",
+          "قديمة",
+          "آخر تحديث"
+        ],
+        "keywords_en": [
+          "source",
+          "official",
+          "community",
+          "conflicting",
+          "updated"
+        ],
+        "entities": []
+      },
+      "answer": {
+        "type": "fixed",
+        "handler": null,
+        "responses": {
+          "ar": [
+            "EyeMakkah يوضح مصدر المعلومة عندما يكون متاحًا: رسمي، من مقدم الخدمة، أو من المجتمع، ويعرض حداثتها أو وجود تعارض بدل ما يخفيه.",
+            "إذا اختلفت المصادر، التطبيق يقدر يعرض الادعاءات والتواريخ جنب بعض بدل ما يدّعي أن واحدًا منها صحيح بدون دليل."
+          ],
+          "en": [
+            "EyeMakkah can show whether information comes from an official source, provider, or community, and indicate freshness or conflicts instead of hiding them.",
+            "When sources disagree, the app can show the claims and dates side by side rather than pretending one is true without evidence."
+          ]
+        }
+      },
+      "context": {
+        "applicable_pages": [
+          "*"
+        ],
+        "followup_keys": []
+      },
+      "priority": 95
+    },
+    {
+      "id": "app_resident_visitor_help",
+      "category": "app_help",
+      "purpose": "Explain resident/visitor context.",
+      "examples": {
+        "ar": [
+          "وش الفرق بين مقيم وزائر",
+          "ليش تختارون مقيم أو زائر",
+          "أنا من مكة وش أختار",
+          "أنا زائر وش أختار",
+          "هل التوصيات تختلف للمقيم والزائر"
+        ],
+        "en": [
+          "what is the difference between resident and visitor",
+          "why choose resident or visitor",
+          "I'm from Makkah what should I choose",
+          "I'm visiting what should I choose",
+          "do recommendations differ"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "مقيم",
+          "زائر",
+          "سكان مكة",
+          "التوصيات تختلف"
+        ],
+        "keywords_en": [
+          "resident",
+          "visitor",
+          "recommendations"
+        ],
+        "entities": []
+      },
+      "answer": {
+        "type": "fixed",
+        "handler": null,
+        "responses": {
+          "ar": [
+            "اختيار «مقيم» أو «زائر» يعطي EyeMakkah سياقًا أفضل. المقيم غالبًا يحتاج اكتشافًا متجددًا وحياة يومية ومجتمعات محلية، والزائر قد يحتاج تجربة أوضح حسب الوقت والزيارة والخطة.",
+            "الاختيار يساعد في الترتيب فقط، وما يمنعك من اكتشاف أي نوع محتوى داخل التطبيق."
+          ],
+          "en": [
+            "Choosing resident or visitor gives EyeMakkah better context. Residents may benefit more from ongoing local discovery and communities, while visitors may need clearer time-based experiences and planning.",
+            "The choice helps ranking; it does not block you from discovering other content."
+          ]
+        }
+      },
+      "context": {
+        "applicable_pages": [
+          "*"
+        ],
+        "followup_keys": []
+      },
+      "priority": 88
+    },
+    {
+      "id": "app_personalization_help",
+      "category": "app_help",
+      "purpose": "Explain personalization and user control.",
+      "examples": {
+        "ar": [
+          "كيف التخصيص",
+          "ليش تطلع لي هذي الاقتراحات",
+          "كيف تعرفون اهتماماتي",
+          "هل تتعلمون مني",
+          "أقدر أغير اهتماماتي",
+          "كيف أحذف اهتمام",
+          "وش يعني مخصص لي"
+        ],
+        "en": [
+          "how does personalization work",
+          "why am I seeing these suggestions",
+          "how do you know my interests",
+          "does the app learn from me",
+          "can I change my interests",
+          "what does personalized mean"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "التخصيص",
+          "ليش تطلع",
+          "اهتماماتي",
+          "تتعلم",
+          "مخصص"
+        ],
+        "keywords_en": [
+          "personalization",
+          "why am I seeing",
+          "interests",
+          "learn",
+          "personalized"
+        ],
+        "entities": []
+      },
+      "answer": {
+        "type": "fixed",
+        "handler": null,
+        "responses": {
+          "ar": [
+            "التخصيص يعتمد على سياق صريح وسلوك مفيد داخل التطبيق مثل ما حفظته أو أضفته لخطتك أو أكملته، بدون افتراض صفات حساسة عنك. وتقدر تصحح اهتماماتك من الحساب.",
+            "EyeMakkah ما يفترض أن كل مشاهدة تعني اهتمام قوي، وما يحول رفضًا واحدًا إلى كراهية دائمة."
+          ],
+          "en": [
+            "Personalization uses explicit context and meaningful in-app actions such as saving, planning, joining, or completing, without inferring sensitive traits. You can correct your interests from Profile.",
+            "EyeMakkah does not treat every view as a strong preference or one dismissal as a permanent dislike."
+          ]
+        }
+      },
+      "context": {
+        "applicable_pages": [
+          "*"
+        ],
+        "followup_keys": []
+      },
+      "priority": 95
+    },
+    {
+      "id": "app_location_help",
+      "category": "app_help",
+      "purpose": "Explain optional location behavior.",
+      "examples": {
+        "ar": [
+          "ليش تبغون الموقع",
+          "هل لازم أفعل الموقع",
+          "بدون موقع يشتغل",
+          "وش تستفيدون من الموقع",
+          "هل تشوفون موقعي بالضبط",
+          "هل الناس يشوفون موقعي"
+        ],
+        "en": [
+          "why do you need location",
+          "do I have to enable location",
+          "does it work without location",
+          "what do you use location for",
+          "do you see my exact location",
+          "can other people see my location"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "الموقع",
+          "أفعل الموقع",
+          "بدون موقع",
+          "موقعي بالضبط",
+          "الناس يشوفون"
+        ],
+        "keywords_en": [
+          "location",
+          "enable location",
+          "without location",
+          "exact location",
+          "people see"
+        ],
+        "entities": []
+      },
+      "answer": {
+        "type": "fixed",
+        "handler": null,
+        "responses": {
+          "ar": [
+            "الموقع اختياري. EyeMakkah يقدر يشتغل بدون موقع دقيق باستخدام الحي أو المنطقة التي تختارها. إذا شاركت الموقع يمكن استخدامه لتحسين القرب، لكن ما المفروض يعرض موقعك الدقيق للناس أو يبني اكتشاف مستخدمين قريبين.",
+            "تقدر تستخدم التطبيق بدون إذن الموقع، وتختار منطقتك يدويًا."
+          ],
+          "en": [
+            "Location is optional. EyeMakkah can work without precise location using the area or neighborhood you choose. If location is shared, it can improve proximity results, but it should not expose your exact location to other users or power nearby-person discovery.",
+            "You can use the app without location permission and choose your area manually."
+          ]
+        }
+      },
+      "context": {
+        "applicable_pages": [
+          "*"
+        ],
+        "followup_keys": []
+      },
+      "priority": 100
+    },
+    {
+      "id": "app_offers_help",
+      "category": "app_help",
+      "purpose": "Explain how offers and discounts fit the consumer app.",
+      "examples": {
+        "ar": [
+          "وين العروض",
+          "هل فيه خصومات",
+          "وش يعني عرض",
+          "هل عندكم باقات",
+          "العروض تشمل ايش",
+          "هل فيه خصم من التطبيق",
+          "وين أشوف الخصومات"
+        ],
+        "en": [
+          "where are the offers",
+          "are there discounts",
+          "what is an offer",
+          "do you have packages",
+          "what do offers cover",
+          "are there app discounts",
+          "where can I see discounts"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "العروض",
+          "خصومات",
+          "باقات",
+          "خصم"
+        ],
+        "keywords_en": [
+          "offers",
+          "discounts",
+          "packages",
+          "app discount"
+        ],
+        "entities": []
+      },
+      "answer": {
+        "type": "fixed",
+        "handler": null,
+        "responses": {
+          "ar": [
+            "EyeMakkah يقدر يعرض عروضًا وخصومات مرتبطة بالمطاعم والمقاهي والإقامة والتجارب والأنشطة والمتاجر والخدمات، مثل خصم مباشر أو باقة عائلية أو سعر خاص عبر التطبيق، مع إظهار شروط العرض وحالته بوضوح.",
+            "العرض المفروض يظهر في المكان المناسب أثناء الاكتشاف وصفحة التفاصيل وداخل النتائج، مو كقسم منفصل مخفي فقط."
+          ],
+          "en": [
+            "EyeMakkah can surface offers and discounts across restaurants, cafés, stays, experiences, activities, shops, and services, such as direct discounts, family packages, or app-only prices, with clear terms and status.",
+            "Offers should appear where they matter during discovery and on detail/results surfaces, not only in a hidden standalone section."
+          ]
+        }
+      },
+      "context": {
+        "applicable_pages": [
+          "*"
+        ],
+        "followup_keys": []
+      },
+      "priority": 90
+    },
+    {
+      "id": "context_explain_all",
+      "category": "user_context",
+      "purpose": "Explain what context the app may use.",
+      "examples": {
+        "ar": [
+          "وش السياق اللي تستخدمه",
+          "على ايش تعتمد بالتوصيات",
+          "وش الأشياء اللي تاخذها بالحسبان",
+          "وش تعرف عن احتياجي",
+          "كيف تختار لي",
+          "وش البيانات اللي تأثر على اقتراحاتك"
+        ],
+        "en": [
+          "what context do you use",
+          "what do recommendations depend on",
+          "what do you take into account",
+          "how do you choose for me",
+          "what affects your suggestions"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "السياق",
+          "تعتمد",
+          "بالحسبان",
+          "كيف تختار",
+          "اقتراحاتك"
+        ],
+        "keywords_en": [
+          "context",
+          "depend on",
+          "take into account",
+          "choose",
+          "suggestions"
+        ],
+        "entities": []
+      },
+      "answer": {
+        "type": "fixed",
+        "handler": null,
+        "responses": {
+          "ar": [
+            "أستخدم فقط السياق المتاح داخل EyeMakkah مثل مقيم/زائر، الحي المختار، الوقت المتاح، فرد/عائلة/أطفال/مجموعة، الاهتمامات، متطلبات الوصول، وما عندك في «خطتي».",
+            "السياق يساعدني أرتب الخيارات، لكنه ما يخليني أفترض معلومات حساسة غير موجودة."
+          ],
+          "en": [
+            "I use context available inside EyeMakkah such as resident/visitor mode, selected area, available time, solo/family/kids/group, interests, accessibility preferences, and My Plan.",
+            "Context helps rank options, but it does not justify inferring sensitive information that is not provided."
+          ]
+        }
+      },
+      "context": {
+        "applicable_pages": [
+          "*"
+        ],
+        "followup_keys": []
+      },
+      "priority": 90
+    },
+    {
+      "id": "context_current",
+      "category": "user_context",
+      "purpose": "Describe the current user context.",
+      "examples": {
+        "ar": [
+          "وش سياقي الحالي",
+          "وش مختار الحين",
+          "وش تعرف عني هنا",
+          "وش محدد عندي",
+          "أنا داخل بأي وضع",
+          "وش الوقت المحدد",
+          "وش الحي الحالي"
+        ],
+        "en": [
+          "what is my current context",
+          "what is selected right now",
+          "what do you know about my current setup",
+          "what mode am I in",
+          "what area is selected",
+          "what time is selected"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "سياقي",
+          "مختار",
+          "محدد",
+          "الوضع",
+          "الحي الحالي",
+          "الوقت المحدد"
+        ],
+        "keywords_en": [
+          "current context",
+          "selected",
+          "mode",
+          "area",
+          "time"
+        ],
+        "entities": []
+      },
+      "answer": {
+        "type": "dynamic",
+        "handler": "describe_current_user_context",
+        "responses": {
+          "ar": [
+            "سياقك الحالي: {{mode}} · {{neighborhood}} · {{party}} · الوقت المتاح {{time_available}} · الاهتمامات {{interests}} · اللغة {{language}}.",
+            "حاليًا أتعامل معك على أساس: {{mode}}، المنطقة {{neighborhood}}، {{party}}، والوقت المتاح {{time_available}}."
+          ],
+          "en": [
+            "Your current context is: {{mode}} · {{neighborhood}} · {{party}} · {{time_available}} available · interests {{interests}} · language {{language}}.",
+            "Right now I'm using: {{mode}}, area {{neighborhood}}, {{party}}, and {{time_available}} available."
+          ]
+        }
+      },
+      "context": {
+        "applicable_pages": [
+          "*"
+        ],
+        "followup_keys": []
+      },
+      "priority": 100
+    },
+    {
+      "id": "context_mode_options",
+      "category": "user_context",
+      "purpose": "Explain resident/visitor mode options.",
+      "examples": {
+        "ar": [
+          "وش خيارات المستخدم",
+          "وش خيارات مقيم وزائر",
+          "أقدر أغير لمقيم",
+          "أقدر أغير لزائر",
+          "وش أنواع الحساب هنا",
+          "وش يعني resident visitor"
+        ],
+        "en": [
+          "what user modes are there",
+          "what are resident and visitor options",
+          "can I switch to resident",
+          "can I switch to visitor",
+          "what user types are there"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "مقيم",
+          "زائر",
+          "خيارات المستخدم",
+          "أنواع الحساب"
+        ],
+        "keywords_en": [
+          "resident",
+          "visitor",
+          "user modes",
+          "user types"
+        ],
+        "entities": []
+      },
+      "answer": {
+        "type": "fixed",
+        "handler": null,
+        "responses": {
+          "ar": [
+            "السياق الأساسي هنا خياران: «مقيم» أو «زائر». وتقدر تغيّره حسب وضعك الحالي بدون ما يغيّر هوية حسابك.",
+            "مقيم/زائر سياق للتخصيص والترتيب، مو بوابتين منفصلتين للتطبيق."
+          ],
+          "en": [
+            "The primary context options are Resident and Visitor. You can switch based on your current situation without changing your account identity.",
+            "Resident/Visitor is a personalization context, not two separate app portals."
+          ]
+        }
+      },
+      "context": {
+        "applicable_pages": [
+          "*"
+        ],
+        "followup_keys": []
+      },
+      "priority": 80
+    },
+    {
+      "id": "context_neighborhood_options",
+      "category": "user_context",
+      "purpose": "List supported neighborhood/area context in the current app.",
+      "examples": {
+        "ar": [
+          "وش الأحياء الموجودة",
+          "وش المناطق اللي أقدر أختارها",
+          "ايش خيارات الحي",
+          "وش الأحياء المدعومة",
+          "أقدر أختار العوالي",
+          "وش المناطق الموجودة"
+        ],
+        "en": [
+          "what neighborhoods are available",
+          "what areas can I choose",
+          "what neighborhood options are there",
+          "which areas are supported",
+          "can I choose Al Awali"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "الأحياء",
+          "المناطق",
+          "خيارات الحي",
+          "مدعومة"
+        ],
+        "keywords_en": [
+          "neighborhoods",
+          "areas",
+          "options",
+          "supported"
+        ],
+        "entities": []
+      },
+      "answer": {
+        "type": "fixed",
+        "handler": null,
+        "responses": {
+          "ar": [
+            "المناطق المتاحة في النموذج الحالي تشمل: العوالي، العزيزية، الششة، الشوقية، النسيم، بطحاء قريش، المسفلة، أجياد، الهجرة، الزاهر، الكعكية، جرول، الرصيفة، التنعيم، ومحيط الحرم.",
+            "تقدر تختار الحي يدويًا حتى لو ما فعّلت الموقع الدقيق."
+          ],
+          "en": [
+            "The current prototype includes Al Awali, Al Aziziyah, Al Shisha, Al Shawqiyah, An Naseem, Batha Quraysh, Al Misfalah, Ajyad, Al Hijrah, Az Zahir, Al Kakiyah, Jarwal, Ar Rusayfah, At Tanim, and the Haram area.",
+            "You can choose an area manually even without precise location."
+          ]
+        }
+      },
+      "context": {
+        "applicable_pages": [
+          "*"
+        ],
+        "followup_keys": []
+      },
+      "priority": 85
+    },
+    {
+      "id": "context_party_options",
+      "category": "user_context",
+      "purpose": "Explain party/context options.",
+      "examples": {
+        "ar": [
+          "وش خيارات العائلة",
+          "أقدر أقول لحالي",
+          "كيف أحدد مع أطفال",
+          "وش يعني فرد أو عائلة",
+          "أقدر أقول مجموعة",
+          "وش خيارات المجموعة"
+        ],
+        "en": [
+          "what party options are there",
+          "can I say I'm solo",
+          "how do I set kids",
+          "what does solo or family mean",
+          "can I choose group"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "العائلة",
+          "لحالي",
+          "أطفال",
+          "فرد",
+          "مجموعة"
+        ],
+        "keywords_en": [
+          "party",
+          "solo",
+          "family",
+          "kids",
+          "group"
+        ],
+        "entities": []
+      },
+      "answer": {
+        "type": "fixed",
+        "handler": null,
+        "responses": {
+          "ar": [
+            "سياق المجموعة في النموذج الحالي يشمل: لوحدك، عائلة، مع أطفال، أو مجموعة. هذا يساعد في ترتيب الخيارات المناسبة.",
+            "هذا مجرد سياق للتوصيات، وما يعني أن التطبيق ينشر مع من أنت أو هويات الحضور."
+          ],
+          "en": [
+            "The current party context includes solo, family, with kids, or group. This helps rank suitable options.",
+            "It is only recommendation context; it does not publish who you are with or attendee identities."
+          ]
+        }
+      },
+      "context": {
+        "applicable_pages": [
+          "*"
+        ],
+        "followup_keys": []
+      },
+      "priority": 80
+    },
+    {
+      "id": "context_time_options",
+      "category": "user_context",
+      "purpose": "Explain available-time context.",
+      "examples": {
+        "ar": [
+          "وش خيارات الوقت",
+          "كم أقدر أحدد وقت",
+          "وش يعني ساعة ساعتين",
+          "أقدر أقول عندي المساء كله",
+          "كيف أحدد الوقت المتاح",
+          "وش أوقات الاقتراح"
+        ],
+        "en": [
+          "what time options are there",
+          "how much time can I set",
+          "what does one hour or two hours mean",
+          "can I say I have the whole evening",
+          "how do I set available time"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "خيارات الوقت",
+          "ساعة",
+          "ساعتين",
+          "المساء كله",
+          "الوقت المتاح"
+        ],
+        "keywords_en": [
+          "time options",
+          "one hour",
+          "two hours",
+          "whole evening",
+          "available time"
+        ],
+        "entities": []
+      },
+      "answer": {
+        "type": "fixed",
+        "handler": null,
+        "responses": {
+          "ar": [
+            "تقدر تحدد وقتك المتاح مثل ساعة، ساعتين، أو مساحة أطول للمساء. المساعد يستخدمه عشان ما يقترح تجربة أطول من وقتك قدر الإمكان.",
+            "الوقت المتاح سياق مباشر لبناء اقتراح واحد أو طلعة مركبة."
+          ],
+          "en": [
+            "You can set available time such as one hour, two hours, or a longer evening window. The assistant uses it to avoid suggesting something longer than your available time where possible.",
+            "Available time can guide a single recommendation or a composed outing."
+          ]
+        }
+      },
+      "context": {
+        "applicable_pages": [
+          "*"
+        ],
+        "followup_keys": []
+      },
+      "priority": 85
+    },
+    {
+      "id": "context_change_mode",
+      "category": "user_context",
+      "purpose": "Recognize a request to switch Resident/Visitor context.",
+      "examples": {
+        "ar": [
+          "خلني مقيم",
+          "أنا من سكان مكة",
+          "غيرني لمقيم",
+          "خلني زائر",
+          "أنا زائر",
+          "حولني لزائر",
+          "اعتبرني زائر",
+          "اعتبرني مقيم"
+        ],
+        "en": [
+          "set me as resident",
+          "I'm a Makkah resident",
+          "switch me to resident",
+          "set me as visitor",
+          "I'm visiting",
+          "switch me to visitor",
+          "treat me as a visitor"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "مقيم",
+          "سكان مكة",
+          "زائر",
+          "حولني",
+          "اعتبرني"
+        ],
+        "keywords_en": [
+          "resident",
+          "visitor",
+          "switch",
+          "set me"
+        ],
+        "entities": [
+          "mode"
+        ]
+      },
+      "answer": {
+        "type": "action",
+        "handler": "set_user_mode_from_query",
+        "responses": {
+          "ar": [
+            "تمام، أغيّر السياق إلى {{mode}} وأبقي باقي تفضيلاتك كما هي."
+          ],
+          "en": [
+            "Okay. I'll switch your context to {{mode}} and keep the rest of your preferences unchanged."
+          ]
+        }
+      },
+      "context": {
+        "applicable_pages": [
+          "*"
+        ],
+        "followup_keys": []
+      },
+      "priority": 100
+    },
+    {
+      "id": "context_change_neighborhood",
+      "category": "user_context",
+      "purpose": "Recognize a request to change the selected area/neighborhood.",
+      "examples": {
+        "ar": [
+          "خلني على العوالي",
+          "غير الحي للعزيزية",
+          "شوف لي النسيم",
+          "خل المنطقة أجياد",
+          "حولني لمحيط الحرم",
+          "أبغى نتائج جرول",
+          "غيرها للشوقية"
+        ],
+        "en": [
+          "set the area to Al Awali",
+          "switch to Al Aziziyah",
+          "show me An Naseem",
+          "set the neighborhood to Ajyad",
+          "switch to the Haram area",
+          "show results for Jarwal"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "غير الحي",
+          "خل المنطقة",
+          "حولني",
+          "نتائج"
+        ],
+        "keywords_en": [
+          "set area",
+          "switch to",
+          "neighborhood",
+          "show results"
+        ],
+        "entities": [
+          "neighborhood"
+        ]
+      },
+      "answer": {
+        "type": "action",
+        "handler": "set_neighborhood_from_query",
+        "responses": {
+          "ar": [
+            "تمام، أغيّر المنطقة إلى {{neighborhood}} وأبقي باقي السياق كما هو."
+          ],
+          "en": [
+            "Okay. I'll switch the area to {{neighborhood}} and keep the rest of the context unchanged."
+          ]
+        }
+      },
+      "context": {
+        "applicable_pages": [
+          "*"
+        ],
+        "followup_keys": []
+      },
+      "priority": 100
+    },
+    {
+      "id": "context_change_party",
+      "category": "user_context",
+      "purpose": "Recognize a request to change solo/family/kids/group context.",
+      "examples": {
+        "ar": [
+          "خلها للعائلة",
+          "أنا لحالي",
+          "معي أطفال",
+          "نحن مجموعة",
+          "اعتبرني مع العائلة",
+          "أبغى اقتراحات لشخص واحد",
+          "غيرها لأطفال"
+        ],
+        "en": [
+          "set it for family",
+          "I'm on my own",
+          "I'm with kids",
+          "we are a group",
+          "treat me as family",
+          "show options for one person",
+          "switch to kids"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "للعائلة",
+          "لحالي",
+          "أطفال",
+          "مجموعة",
+          "شخص واحد"
+        ],
+        "keywords_en": [
+          "family",
+          "solo",
+          "kids",
+          "group",
+          "one person"
+        ],
+        "entities": [
+          "party"
+        ]
+      },
+      "answer": {
+        "type": "action",
+        "handler": "set_party_from_query",
+        "responses": {
+          "ar": [
+            "تمام، أغيّر سياق المجموعة إلى {{party}} وأستخدمه في الاقتراحات القادمة."
+          ],
+          "en": [
+            "Okay. I'll switch the party context to {{party}} and use it for upcoming suggestions."
+          ]
+        }
+      },
+      "context": {
+        "applicable_pages": [
+          "*"
+        ],
+        "followup_keys": []
+      },
+      "priority": 100
+    },
+    {
+      "id": "context_change_time",
+      "category": "user_context",
+      "purpose": "Recognize a request to change available time.",
+      "examples": {
+        "ar": [
+          "عندي ساعة",
+          "عندي ساعتين",
+          "المساء كله",
+          "خلها ساعة",
+          "خل الوقت ساعتين",
+          "أبغى شي خلال ساعة",
+          "عندي أربع ساعات",
+          "عندي نص يوم"
+        ],
+        "en": [
+          "I have one hour",
+          "I have two hours",
+          "I have the whole evening",
+          "set it to one hour",
+          "set my time to two hours",
+          "I need something within an hour",
+          "I have four hours",
+          "I have half a day"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "عندي ساعة",
+          "ساعتين",
+          "المساء كله",
+          "خلال ساعة",
+          "أربع ساعات",
+          "نص يوم"
+        ],
+        "keywords_en": [
+          "one hour",
+          "two hours",
+          "whole evening",
+          "within an hour",
+          "four hours",
+          "half a day"
+        ],
+        "entities": [
+          "time_available"
+        ]
+      },
+      "answer": {
+        "type": "action",
+        "handler": "set_time_available_from_query",
+        "responses": {
+          "ar": [
+            "تمام، أخلي وقتك المتاح {{time_available}} وأبني الاقتراحات على هذا الأساس."
+          ],
+          "en": [
+            "Okay. I'll set your available time to {{time_available}} and use it for recommendations."
+          ]
+        }
+      },
+      "context": {
+        "applicable_pages": [
+          "*"
+        ],
+        "followup_keys": []
+      },
+      "priority": 100
+    },
+    {
+      "id": "context_change_language",
+      "category": "user_context",
+      "purpose": "Recognize request to switch assistant/app language where supported.",
+      "examples": {
+        "ar": [
+          "خلها عربي",
+          "تكلم عربي",
+          "حول للإنجليزي",
+          "خلها إنجليزي",
+          "English please",
+          "رد علي بالإنجليزي",
+          "رد عربي"
+        ],
+        "en": [
+          "switch to Arabic",
+          "Arabic please",
+          "switch to English",
+          "English please",
+          "reply in English",
+          "reply in Arabic"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "عربي",
+          "إنجليزي",
+          "حول",
+          "تكلم",
+          "رد"
+        ],
+        "keywords_en": [
+          "Arabic",
+          "English",
+          "switch",
+          "reply"
+        ],
+        "entities": [
+          "language"
+        ]
+      },
+      "answer": {
+        "type": "action",
+        "handler": "set_language_from_query",
+        "responses": {
+          "ar": [
+            "تمام، أغيّر اللغة إلى {{language}}."
+          ],
+          "en": [
+            "Okay. I'll switch the language to {{language}}."
+          ]
+        }
+      },
+      "context": {
+        "applicable_pages": [
+          "*"
+        ],
+        "followup_keys": []
+      },
+      "priority": 100
+    },
+    {
+      "id": "fallback_unclear",
+      "category": "fallback",
+      "purpose": "General fallback for vague requests without a resolvable intent.",
+      "examples": {
+        "ar": [
+          "وش",
+          "طيب",
+          "ايش",
+          "كيف",
+          "ممكن",
+          "ساعدني",
+          "ما أدري وش أسأل",
+          "وش تنصح",
+          "ابي مساعدة",
+          "ما أدري"
+        ],
+        "en": [
+          "what",
+          "okay then",
+          "help me",
+          "I don't know what to ask",
+          "can you help",
+          "what do you suggest",
+          "I need help"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "ساعدني",
+          "ما أدري",
+          "مساعدة",
+          "وش تنصح"
+        ],
+        "keywords_en": [
+          "help",
+          "don't know",
+          "suggest",
+          "need help"
+        ],
+        "entities": []
+      },
+      "answer": {
+        "type": "fixed",
+        "handler": null,
+        "responses": {
+          "ar": [
+            "أكيد. اكتب اللي تحتاجه بطريقتك: مكان، مطعم، نشاط، عرض، مجتمع، أو شيء ترتبه في «خطتي».",
+            "قل لي وش ودك تسوي أو وش نوع الشيء اللي تبحث عنه، حتى لو بجملة بسيطة، وأنا أحاول أفهم المقصود."
+          ],
+          "en": [
+            "Sure. Ask naturally about a place, restaurant, activity, offer, community, or something you want to organize in My Plan.",
+            "Tell me what you'd like to do or what kind of thing you're looking for, even in a simple sentence, and I'll try to understand."
+          ]
+        }
+      },
+      "context": {
+        "applicable_pages": [
+          "*"
+        ],
+        "followup_keys": []
+      },
+      "priority": 10
+    },
+    {
+      "id": "fallback_ambiguous_entity",
+      "category": "fallback",
+      "purpose": "Ask one concise clarification when multiple entities could fit.",
+      "examples": {
+        "ar": [
+          "هذا المكان",
+          "ذاك النشاط",
+          "هو نفسه",
+          "الثاني هناك",
+          "هذاك",
+          "المكان اللي قلت",
+          "النشاط اللي قبل"
+        ],
+        "en": [
+          "this place",
+          "that activity",
+          "the same one",
+          "the second one there",
+          "that one",
+          "the place you mentioned",
+          "the previous activity"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "هذا",
+          "ذاك",
+          "المكان",
+          "النشاط",
+          "اللي قلت"
+        ],
+        "keywords_en": [
+          "this",
+          "that",
+          "place",
+          "activity",
+          "mentioned"
+        ],
+        "entities": []
+      },
+      "answer": {
+        "type": "fixed",
+        "handler": null,
+        "responses": {
+          "ar": [
+            "أقدر أكمل، لكن عندي أكثر من شيء ممكن تقصده. اكتب اسم المكان أو النشاط، أو وصف قصير له.",
+            "عندي أكثر من مرجع محتمل. حدّد لي أي واحد تقصد وما أحتاج تعيد السؤال كاملًا."
+          ],
+          "en": [
+            "I can continue, but more than one item could match. Give me the place/activity name or a short description.",
+            "I have multiple possible references. Tell me which one you mean; you don't need to repeat the whole question."
+          ]
+        }
+      },
+      "context": {
+        "applicable_pages": [
+          "*"
+        ],
+        "followup_keys": []
+      },
+      "priority": 92
+    },
+    {
+      "id": "fallback_spelling_noise",
+      "category": "fallback",
+      "purpose": "Recover from heavy spelling noise while preserving natural input.",
+      "examples": {
+        "ar": [
+          "ابغا مطعم للعائله",
+          "وش في فعاليات الليله",
+          "ابي شي قرييب",
+          "وين اروحع",
+          "ابغى خصم مطعم",
+          "ايش فيه بلعوالي",
+          "وش في للاطفااال"
+        ],
+        "en": [
+          "restarant for famly",
+          "whats on tonite",
+          "somthing closr",
+          "wher shud i go",
+          "discount resturant",
+          "things in awali",
+          "for kidss"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "ابغا",
+          "العائله",
+          "الليله",
+          "قرييب",
+          "اروحع",
+          "للاطفااال"
+        ],
+        "keywords_en": [
+          "restarant",
+          "famly",
+          "tonite",
+          "closr",
+          "kidss"
+        ],
+        "entities": []
+      },
+      "answer": {
+        "type": "fixed",
+        "handler": null,
+        "responses": {
+          "ar": [
+            "أفهم الأخطاء البسيطة عادةً. اكتب بطريقتك، وإذا كان فيه أكثر من معنى محتمل بسألك توضيحًا واحدًا بدل ما أخمّن.",
+            "مو لازم تكتب رسمي. أحاول أطبّع الأخطاء الشائعة واللهجة، وإذا المعنى مو واضح بحدد لك وش أحتاج أعرف."
+          ],
+          "en": [
+            "I can usually handle common typos. Write naturally; if more than one meaning is plausible, I'll ask one clarification instead of guessing.",
+            "You don't need perfect spelling. I normalize common mistakes and informal wording, and I'll clarify only when needed."
+          ]
+        }
+      },
+      "context": {
+        "applicable_pages": [
+          "*"
+        ],
+        "followup_keys": []
+      },
+      "priority": 20
+    },
+    {
+      "id": "out_of_scope_general_knowledge",
+      "category": "out_of_scope",
+      "purpose": "Redirect unrelated general-knowledge questions.",
+      "examples": {
+        "ar": [
+          "من هو رئيس أمريكا",
+          "وش عاصمة فرنسا",
+          "كم عدد سكان العالم",
+          "من اخترع الإنترنت",
+          "اعطني معلومات عن الفضاء",
+          "من فاز بكأس العالم",
+          "احسب لي مسألة رياضيات"
+        ],
+        "en": [
+          "who is the president of the US",
+          "what is the capital of France",
+          "what is the world population",
+          "who invented the internet",
+          "tell me about space",
+          "who won the world cup",
+          "solve a math problem"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "رئيس",
+          "عاصمة",
+          "العالم",
+          "الفضاء",
+          "كأس العالم"
+        ],
+        "keywords_en": [
+          "president",
+          "capital",
+          "world population",
+          "space",
+          "world cup"
+        ],
+        "entities": []
+      },
+      "answer": {
+        "type": "fixed",
+        "handler": null,
+        "responses": {
+          "ar": [
+            "هذا خارج نطاق مساعد EyeMakkah داخل التطبيق. أقدر أساعدك في مكة من خلال الأماكن والتجارب والمطاعم والعروض والمجتمعات و«خطتي».",
+            "سؤالك عام وخارج نطاق تجربة EyeMakkah الحالية."
+          ],
+          "en": [
+            "That's outside the EyeMakkah app assistant scope. I can help with Makkah places, experiences, restaurants, offers, communities, and My Plan.",
+            "That's a general question outside the current EyeMakkah experience."
+          ]
+        }
+      },
+      "context": {
+        "applicable_pages": [
+          "*"
+        ],
+        "followup_keys": []
+      },
+      "priority": 35
+    },
+    {
+      "id": "out_of_scope_live_news",
+      "category": "out_of_scope",
+      "purpose": "Redirect live news/current-events requests not represented in the app.",
+      "examples": {
+        "ar": [
+          "وش آخر الأخبار",
+          "وش صار اليوم في الأخبار",
+          "عطني أخبار مكة الآن",
+          "في خبر عاجل",
+          "وش ترند اليوم",
+          "وش الأخبار السياسية"
+        ],
+        "en": [
+          "what's the latest news",
+          "what happened in the news today",
+          "give me Makkah news now",
+          "is there breaking news",
+          "what is trending today",
+          "political news"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "الأخبار",
+          "خبر عاجل",
+          "ترند",
+          "السياسية"
+        ],
+        "keywords_en": [
+          "news",
+          "breaking news",
+          "trending",
+          "political"
+        ],
+        "entities": []
+      },
+      "answer": {
+        "type": "fixed",
+        "handler": null,
+        "responses": {
+          "ar": [
+            "الأخبار الحية مو ضمن بيانات مساعد EyeMakkah في هذا النموذج. إذا فيه فعالية أو تحديث موجود داخل محتوى التطبيق أقدر أساعدك فيه.",
+            "ما عندي feed أخبار حي في النسخة الحالية."
+          ],
+          "en": [
+            "Live news is not part of the EyeMakkah assistant data in this prototype. I can help with events or updates represented inside the app.",
+            "There is no live news feed in the current prototype."
+          ]
+        }
+      },
+      "context": {
+        "applicable_pages": [
+          "*"
+        ],
+        "followup_keys": []
+      },
+      "priority": 50
+    },
+    {
+      "id": "out_of_scope_live_operational_certainty",
+      "category": "out_of_scope",
+      "purpose": "Avoid inventing live crowds, availability, queues, or operational status.",
+      "examples": {
+        "ar": [
+          "الحرم زحمة الحين",
+          "كم الانتظار الآن",
+          "هل فيه مواقف الآن",
+          "هل فيه مقاعد متاحة الآن",
+          "هل العرض متوفر الآن",
+          "كم عدد الناس الآن",
+          "هل النشاط فل"
+        ],
+        "en": [
+          "is the Haram crowded right now",
+          "what is the wait time now",
+          "are there parking spaces now",
+          "are seats available now",
+          "is the offer available right now",
+          "how many people are there now",
+          "is the activity full"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "زحمة الحين",
+          "الانتظار الآن",
+          "مواقف الآن",
+          "متاحة الآن",
+          "عدد الناس",
+          "فل"
+        ],
+        "keywords_en": [
+          "crowded right now",
+          "wait time now",
+          "parking now",
+          "available right now",
+          "how many people",
+          "full"
+        ],
+        "entities": []
+      },
+      "answer": {
+        "type": "fixed",
+        "handler": null,
+        "responses": {
+          "ar": [
+            "ما أقدر أؤكد حالة حية إذا EyeMakkah ما عنده مصدر تشغيلي فعلي لها. أقدر أعرض لك آخر معلومة متاحة ومصدرها أو أحولك للمصدر الرسمي/مقدم الخدمة إذا كان موجودًا.",
+            "الحالة اللحظية مثل الزحام والتوفر تحتاج مصدرًا حيًا؛ ما راح أخمّنها."
+          ],
+          "en": [
+            "I can't confirm live operational status unless EyeMakkah has a real live source for it. I can show the latest available information and its source, or direct you to the official/provider source when available.",
+            "Real-time crowding or availability requires a live source; I won't guess it."
+          ]
+        }
+      },
+      "context": {
+        "applicable_pages": [
+          "*"
+        ],
+        "followup_keys": []
+      },
+      "priority": 100
+    },
+    {
+      "id": "out_of_scope_sensitive_personal_data",
+      "category": "out_of_scope",
+      "purpose": "Reject requests to expose or infer other users' sensitive/private information.",
+      "examples": {
+        "ar": [
+          "مين قريب مني من المستخدمين",
+          "عطني أسماء اللي رايحين",
+          "وين فلان الآن",
+          "مين سجل في النشاط",
+          "ورني مواقع الناس",
+          "أعطني أرقام المشاركين",
+          "وش ديانة المستخدمين",
+          "مين النساء المسجلات"
+        ],
+        "en": [
+          "who are the users near me",
+          "show me names of people going",
+          "where is this person now",
+          "who registered for the activity",
+          "show people's locations",
+          "give me participant phone numbers",
+          "what religion are the users",
+          "which women are registered"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "مين قريب",
+          "أسماء",
+          "وين فلان",
+          "مواقع الناس",
+          "أرقام المشاركين",
+          "ديانة",
+          "المسجلات"
+        ],
+        "keywords_en": [
+          "users near me",
+          "names",
+          "where is",
+          "people's locations",
+          "phone numbers",
+          "religion",
+          "registered women"
+        ],
+        "entities": []
+      },
+      "answer": {
+        "type": "fixed",
+        "handler": null,
+        "responses": {
+          "ar": [
+            "ما أقدر أكشف مواقع المستخدمين أو هويات الحضور أو بيانات شخصية/حساسة. EyeMakkah مصمم للمجتمع والمشاركة بدون تحويله لتتبع أشخاص.",
+            "أقدر أساعدك بمعلومات النشاط أو المجتمع نفسه، لكن مو ببيانات خاصة عن أشخاص آخرين."
+          ],
+          "en": [
+            "I can't expose user locations, attendee identities, or personal/sensitive data. EyeMakkah is designed for community participation without turning into people tracking.",
+            "I can help with information about the activity or community itself, not private data about other people."
+          ]
+        }
+      },
+      "context": {
+        "applicable_pages": [
+          "*"
+        ],
+        "followup_keys": []
+      },
+      "priority": 100
+    },
+    {
+      "id": "out_of_scope_external_confirmation_or_authority",
+      "category": "out_of_scope",
+      "purpose": "Avoid pretending EyeMakkah can authoritatively confirm external transactions or official/religious decisions it does not own.",
+      "examples": {
+        "ar": [
+          "أكد لي حجزي",
+          "هل حجزي تم أكيد",
+          "قول لي رسميًا أقدر أدخل",
+          "هل هذا الحكم الشرعي صحيح",
+          "افتي لي",
+          "ضمن لي أني بدخل",
+          "أكد لي التذكرة من الجهة"
+        ],
+        "en": [
+          "confirm my booking",
+          "is my booking definitely confirmed",
+          "officially tell me I can enter",
+          "is this religious ruling correct",
+          "give me a fatwa",
+          "guarantee I can enter",
+          "confirm my ticket from the authority"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "أكد حجزي",
+          "رسميًا",
+          "الحكم الشرعي",
+          "افتي",
+          "ضمن لي",
+          "التذكرة"
+        ],
+        "keywords_en": [
+          "confirm my booking",
+          "officially",
+          "religious ruling",
+          "fatwa",
+          "guarantee",
+          "ticket"
+        ],
+        "entities": []
+      },
+      "answer": {
+        "type": "fixed",
+        "handler": null,
+        "responses": {
+          "ar": [
+            "EyeMakkah ما يقدر يصدر تأكيدًا رسميًا أو دينيًا من نفسه. للحجز أو الدخول أو الحكم الشرعي، أعرض لك ما هو موجود في التطبيق وأوجهك للمصدر المختص عند الحاجة.",
+            "إذا كان الشيء يحتاج تأكيد جهة رسمية أو مقدم خدمة أو مرجع ديني مختص، ما راح أستبدل ذلك بتخمين من المساعد."
+          ],
+          "en": [
+            "EyeMakkah cannot issue an official or religious confirmation on its own. For bookings, access, or religious rulings, I can show what the app has and direct you to the appropriate source when needed.",
+            "If something requires confirmation from an authority, provider, or qualified religious source, the assistant should not replace that with a guess."
+          ]
+        }
+      },
+      "context": {
+        "applicable_pages": [
+          "*"
+        ],
+        "followup_keys": []
+      },
+      "priority": 100
+    }
+  ]
+}

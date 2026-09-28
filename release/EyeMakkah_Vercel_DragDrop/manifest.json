@@ -1,6 +1,6 @@
 {
   "package": "EyeMakkah — مجتمع مكة الرقمي (Groups 1–5, cumulative)",
-  "date": "2026-09-24",
+  "date": "2026-09-28",
   "zero_build": true,
   "deploy": "Vercel drag-and-drop",
   "navigation": [
@@ -28,5 +28,7 @@
     "README.md",
     "PHOTO_SOURCES.md",
     "manifest.json"
-  ]
+  ],
+  "offers": "64 illustrative offer records (62 live) on one shared model — restaurants, cafés, stays, culture tickets, experiences, activities, events, markets, services; shown on cards, decision pages, Home/Discover deal rails, My Plan and the Assistant; not live commercial offers",
+  "assistant": "Free-text EyeMakkah Assistant over the four-part Intent Bank (150 intents, 2,123 AR/EN examples) — deterministic, on-device, no LLM or external API"
 }

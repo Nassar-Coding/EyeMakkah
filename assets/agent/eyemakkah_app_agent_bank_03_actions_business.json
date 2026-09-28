@@ -1,0 +1,2691 @@
+{
+  "file": "eyemakkah_app_agent_bank_03_actions_business.json",
+  "version": "1.0.0",
+  "phase": 1,
+  "part": "03_actions_business",
+  "source_alignment": {
+    "app_branch": "claude/upbeat-bell-hkmvzy",
+    "scope_reviewed": [
+      "Offers and discounts across restaurants, cafés, stays, experiences, activities, markets/services",
+      "App-exclusive discounts and family packages",
+      "Offer lifecycle and offer terms",
+      "Save / Join / Booking / Confirmed semantics",
+      "External booking handoff",
+      "My Plan buckets and continuity",
+      "Community recommendations, threads, contributions, memberships and linked activities"
+    ],
+    "note": "This bank is aligned to the EyeMakkah consumer-app product rules and assumes offer/discount objects are resolved from the current app state after the offer layer is implemented. It defines intents only and does not modify or integrate the app."
+  },
+  "product": {
+    "name_ar": "تطبيق EyeMakkah",
+    "name_en": "EyeMakkah App",
+    "assistant_name_ar": "مساعد EyeMakkah",
+    "assistant_name_en": "EyeMakkah Assistant"
+  },
+  "purpose": "Bilingual consumer-agent intent bank for offers/discounts, transactional actions, My Plan continuity, and community participation. Dynamic answers/actions must use the same EyeMakkah object states and offer data shown in the UI.",
+  "integration_contract": {
+    "languages": [
+      "ar",
+      "en"
+    ],
+    "requires_active_context": [
+      "last_intent",
+      "last_result",
+      "last_ranked_results",
+      "last_entities",
+      "current_page",
+      "user_context",
+      "plan_state",
+      "saved_state",
+      "join_state",
+      "booking_state",
+      "offer_state"
+    ],
+    "offer_rule": "Offers must resolve dynamically from active offer records linked to current EyeMakkah objects. Do not invent a percentage, package, exclusivity flag, eligibility, expiry, or redemption path that is not present in current offer data.",
+    "offer_visibility_rule": "Offer intents are cross-category. The same offer layer may apply to restaurants, cafés, stays/hotels, experiences, activities, markets/retail and services when those objects have an active offer.",
+    "offer_lifecycle_rule": "Active and ending-soon offers may be recommended. Expired offers must not be promoted as active; they may only appear in historical/detail context if the product supports that state.",
+    "transaction_state_rule": "Save ≠ Add to Plan ≠ Join/Going ≠ Booking handoff ≠ Confirmed ≠ Attended/Completed. Every handler must preserve this separation.",
+    "booking_rule": "External booking/registration opens an outbound handoff and records only 'left to complete booking'. Move to Confirmed only after a real callback or explicit user confirmation.",
+    "plan_rule": "My Plan is a continuity/timeline surface, not a synonym for saved items.",
+    "community_rule": "Community knowledge may inform decisions but must not be rewritten as official fact. Preserve original human voice and source context.",
+    "privacy_rule": "Do not expose attendee identities, exact user locations, nearby-user lists, or other private user data.",
+    "action_confirmation_rule": "Action handlers must return a concise confirmation that names exactly which state changed and which states did not.",
+    "truthfulness": [
+      "Do not fabricate active discounts or offers.",
+      "Do not claim a discount is EyeMakkah-exclusive unless the offer data explicitly marks it so.",
+      "Do not claim booking confirmation after an outbound click.",
+      "Do not infer attendance from booking or Plan state.",
+      "Do not infer booking from Save, Join, or Add to Plan.",
+      "Do not recommend expired offers or dormant/paused community activities as active.",
+      "Do not present community comments as verified operational facts.",
+      "Do not expose identities or precise locations of other users."
+    ]
+  },
+  "supported_entities": {
+    "offer_types": [
+      "percentage_discount",
+      "fixed_discount",
+      "family_package",
+      "bundle",
+      "app_exclusive",
+      "limited_time",
+      "student_offer",
+      "morning_offer",
+      "evening_offer",
+      "special_price"
+    ],
+    "offer_targets": [
+      "restaurant",
+      "cafe",
+      "stay",
+      "experience",
+      "activity",
+      "event",
+      "market",
+      "service"
+    ],
+    "plan_states": [
+      "now",
+      "today",
+      "upcoming",
+      "confirmed",
+      "interested",
+      "saved",
+      "completed"
+    ],
+    "action_states": [
+      "save",
+      "unsave",
+      "join",
+      "leave",
+      "book_outbound",
+      "confirm_by_user",
+      "open_details",
+      "directions"
+    ],
+    "community_contribution_types": [
+      "question",
+      "answer",
+      "recommendation",
+      "experience_report",
+      "tip",
+      "update",
+      "photo"
+    ]
+  },
+  "bank_plan": {
+    "part_01_intents": 50,
+    "part_02_intents": 45,
+    "part_03_intents": 35,
+    "cumulative_intents_after_part_03": 130,
+    "planned_part_04": "Conversation follow-ups, aliases, entity routing, contextual suggestions and short-session memory.",
+    "target_total_intents_across_all_parts": 150
+  },
+  "stats": {
+    "intent_count": 35,
+    "utterances_ar": 240,
+    "utterances_en": 240,
+    "utterances_total": 480,
+    "by_category": {
+      "offers": 10,
+      "actions": 8,
+      "plan": 9,
+      "community": 8
+    },
+    "by_answer_type": {
+      "dynamic": 22,
+      "action": 13
+    }
+  },
+  "intents": [
+    {
+      "id": "offers_all_active",
+      "category": "offers",
+      "purpose": "Return active offers and discounts across all supported EyeMakkah content types.",
+      "examples": {
+        "ar": [
+          "وش العروض الموجودة",
+          "عطني كل الخصومات",
+          "وش عندكم عروض",
+          "وين العروض الحالية",
+          "أبغى أشوف الخصومات",
+          "وش فيه عروض اليوم",
+          "عرض لي كل العروض",
+          "وش العروض المتاحة"
+        ],
+        "en": [
+          "what offers are available",
+          "show me all discounts",
+          "what deals do you have",
+          "where are the current offers",
+          "show me discounts",
+          "what offers are on today",
+          "show all offers",
+          "what deals are available"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "العروض",
+          "الخصومات",
+          "العروض الحالية",
+          "متاحة"
+        ],
+        "keywords_en": [
+          "offers",
+          "discounts",
+          "deals",
+          "available"
+        ],
+        "entities": [
+          "offer",
+          "category",
+          "neighborhood",
+          "time"
+        ]
+      },
+      "answer": {
+        "type": "dynamic",
+        "handler": "offers_active_all",
+        "responses": {
+          "ar": [
+            "هذه أبرز العروض النشطة ضمن سياقك الحالي: {{offers}}.",
+            "العروض المتاحة الآن في EyeMakkah: {{offers}}."
+          ],
+          "en": [
+            "These are the strongest active offers in your current context: {{offers}}.",
+            "The offers currently available in EyeMakkah are: {{offers}}."
+          ]
+        },
+        "result_shape": "ranked_list"
+      },
+      "context": {
+        "applicable_pages": [
+          "الرئيسية",
+          "اكتشف",
+          "*"
+        ],
+        "followup_keys": [
+          "followup_offer_category",
+          "followup_offer_nearby",
+          "followup_offer_expiring",
+          "followup_second_result"
+        ]
+      },
+      "priority": 100
+    },
+    {
+      "id": "offers_restaurants",
+      "category": "offers",
+      "purpose": "Return active restaurant/food offers.",
+      "examples": {
+        "ar": [
+          "وش عروض المطاعم",
+          "فيه خصم مطاعم",
+          "أبغى مطعم عليه عرض",
+          "وش المطاعم اللي عليها خصم",
+          "عروض أكل",
+          "عطني خصومات المطاعم",
+          "فيه خصم للعشاء",
+          "مطاعم بعروض"
+        ],
+        "en": [
+          "what restaurant offers are there",
+          "any restaurant discounts",
+          "I want a restaurant with an offer",
+          "which restaurants have discounts",
+          "food offers",
+          "show restaurant discounts",
+          "any dinner discount",
+          "restaurants with deals"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "عروض المطاعم",
+          "خصم مطاعم",
+          "مطعم عليه عرض",
+          "عروض أكل",
+          "خصومات المطاعم",
+          "خصم للعشاء"
+        ],
+        "keywords_en": [
+          "restaurant offers",
+          "restaurant discounts",
+          "restaurant with an offer",
+          "food offers",
+          "dinner discount"
+        ],
+        "entities": [
+          "offer",
+          "restaurant",
+          "category",
+          "time",
+          "party"
+        ]
+      },
+      "answer": {
+        "type": "dynamic",
+        "handler": "offers_restaurants",
+        "responses": {
+          "ar": [
+            "هذه المطاعم عندها عروض أو خصومات نشطة ضمن السياق الحالي: {{offers}}.",
+            "إذا تبغى مطعم عليه عرض، هذه أفضل الخيارات: {{offers}}."
+          ],
+          "en": [
+            "These restaurants currently have active offers or discounts in your context: {{offers}}.",
+            "If you want a restaurant with an offer, these are the strongest matches: {{offers}}."
+          ]
+        },
+        "result_shape": "ranked_list"
+      },
+      "context": {
+        "applicable_pages": [
+          "الرئيسية",
+          "اكتشف",
+          "*"
+        ],
+        "followup_keys": [
+          "followup_family_only",
+          "followup_cheaper",
+          "followup_second_result"
+        ]
+      },
+      "priority": 100
+    },
+    {
+      "id": "offers_cafes",
+      "category": "offers",
+      "purpose": "Return active café offers.",
+      "examples": {
+        "ar": [
+          "وش عروض المقاهي",
+          "فيه خصم قهوة",
+          "أبغى كوفي عليه عرض",
+          "وش المقاهي اللي عليها خصم",
+          "عروض قهوة",
+          "خصومات الكوفيات",
+          "فيه عرض صباحي للقهوة"
+        ],
+        "en": [
+          "what cafe offers are there",
+          "any coffee discount",
+          "I want a cafe with an offer",
+          "which cafes have discounts",
+          "coffee offers",
+          "cafe discounts",
+          "any morning coffee deal"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "عروض المقاهي",
+          "خصم قهوة",
+          "كوفي عليه عرض",
+          "عروض قهوة",
+          "خصومات الكوفيات"
+        ],
+        "keywords_en": [
+          "cafe offers",
+          "coffee discount",
+          "cafe with an offer",
+          "coffee offers",
+          "cafe discounts"
+        ],
+        "entities": [
+          "offer",
+          "cafe",
+          "time",
+          "neighborhood"
+        ]
+      },
+      "answer": {
+        "type": "dynamic",
+        "handler": "offers_cafes",
+        "responses": {
+          "ar": [
+            "هذه المقاهي عندها عروض أو خصومات نشطة: {{offers}}.",
+            "إذا تبغى قهوة عليها عرض، جرّب: {{offers}}."
+          ],
+          "en": [
+            "These cafés currently have active offers or discounts: {{offers}}.",
+            "If you want coffee with an offer, try: {{offers}}."
+          ]
+        },
+        "result_shape": "ranked_list"
+      },
+      "context": {
+        "applicable_pages": [
+          "الرئيسية",
+          "اكتشف",
+          "*"
+        ],
+        "followup_keys": [
+          "followup_nearby",
+          "followup_second_result"
+        ]
+      },
+      "priority": 99
+    },
+    {
+      "id": "offers_stays_hotels",
+      "category": "offers",
+      "purpose": "Return active stay/hospitality offers.",
+      "examples": {
+        "ar": [
+          "وش عروض الفنادق",
+          "فيه خصم إقامة",
+          "أبغى فندق عليه عرض",
+          "وش عروض السكن",
+          "خصومات الإقامة",
+          "فيه باقة فندق",
+          "عروض الشقق المخدومة",
+          "أبغى إقامة بسعر خاص"
+        ],
+        "en": [
+          "what hotel offers are there",
+          "any stay discounts",
+          "I want a hotel with an offer",
+          "what accommodation deals are there",
+          "stay discounts",
+          "any hotel package",
+          "serviced apartment offers",
+          "special stay price"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "عروض الفنادق",
+          "خصم إقامة",
+          "فندق عليه عرض",
+          "عروض السكن",
+          "خصومات الإقامة",
+          "باقة فندق",
+          "الشقق المخدومة"
+        ],
+        "keywords_en": [
+          "hotel offers",
+          "stay discounts",
+          "hotel with an offer",
+          "accommodation deals",
+          "hotel package",
+          "serviced apartment offers"
+        ],
+        "entities": [
+          "offer",
+          "stay",
+          "neighborhood",
+          "party"
+        ]
+      },
+      "answer": {
+        "type": "dynamic",
+        "handler": "offers_stays",
+        "responses": {
+          "ar": [
+            "هذه عروض الإقامة النشطة في EyeMakkah: {{offers}}.",
+            "إذا تبغى إقامة عليها عرض، هذه الخيارات المتاحة: {{offers}}."
+          ],
+          "en": [
+            "These are the active stay offers in EyeMakkah: {{offers}}.",
+            "If you want accommodation with an offer, these are the available matches: {{offers}}."
+          ]
+        },
+        "result_shape": "ranked_list"
+      },
+      "context": {
+        "applicable_pages": [
+          "اكتشف",
+          "*"
+        ],
+        "followup_keys": [
+          "followup_family_package",
+          "followup_near_haram",
+          "followup_second_result"
+        ]
+      },
+      "priority": 100
+    },
+    {
+      "id": "offers_experiences_activities",
+      "category": "offers",
+      "purpose": "Return active experience/activity offers.",
+      "examples": {
+        "ar": [
+          "وش عروض التجارب",
+          "فيه خصم على الأنشطة",
+          "أبغى تجربة عليها عرض",
+          "وش الأنشطة اللي عليها خصم",
+          "عروض الورش",
+          "فيه خصم فعالية",
+          "أبغى نشاط بعرض"
+        ],
+        "en": [
+          "what experience offers are there",
+          "any activity discounts",
+          "I want an experience with an offer",
+          "which activities have discounts",
+          "workshop offers",
+          "any event discount",
+          "an activity with a deal"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "عروض التجارب",
+          "خصم على الأنشطة",
+          "تجربة عليها عرض",
+          "عروض الورش",
+          "خصم فعالية",
+          "نشاط بعرض"
+        ],
+        "keywords_en": [
+          "experience offers",
+          "activity discounts",
+          "experience with an offer",
+          "workshop offers",
+          "event discount",
+          "activity deal"
+        ],
+        "entities": [
+          "offer",
+          "experience",
+          "activity",
+          "event",
+          "time"
+        ]
+      },
+      "answer": {
+        "type": "dynamic",
+        "handler": "offers_experiences_activities",
+        "responses": {
+          "ar": [
+            "هذه التجارب والأنشطة عندها عروض نشطة: {{offers}}.",
+            "إذا تبغى تجربة أو نشاط عليه عرض، هذه أفضل النتائج: {{offers}}."
+          ],
+          "en": [
+            "These experiences and activities currently have active offers: {{offers}}.",
+            "If you want an experience or activity with a deal, these are the strongest matches: {{offers}}."
+          ]
+        },
+        "result_shape": "ranked_list"
+      },
+      "context": {
+        "applicable_pages": [
+          "الرئيسية",
+          "اكتشف",
+          "*"
+        ],
+        "followup_keys": [
+          "followup_family_only",
+          "followup_beginner_only",
+          "followup_second_result"
+        ]
+      },
+      "priority": 100
+    },
+    {
+      "id": "offers_family_packages",
+      "category": "offers",
+      "purpose": "Return family-package offers across food, stays, activities and experiences.",
+      "examples": {
+        "ar": [
+          "وش البكجات العائلية",
+          "فيه باقة عائلية",
+          "أبغى عرض للعائلة",
+          "وش عروض الأسرة",
+          "عطني باقات للعوائل",
+          "فيه خصم عائلي",
+          "أبغى شي للعائلة بسعر أفضل"
+        ],
+        "en": [
+          "what family packages are there",
+          "is there a family package",
+          "I want a family offer",
+          "what family deals are there",
+          "show family packages",
+          "any family discount",
+          "something for the family at a better price"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "بكجات عائلية",
+          "باقة عائلية",
+          "عرض للعائلة",
+          "عروض الأسرة",
+          "خصم عائلي"
+        ],
+        "keywords_en": [
+          "family packages",
+          "family package",
+          "family offer",
+          "family deals",
+          "family discount"
+        ],
+        "entities": [
+          "offer",
+          "family",
+          "party",
+          "kids"
+        ]
+      },
+      "answer": {
+        "type": "dynamic",
+        "handler": "offers_family_packages",
+        "responses": {
+          "ar": [
+            "هذه العروض والباقات الموجهة للعائلة: {{offers}}.",
+            "إذا تبغى باقة عائلية، هذه أبرز الخيارات: {{offers}}."
+          ],
+          "en": [
+            "These offers and packages are aimed at families: {{offers}}.",
+            "If you want a family package, these are the strongest options: {{offers}}."
+          ]
+        },
+        "result_shape": "ranked_list"
+      },
+      "context": {
+        "applicable_pages": [
+          "الرئيسية",
+          "اكتشف",
+          "*"
+        ],
+        "followup_keys": [
+          "followup_food_only",
+          "followup_stays_only",
+          "followup_activities_only",
+          "followup_second_result"
+        ]
+      },
+      "priority": 100
+    },
+    {
+      "id": "offers_app_exclusive",
+      "category": "offers",
+      "purpose": "Return offers explicitly marked as app-exclusive / app booking discounts.",
+      "examples": {
+        "ar": [
+          "فيه خصم إذا حجزت من التطبيق",
+          "وش عروض التطبيق",
+          "فيه خصم حصري EyeMakkah",
+          "أبغى العروض الحصرية",
+          "وش ينقص إذا حجزت من EyeMakkah",
+          "فيه 10 بالمية من التطبيق",
+          "عروض خاصة بالتطبيق"
+        ],
+        "en": [
+          "is there a discount if I book from the app",
+          "what app offers are there",
+          "any EyeMakkah exclusive discount",
+          "show exclusive offers",
+          "do I get a discount through EyeMakkah",
+          "is there a 10 percent app discount",
+          "app-only offers"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "خصم من التطبيق",
+          "عروض التطبيق",
+          "حصري EyeMakkah",
+          "العروض الحصرية",
+          "10 بالمية",
+          "خاصة بالتطبيق"
+        ],
+        "keywords_en": [
+          "discount from the app",
+          "app offers",
+          "EyeMakkah exclusive",
+          "exclusive offers",
+          "10 percent",
+          "app-only"
+        ],
+        "entities": [
+          "offer",
+          "app_exclusive",
+          "discount_type"
+        ]
+      },
+      "answer": {
+        "type": "dynamic",
+        "handler": "offers_app_exclusive",
+        "responses": {
+          "ar": [
+            "هذه العروض المعلّمة كعروض خاصة عبر EyeMakkah: {{offers}}. كل عرض يعرض النسبة/القيمة والشروط بوضوح.",
+            "إذا تبغى خصم مرتبط باستخدام التطبيق، هذه العروض الحالية: {{offers}}."
+          ],
+          "en": [
+            "These offers are marked as EyeMakkah app-specific: {{offers}}. Each offer should show the discount/value and terms clearly.",
+            "If you want a discount tied to using the app, these are the current matches: {{offers}}."
+          ]
+        },
+        "result_shape": "ranked_list"
+      },
+      "context": {
+        "applicable_pages": [
+          "الرئيسية",
+          "اكتشف",
+          "*"
+        ],
+        "followup_keys": [
+          "followup_offer_terms",
+          "followup_book_now",
+          "followup_second_result"
+        ]
+      },
+      "priority": 100
+    },
+    {
+      "id": "offers_expiring_soon",
+      "category": "offers",
+      "purpose": "Return offers ending soon, excluding expired offers.",
+      "examples": {
+        "ar": [
+          "وش العروض اللي بتنتهي",
+          "وش ينتهي قريب",
+          "عطني عروض آخر فرصة",
+          "فيه خصومات تنتهي اليوم",
+          "وش العرض اللي لازم ألحق عليه",
+          "عروض تنتهي الليلة",
+          "وش قرب يخلص"
+        ],
+        "en": [
+          "which offers are ending soon",
+          "what expires soon",
+          "show last-chance offers",
+          "any discounts ending today",
+          "what offer should I use before it ends",
+          "offers ending tonight",
+          "what is about to expire"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "بتنتهي",
+          "ينتهي قريب",
+          "آخر فرصة",
+          "تنتهي اليوم",
+          "ألحق عليه",
+          "تنتهي الليلة",
+          "قرب يخلص"
+        ],
+        "keywords_en": [
+          "ending soon",
+          "expires soon",
+          "last chance",
+          "ending today",
+          "before it ends",
+          "ending tonight"
+        ],
+        "entities": [
+          "offer",
+          "lifecycle",
+          "time"
+        ]
+      },
+      "answer": {
+        "type": "dynamic",
+        "handler": "offers_expiring_soon",
+        "responses": {
+          "ar": [
+            "هذه العروض النشطة الأقرب للانتهاء: {{offers}}.",
+            "إذا تبغى تلحق عرض قبل ينتهي، هذه أبرز النتائج: {{offers}}."
+          ],
+          "en": [
+            "These are the active offers closest to expiry: {{offers}}.",
+            "If you want to catch a deal before it ends, these are the strongest matches: {{offers}}."
+          ]
+        },
+        "result_shape": "ranked_list"
+      },
+      "context": {
+        "applicable_pages": [
+          "الرئيسية",
+          "اكتشف",
+          "*"
+        ],
+        "followup_keys": [
+          "followup_nearby",
+          "followup_book_now",
+          "followup_second_result"
+        ]
+      },
+      "priority": 99
+    },
+    {
+      "id": "offers_nearby",
+      "category": "offers",
+      "purpose": "Return active offers near current selected area/location.",
+      "examples": {
+        "ar": [
+          "وش العروض القريبة",
+          "فيه خصم قريب مني",
+          "عطني عروض في الحي",
+          "وش عليه عرض بالعوالي",
+          "خصومات قريبة",
+          "أبغى عرض قريب",
+          "وين أقرب عرض"
+        ],
+        "en": [
+          "what offers are nearby",
+          "any discount near me",
+          "show deals in my neighborhood",
+          "what has an offer in Al Awali",
+          "nearby discounts",
+          "I want a nearby deal",
+          "where is the closest offer"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "العروض القريبة",
+          "خصم قريب",
+          "عروض في الحي",
+          "عليه عرض بالعوالي",
+          "خصومات قريبة",
+          "أقرب عرض"
+        ],
+        "keywords_en": [
+          "offers nearby",
+          "discount near me",
+          "deals in my neighborhood",
+          "nearby discounts",
+          "closest offer"
+        ],
+        "entities": [
+          "offer",
+          "neighborhood",
+          "location"
+        ]
+      },
+      "answer": {
+        "type": "dynamic",
+        "handler": "offers_nearby",
+        "responses": {
+          "ar": [
+            "في منطقتك الحالية، هذه أقرب العروض النشطة: {{offers}}.",
+            "أقرب عروض مناسبة لسياقك: {{offers}}."
+          ],
+          "en": [
+            "In your current area, these are the nearest active offers: {{offers}}.",
+            "The closest offers that fit your context are: {{offers}}."
+          ]
+        },
+        "result_shape": "ranked_list"
+      },
+      "context": {
+        "applicable_pages": [
+          "الرئيسية",
+          "اكتشف",
+          "*"
+        ],
+        "followup_keys": [
+          "followup_restaurants_only",
+          "followup_family_package",
+          "followup_second_result"
+        ]
+      },
+      "priority": 100
+    },
+    {
+      "id": "offers_terms_details",
+      "category": "offers",
+      "purpose": "Explain offer value, eligibility, period, redemption path and source for a selected offer.",
+      "examples": {
+        "ar": [
+          "وش شروط العرض",
+          "اشرح لي الخصم",
+          "كم نسبة الخصم",
+          "متى ينتهي العرض",
+          "مين يستفيد من العرض",
+          "هل العرض للعائلة",
+          "كيف أستخدم الخصم",
+          "وش تفاصيل الباقة"
+        ],
+        "en": [
+          "what are the offer terms",
+          "explain the discount",
+          "what is the discount percentage",
+          "when does the offer end",
+          "who is eligible",
+          "is the offer for families",
+          "how do I use the discount",
+          "what are the package details"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "شروط العرض",
+          "نسبة الخصم",
+          "ينتهي العرض",
+          "مين يستفيد",
+          "كيف أستخدم",
+          "تفاصيل الباقة"
+        ],
+        "keywords_en": [
+          "offer terms",
+          "discount percentage",
+          "offer end",
+          "eligible",
+          "use the discount",
+          "package details"
+        ],
+        "entities": [
+          "offer",
+          "eligibility",
+          "validity",
+          "redemption",
+          "source"
+        ]
+      },
+      "answer": {
+        "type": "dynamic",
+        "handler": "offer_terms_detail",
+        "responses": {
+          "ar": [
+            "تفاصيل {{offer}}: {{offer_value}} · الشروط {{terms}} · الصلاحية {{validity}} · طريقة الاستفادة {{redemption}} · المصدر {{source}}.",
+            "بالنسبة لـ{{offer}}: {{terms_summary}}."
+          ],
+          "en": [
+            "Details for {{offer}}: {{offer_value}} · terms {{terms}} · validity {{validity}} · redemption {{redemption}} · source {{source}}.",
+            "For {{offer}}: {{terms_summary}}."
+          ]
+        },
+        "result_shape": "single_entity"
+      },
+      "context": {
+        "applicable_pages": [
+          "اكتشف",
+          "خطتي",
+          "*"
+        ],
+        "followup_keys": [
+          "followup_book_now",
+          "followup_add_to_plan"
+        ]
+      },
+      "priority": 100
+    },
+    {
+      "id": "action_save_item",
+      "category": "actions",
+      "purpose": "Save the selected/referenced item without implying Plan/booking/join.",
+      "examples": {
+        "ar": [
+          "احفظه",
+          "احفظ هذا",
+          "حطه بالمحفوظات",
+          "أبغى أحفظه",
+          "خلني أرجع له بعدين",
+          "save هذا",
+          "احفظ الثاني"
+        ],
+        "en": [
+          "save it",
+          "save this",
+          "add it to saved",
+          "I want to save it",
+          "keep it for later",
+          "save this one",
+          "save the second one"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "احفظه",
+          "المحفوظات",
+          "أحفظه",
+          "بعدين",
+          "احفظ الثاني"
+        ],
+        "keywords_en": [
+          "save it",
+          "saved",
+          "keep it for later",
+          "save the second"
+        ],
+        "entities": [
+          "object",
+          "last_ranked_results"
+        ]
+      },
+      "answer": {
+        "type": "action",
+        "handler": "action_save_object",
+        "responses": {
+          "ar": [
+            "تم حفظ {{object}} للرجوع له لاحقًا. ما تم إضافته إلى «خطتي» ولا اعتباره حجزًا.",
+            "حفظت {{object}} فقط."
+          ],
+          "en": [
+            "{{object}} is saved for later. It has not been added to My Plan or treated as a booking.",
+            "I saved {{object}} only."
+          ]
+        },
+        "result_shape": "action_confirmation"
+      },
+      "context": {
+        "applicable_pages": [
+          "*"
+        ],
+        "followup_keys": [
+          "followup_add_to_plan",
+          "followup_with_offer"
+        ]
+      },
+      "priority": 100
+    },
+    {
+      "id": "action_unsave_item",
+      "category": "actions",
+      "purpose": "Remove a saved item without changing other states.",
+      "examples": {
+        "ar": [
+          "شيله من الحفظ",
+          "فك الحفظ",
+          "لا تحفظه",
+          "احذفه من المحفوظات",
+          "شيل هذا من المحفوظ",
+          "unsave هذا"
+        ],
+        "en": [
+          "remove it from saved",
+          "unsave it",
+          "don't save it",
+          "delete it from saved",
+          "remove this saved item",
+          "unsave this"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "شيله من الحفظ",
+          "فك الحفظ",
+          "لا تحفظه",
+          "المحفوظات"
+        ],
+        "keywords_en": [
+          "remove from saved",
+          "unsave",
+          "don't save",
+          "saved item"
+        ],
+        "entities": [
+          "object"
+        ]
+      },
+      "answer": {
+        "type": "action",
+        "handler": "action_unsave_object",
+        "responses": {
+          "ar": [
+            "شلت {{object}} من المحفوظات، وباقي حالاته ما تغيرت.",
+            "تم إلغاء حفظ {{object}}."
+          ],
+          "en": [
+            "{{object}} was removed from saved items; its other states were not changed.",
+            "{{object}} is no longer saved."
+          ]
+        },
+        "result_shape": "action_confirmation"
+      },
+      "context": {
+        "applicable_pages": [
+          "*"
+        ],
+        "followup_keys": []
+      },
+      "priority": 100
+    },
+    {
+      "id": "action_join_activity",
+      "category": "actions",
+      "purpose": "Join/Going action for eligible activities without implying booking/attendance.",
+      "examples": {
+        "ar": [
+          "انضم للنشاط",
+          "سجلني حضور",
+          "أنا جاي",
+          "حطني going",
+          "أبغى أنضم",
+          "انضم للثاني",
+          "خلني مع المجموعة"
+        ],
+        "en": [
+          "join the activity",
+          "mark me as going",
+          "I'm going",
+          "set me as going",
+          "I want to join",
+          "join the second one",
+          "add me to the group"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "انضم",
+          "سجلني حضور",
+          "أنا جاي",
+          "going",
+          "أنضم",
+          "مع المجموعة"
+        ],
+        "keywords_en": [
+          "join",
+          "going",
+          "I'm going",
+          "join the second",
+          "group"
+        ],
+        "entities": [
+          "activity",
+          "club",
+          "last_ranked_results"
+        ]
+      },
+      "answer": {
+        "type": "action",
+        "handler": "action_join_activity",
+        "responses": {
+          "ar": [
+            "سجلت نية انضمامك إلى {{object}}. هذا يعني Join/Going فقط، وليس حجزًا مؤكدًا أو إثبات حضور.",
+            "تم الانضمام إلى {{object}} كحالة مشاركة/نية حضور."
+          ],
+          "en": [
+            "Your join/going intent for {{object}} is recorded. This is not a confirmed booking or proof of attendance.",
+            "You joined {{object}} as a participation/going state."
+          ]
+        },
+        "result_shape": "action_confirmation"
+      },
+      "context": {
+        "applicable_pages": [
+          "المجتمع",
+          "اكتشف",
+          "*"
+        ],
+        "followup_keys": [
+          "followup_add_to_plan"
+        ]
+      },
+      "priority": 100
+    },
+    {
+      "id": "action_leave_activity",
+      "category": "actions",
+      "purpose": "Leave/cancel a Join/Going state without touching saved/plan unless explicitly requested.",
+      "examples": {
+        "ar": [
+          "الغ انضمامي",
+          "شيلني من النشاط",
+          "ما عاد بروح",
+          "فك going",
+          "أبغى أطلع من المجموعة",
+          "الغ الثاني"
+        ],
+        "en": [
+          "cancel my join",
+          "remove me from the activity",
+          "I'm not going anymore",
+          "remove going",
+          "leave the group",
+          "cancel the second one"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "الغ انضمامي",
+          "شيلني",
+          "ما عاد بروح",
+          "فك going",
+          "أطلع من المجموعة"
+        ],
+        "keywords_en": [
+          "cancel join",
+          "remove me",
+          "not going",
+          "leave the group"
+        ],
+        "entities": [
+          "activity",
+          "club"
+        ]
+      },
+      "answer": {
+        "type": "action",
+        "handler": "action_leave_activity",
+        "responses": {
+          "ar": [
+            "ألغيت حالة الانضمام/الذهاب لـ{{object}} فقط. الحفظ أو «خطتي» ما تتغير إلا إذا طلبت.",
+            "تم إلغاء انضمامك إلى {{object}}."
+          ],
+          "en": [
+            "Your join/going state for {{object}} was cancelled only. Saved/My Plan state remains unless you ask to change it.",
+            "Your join state for {{object}} has been removed."
+          ]
+        },
+        "result_shape": "action_confirmation"
+      },
+      "context": {
+        "applicable_pages": [
+          "المجتمع",
+          "اكتشف",
+          "*"
+        ],
+        "followup_keys": []
+      },
+      "priority": 100
+    },
+    {
+      "id": "action_start_booking_handoff",
+      "category": "actions",
+      "purpose": "Start external booking/registration handoff with truthful semantics.",
+      "examples": {
+        "ar": [
+          "احجزه",
+          "أبغى أحجز",
+          "ودني للحجز",
+          "افتح الحجز",
+          "احجز الثاني",
+          "كيف أحجزه الحين",
+          "أبغى أكمل الحجز"
+        ],
+        "en": [
+          "book it",
+          "I want to book",
+          "take me to booking",
+          "open booking",
+          "book the second one",
+          "how do I book it now",
+          "I want to complete booking"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "احجزه",
+          "أحجز",
+          "للحجز",
+          "افتح الحجز",
+          "أكمل الحجز"
+        ],
+        "keywords_en": [
+          "book it",
+          "booking",
+          "open booking",
+          "complete booking"
+        ],
+        "entities": [
+          "object",
+          "action_type",
+          "booking_target"
+        ]
+      },
+      "answer": {
+        "type": "action",
+        "handler": "action_booking_handoff",
+        "responses": {
+          "ar": [
+            "أفتح لك مسار الحجز لـ{{object}}. بعد الانتقال أسجل فقط «انتقلت لإكمال الحجز» إلى أن يصل تأكيد فعلي أو تأكده أنت.",
+            "جاهز. الانتقال للحجز لا يعني أن {{object}} صار «مؤكد» تلقائيًا."
+          ],
+          "en": [
+            "I'll open the booking path for {{object}}. After handoff, EyeMakkah records only 'left to complete booking' until a real confirmation arrives or you explicitly confirm it.",
+            "Ready. Opening booking does not automatically make {{object}} confirmed."
+          ]
+        },
+        "result_shape": "action_confirmation"
+      },
+      "context": {
+        "applicable_pages": [
+          "اكتشف",
+          "خطتي",
+          "*"
+        ],
+        "followup_keys": [
+          "followup_confirm_booking"
+        ]
+      },
+      "priority": 100
+    },
+    {
+      "id": "action_confirm_booking_explicit",
+      "category": "actions",
+      "purpose": "Allow explicit user confirmation after an external booking handoff.",
+      "examples": {
+        "ar": [
+          "تم الحجز",
+          "أنا حجزت خلاص",
+          "أكدت الحجز برا",
+          "خلصت الحجز",
+          "الحجز تأكد",
+          "رجعت وحجزته",
+          "حجزته من الموقع"
+        ],
+        "en": [
+          "booking is done",
+          "I booked it",
+          "I confirmed it externally",
+          "I finished booking",
+          "the booking is confirmed",
+          "I came back after booking",
+          "I booked it on the website"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "تم الحجز",
+          "حجزت خلاص",
+          "أكدت الحجز",
+          "خلصت الحجز",
+          "تأكد",
+          "حجزته"
+        ],
+        "keywords_en": [
+          "booking is done",
+          "I booked it",
+          "confirmed it",
+          "finished booking",
+          "booking is confirmed"
+        ],
+        "entities": [
+          "object",
+          "plan_state",
+          "outbound_state"
+        ]
+      },
+      "answer": {
+        "type": "action",
+        "handler": "action_confirm_booking_by_user",
+        "responses": {
+          "ar": [
+            "تمام، بما أنك أكدت أنك أكملت الحجز لـ{{object}}، أقدر أنقل حالته إلى «مؤكد» كتأكيد صريح منك.",
+            "سجلت تأكيدك الصريح لحجز {{object}}."
+          ],
+          "en": [
+            "Since you explicitly confirmed that you completed booking for {{object}}, it can move to Confirmed as a user-confirmed state.",
+            "Your explicit confirmation for {{object}} has been recorded."
+          ]
+        },
+        "result_shape": "action_confirmation"
+      },
+      "context": {
+        "applicable_pages": [
+          "خطتي",
+          "*"
+        ],
+        "followup_keys": []
+      },
+      "priority": 100
+    },
+    {
+      "id": "action_open_directions",
+      "category": "actions",
+      "purpose": "Open location/directions action for a selected place when available.",
+      "examples": {
+        "ar": [
+          "ودني للمكان",
+          "افتح الاتجاهات",
+          "كيف أوصل",
+          "طلع لي الطريق",
+          "وين الموقع",
+          "افتح الخريطة",
+          "روح للمكان"
+        ],
+        "en": [
+          "take me there",
+          "open directions",
+          "how do I get there",
+          "show me the route",
+          "where is it",
+          "open the map",
+          "go to the place"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "ودني",
+          "الاتجاهات",
+          "أوصل",
+          "الطريق",
+          "الموقع",
+          "الخريطة"
+        ],
+        "keywords_en": [
+          "take me there",
+          "directions",
+          "get there",
+          "route",
+          "map"
+        ],
+        "entities": [
+          "object",
+          "geo",
+          "location"
+        ]
+      },
+      "answer": {
+        "type": "action",
+        "handler": "action_open_directions",
+        "responses": {
+          "ar": [
+            "أفتح لك الاتجاهات إلى {{object}} باستخدام موقع المكان المتاح في EyeMakkah.",
+            "جاهز، بفتح لك مسار الوصول إلى {{object}}."
+          ],
+          "en": [
+            "I'll open directions to {{object}} using the location available in EyeMakkah.",
+            "Ready. I'll open the route to {{object}}."
+          ]
+        },
+        "result_shape": "action_confirmation"
+      },
+      "context": {
+        "applicable_pages": [
+          "اكتشف",
+          "خطتي",
+          "*"
+        ],
+        "followup_keys": []
+      },
+      "priority": 95
+    },
+    {
+      "id": "action_open_details",
+      "category": "actions",
+      "purpose": "Open the selected EyeMakkah object detail/decision page.",
+      "examples": {
+        "ar": [
+          "افتحه",
+          "ورني التفاصيل",
+          "أبغى أشوف المكان",
+          "افتح الثاني",
+          "ودني لصفحة النشاط",
+          "شوف لي تفاصيل العرض",
+          "افتح صفحة المطعم"
+        ],
+        "en": [
+          "open it",
+          "show me details",
+          "I want to see the place",
+          "open the second one",
+          "take me to the activity page",
+          "show offer details",
+          "open the restaurant page"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "افتحه",
+          "التفاصيل",
+          "أشوف المكان",
+          "افتح الثاني",
+          "صفحة النشاط",
+          "صفحة المطعم"
+        ],
+        "keywords_en": [
+          "open it",
+          "details",
+          "see the place",
+          "open the second",
+          "activity page",
+          "restaurant page"
+        ],
+        "entities": [
+          "object",
+          "last_ranked_results"
+        ]
+      },
+      "answer": {
+        "type": "action",
+        "handler": "action_open_object_detail",
+        "responses": {
+          "ar": [
+            "أفتح لك صفحة {{object}} داخل EyeMakkah.",
+            "جاهز، ننتقل لتفاصيل {{object}}."
+          ],
+          "en": [
+            "I'll open {{object}} inside EyeMakkah.",
+            "Ready. Let's open the details for {{object}}."
+          ]
+        },
+        "result_shape": "action_confirmation"
+      },
+      "context": {
+        "applicable_pages": [
+          "*"
+        ],
+        "followup_keys": []
+      },
+      "priority": 95
+    },
+    {
+      "id": "plan_summary",
+      "category": "plan",
+      "purpose": "Summarize the user's current Plan across meaningful states.",
+      "examples": {
+        "ar": [
+          "وش عندي في خطتي",
+          "لخص خطتي",
+          "وش مخطط له",
+          "وش موجود عندي",
+          "عطني ملخص خطتي",
+          "وش الأشياء اللي حاطها بخطتي",
+          "كيف وضعي اليوم"
+        ],
+        "en": [
+          "what is in My Plan",
+          "summarize My Plan",
+          "what do I have planned",
+          "what is on my plan",
+          "give me a My Plan summary",
+          "what have I added to my plan",
+          "what does my day look like"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "خطتي",
+          "لخص خطتي",
+          "مخطط له",
+          "ملخص خطتي",
+          "حاطها بخطتي"
+        ],
+        "keywords_en": [
+          "My Plan",
+          "summarize",
+          "planned",
+          "plan summary"
+        ],
+        "entities": [
+          "plan_state",
+          "time",
+          "object"
+        ]
+      },
+      "answer": {
+        "type": "dynamic",
+        "handler": "plan_summary",
+        "responses": {
+          "ar": [
+            "ملخص «خطتي»: {{plan_summary}}.",
+            "هذه حالتك الحالية في «خطتي»: {{plan_summary}}."
+          ],
+          "en": [
+            "My Plan summary: {{plan_summary}}.",
+            "This is your current My Plan status: {{plan_summary}}."
+          ]
+        },
+        "result_shape": "structured_summary"
+      },
+      "context": {
+        "applicable_pages": [
+          "خطتي",
+          "الرئيسية",
+          "*"
+        ],
+        "followup_keys": [
+          "followup_today_only",
+          "followup_upcoming_only",
+          "followup_confirmed_only",
+          "followup_completed_only"
+        ]
+      },
+      "priority": 100
+    },
+    {
+      "id": "plan_today",
+      "category": "plan",
+      "purpose": "Return items in Now/Today buckets.",
+      "examples": {
+        "ar": [
+          "وش عندي اليوم",
+          "وش خطتي اليوم",
+          "ايش عندي الحين واليوم",
+          "عطني جدول اليوم",
+          "وش الأشياء اللي بسويها اليوم",
+          "وش عندي بعد شوي"
+        ],
+        "en": [
+          "what do I have today",
+          "what is my plan today",
+          "what do I have now and today",
+          "show today's schedule",
+          "what am I doing today",
+          "what do I have coming up today"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "عندي اليوم",
+          "خطتي اليوم",
+          "الحين واليوم",
+          "جدول اليوم",
+          "بسويها اليوم"
+        ],
+        "keywords_en": [
+          "today",
+          "plan today",
+          "now and today",
+          "today's schedule"
+        ],
+        "entities": [
+          "plan_state",
+          "date",
+          "time"
+        ]
+      },
+      "answer": {
+        "type": "dynamic",
+        "handler": "plan_today",
+        "responses": {
+          "ar": [
+            "اليوم عندك: {{plan_items}}.",
+            "هذه عناصر «خطتي» لليوم: {{plan_items}}."
+          ],
+          "en": [
+            "Today you have: {{plan_items}}.",
+            "These are your My Plan items for today: {{plan_items}}."
+          ]
+        },
+        "result_shape": "ranked_list"
+      },
+      "context": {
+        "applicable_pages": [
+          "خطتي",
+          "الرئيسية",
+          "*"
+        ],
+        "followup_keys": [
+          "followup_what_next",
+          "followup_open_second"
+        ]
+      },
+      "priority": 100
+    },
+    {
+      "id": "plan_upcoming",
+      "category": "plan",
+      "purpose": "Return upcoming items.",
+      "examples": {
+        "ar": [
+          "وش عندي قادم",
+          "وش الجاي في خطتي",
+          "وش عندي الأسبوع الجاي",
+          "عطني الأشياء القادمة",
+          "وش بعد اليوم",
+          "ايش مخطط له قدام"
+        ],
+        "en": [
+          "what is coming up",
+          "what is next in My Plan",
+          "what do I have next week",
+          "show upcoming items",
+          "what is after today",
+          "what do I have planned ahead"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "قادم",
+          "الجاي",
+          "الأسبوع الجاي",
+          "الأشياء القادمة",
+          "بعد اليوم",
+          "قدام"
+        ],
+        "keywords_en": [
+          "coming up",
+          "next",
+          "next week",
+          "upcoming",
+          "after today",
+          "planned ahead"
+        ],
+        "entities": [
+          "plan_state",
+          "date"
+        ]
+      },
+      "answer": {
+        "type": "dynamic",
+        "handler": "plan_upcoming",
+        "responses": {
+          "ar": [
+            "القادم في «خطتي»: {{plan_items}}.",
+            "هذه الأشياء المخطط لها بعد اليوم: {{plan_items}}."
+          ],
+          "en": [
+            "Upcoming in My Plan: {{plan_items}}.",
+            "These are the items planned after today: {{plan_items}}."
+          ]
+        },
+        "result_shape": "ranked_list"
+      },
+      "context": {
+        "applicable_pages": [
+          "خطتي",
+          "*"
+        ],
+        "followup_keys": [
+          "followup_second_result",
+          "followup_open_details"
+        ]
+      },
+      "priority": 98
+    },
+    {
+      "id": "plan_confirmed",
+      "category": "plan",
+      "purpose": "Return confirmed items only.",
+      "examples": {
+        "ar": [
+          "وش عندي مؤكد",
+          "ايش الحجوزات المؤكدة",
+          "عطني المؤكد",
+          "وش الأشياء اللي تأكدت",
+          "وش confirmed عندي"
+        ],
+        "en": [
+          "what is confirmed",
+          "what confirmed bookings do I have",
+          "show confirmed items",
+          "what has been confirmed",
+          "what is confirmed in My Plan"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "مؤكد",
+          "الحجوزات المؤكدة",
+          "تأكدت",
+          "confirmed"
+        ],
+        "keywords_en": [
+          "confirmed",
+          "confirmed bookings",
+          "confirmed items"
+        ],
+        "entities": [
+          "plan_state"
+        ]
+      },
+      "answer": {
+        "type": "dynamic",
+        "handler": "plan_confirmed",
+        "responses": {
+          "ar": [
+            "العناصر المؤكدة في «خطتي»: {{plan_items}}.",
+            "هذا اللي حالته «مؤكد»: {{plan_items}}."
+          ],
+          "en": [
+            "Confirmed items in My Plan: {{plan_items}}.",
+            "These items are currently marked Confirmed: {{plan_items}}."
+          ]
+        },
+        "result_shape": "ranked_list"
+      },
+      "context": {
+        "applicable_pages": [
+          "خطتي",
+          "*"
+        ],
+        "followup_keys": [
+          "followup_open_details",
+          "followup_today_only"
+        ]
+      },
+      "priority": 100
+    },
+    {
+      "id": "plan_completed",
+      "category": "plan",
+      "purpose": "Return completed items and expose contribution/what-next continuation.",
+      "examples": {
+        "ar": [
+          "وش الأشياء اللي خلصتها",
+          "وش مكتمل عندي",
+          "عطني اللي سويته",
+          "وش تجاربي المكتملة",
+          "ايش completed",
+          "وش أنجزت"
+        ],
+        "en": [
+          "what have I completed",
+          "what is completed in My Plan",
+          "show what I did",
+          "what experiences have I completed",
+          "what is completed",
+          "what have I finished"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "خلصتها",
+          "مكتمل",
+          "سويته",
+          "تجاربي المكتملة",
+          "أنجزت"
+        ],
+        "keywords_en": [
+          "completed",
+          "what I did",
+          "experiences completed",
+          "finished"
+        ],
+        "entities": [
+          "plan_state",
+          "completed"
+        ]
+      },
+      "answer": {
+        "type": "dynamic",
+        "handler": "plan_completed",
+        "responses": {
+          "ar": [
+            "المكتمل عندك: {{plan_items}}. أقدر بعدها أساعدك تشارك تجربة أو تشوف «وش بعد؟».",
+            "هذه الأشياء اللي أكملتها: {{plan_items}}."
+          ],
+          "en": [
+            "Your completed items are: {{plan_items}}. I can then help you contribute or see what to do next.",
+            "These are the things you've completed: {{plan_items}}."
+          ]
+        },
+        "result_shape": "ranked_list"
+      },
+      "context": {
+        "applicable_pages": [
+          "خطتي",
+          "المجتمع",
+          "*"
+        ],
+        "followup_keys": [
+          "followup_contribute",
+          "followup_what_next"
+        ]
+      },
+      "priority": 98
+    },
+    {
+      "id": "plan_add_item",
+      "category": "plan",
+      "purpose": "Add selected/referenced object to My Plan without changing booking/join state.",
+      "examples": {
+        "ar": [
+          "ضفه لخطتي",
+          "أضف هذا لخطتي",
+          "حطه في خطتي",
+          "ضيف الثاني لخطتي",
+          "أبغى أخطط له",
+          "حطه عندي اليوم",
+          "أضفه للخطة"
+        ],
+        "en": [
+          "add it to My Plan",
+          "add this to my plan",
+          "put it in My Plan",
+          "add the second one to My Plan",
+          "I want to plan for it",
+          "put it in today",
+          "add it to the plan"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "ضفه لخطتي",
+          "أضف",
+          "حطه في خطتي",
+          "ضيف الثاني",
+          "أخطط له",
+          "أضفه للخطة"
+        ],
+        "keywords_en": [
+          "add to My Plan",
+          "put it in My Plan",
+          "add the second",
+          "plan for it",
+          "add to plan"
+        ],
+        "entities": [
+          "object",
+          "last_ranked_results",
+          "plan_state"
+        ]
+      },
+      "answer": {
+        "type": "action",
+        "handler": "action_add_to_plan",
+        "responses": {
+          "ar": [
+            "أضفت {{object}} إلى «خطتي». هذا ما يغيّر حالة الحجز أو الانضمام تلقائيًا.",
+            "تمت إضافة {{object}} إلى «خطتي» فقط."
+          ],
+          "en": [
+            "{{object}} has been added to My Plan. This does not automatically change booking or join status.",
+            "{{object}} was added to My Plan only."
+          ]
+        },
+        "result_shape": "action_confirmation"
+      },
+      "context": {
+        "applicable_pages": [
+          "*"
+        ],
+        "followup_keys": [
+          "followup_plan_when",
+          "followup_build_around_it"
+        ]
+      },
+      "priority": 100
+    },
+    {
+      "id": "plan_remove_item",
+      "category": "plan",
+      "purpose": "Remove item from My Plan without changing saved/join/booking state unless explicitly requested.",
+      "examples": {
+        "ar": [
+          "شيله من خطتي",
+          "احذف هذا من خطتي",
+          "ما أبغاه بالخطة",
+          "طلع الثاني من خطتي",
+          "الغيه من الخطة",
+          "احذف العنصر"
+        ],
+        "en": [
+          "remove it from My Plan",
+          "delete this from my plan",
+          "I don't want it in the plan",
+          "remove the second one from My Plan",
+          "cancel it from the plan",
+          "delete the item"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "شيله من خطتي",
+          "احذف",
+          "ما أبغاه بالخطة",
+          "طلع الثاني",
+          "الغيه من الخطة"
+        ],
+        "keywords_en": [
+          "remove from My Plan",
+          "delete",
+          "don't want it in plan",
+          "remove the second",
+          "cancel from plan"
+        ],
+        "entities": [
+          "object",
+          "plan_state"
+        ]
+      },
+      "answer": {
+        "type": "action",
+        "handler": "action_remove_from_plan",
+        "responses": {
+          "ar": [
+            "شلت {{object}} من «خطتي». الحفظ أو الانضمام أو الحجز ما يتغير إلا إذا طلبت.",
+            "تم حذف {{object}} من «خطتي» فقط."
+          ],
+          "en": [
+            "{{object}} was removed from My Plan. Saved, join, or booking states remain unless you ask to change them.",
+            "{{object}} was removed from My Plan only."
+          ]
+        },
+        "result_shape": "action_confirmation"
+      },
+      "context": {
+        "applicable_pages": [
+          "خطتي",
+          "*"
+        ],
+        "followup_keys": []
+      },
+      "priority": 100
+    },
+    {
+      "id": "plan_what_next",
+      "category": "plan",
+      "purpose": "Recommend the next useful step after current/active/completed plan context.",
+      "examples": {
+        "ar": [
+          "وش بعد",
+          "وش أسوي بعد هذا",
+          "وش يناسب خطتي بعده",
+          "بعد النشاط وين أروح",
+          "وش الخطوة الجاية",
+          "أبغى شي بعد اللي عندي",
+          "وش تكملة الخطة"
+        ],
+        "en": [
+          "what next",
+          "what should I do after this",
+          "what fits after this in My Plan",
+          "where should I go after the activity",
+          "what is the next step",
+          "I want something after what I already have",
+          "what completes the plan"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "وش بعد",
+          "بعد هذا",
+          "يناسب خطتي",
+          "بعد النشاط",
+          "الخطوة الجاية",
+          "تكملة الخطة"
+        ],
+        "keywords_en": [
+          "what next",
+          "after this",
+          "fits after",
+          "after the activity",
+          "next step",
+          "complete the plan"
+        ],
+        "entities": [
+          "plan_state",
+          "current_item",
+          "time",
+          "neighborhood"
+        ]
+      },
+      "answer": {
+        "type": "dynamic",
+        "handler": "plan_recommend_next",
+        "responses": {
+          "ar": [
+            "بعد {{current_item}}, هذه أفضل التكملات المناسبة للوقت والمنطقة: {{recommendations}}.",
+            "الخطوة التالية المقترحة في خطتك: {{recommendations}}."
+          ],
+          "en": [
+            "After {{current_item}}, these are the strongest next options for your time and area: {{recommendations}}.",
+            "Suggested next step in your plan: {{recommendations}}."
+          ]
+        },
+        "result_shape": "ranked_list"
+      },
+      "context": {
+        "applicable_pages": [
+          "خطتي",
+          "الرئيسية",
+          "*"
+        ],
+        "followup_keys": [
+          "followup_with_offer",
+          "followup_second_result",
+          "followup_add_to_plan"
+        ]
+      },
+      "priority": 100
+    },
+    {
+      "id": "plan_build_around_item",
+      "category": "plan",
+      "purpose": "Build a composed outing around an existing selected/Plan item.",
+      "examples": {
+        "ar": [
+          "رتب شي حول هذا",
+          "ابني لي خطة حوله",
+          "وش أحط قبله وبعده",
+          "رتب يومي حول النشاط",
+          "أبغى قهوة قبله وعشاء بعده",
+          "كمل لي الخطة حوله",
+          "وش يناسب مع هذا"
+        ],
+        "en": [
+          "build something around this",
+          "plan around it",
+          "what should I do before and after it",
+          "plan my day around the activity",
+          "coffee before and dinner after",
+          "complete my plan around it",
+          "what goes well with this"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "حول هذا",
+          "خطة حوله",
+          "قبله وبعده",
+          "حول النشاط",
+          "قهوة قبله",
+          "عشاء بعده",
+          "يناسب مع هذا"
+        ],
+        "keywords_en": [
+          "around this",
+          "plan around it",
+          "before and after",
+          "around the activity",
+          "coffee before",
+          "dinner after",
+          "goes well with"
+        ],
+        "entities": [
+          "object",
+          "time_available",
+          "neighborhood",
+          "party"
+        ]
+      },
+      "answer": {
+        "type": "dynamic",
+        "handler": "plan_build_around_item",
+        "responses": {
+          "ar": [
+            "بنيت لك تكملة حول {{object}}: {{outing_steps}}.",
+            "حول {{object}}، هذا الترتيب الأنسب: {{outing_steps}}."
+          ],
+          "en": [
+            "I built a continuation around {{object}}: {{outing_steps}}.",
+            "Around {{object}}, this is the strongest sequence: {{outing_steps}}."
+          ]
+        },
+        "result_shape": "composed_plan"
+      },
+      "context": {
+        "applicable_pages": [
+          "خطتي",
+          "الرئيسية",
+          "*"
+        ],
+        "followup_keys": [
+          "followup_with_offer",
+          "followup_swap_step",
+          "followup_add_all_to_plan"
+        ]
+      },
+      "priority": 100
+    },
+    {
+      "id": "community_what_people_say",
+      "category": "community",
+      "purpose": "Summarize community contributions linked to a selected object.",
+      "examples": {
+        "ar": [
+          "وش الناس تقول عنه",
+          "وش يقولون أهل مكة",
+          "أحد جربه",
+          "وش تجارب الناس",
+          "وش رأي المجتمع",
+          "وش قالوا عن المكان",
+          "وش النصائح عنه"
+        ],
+        "en": [
+          "what do people say about it",
+          "what do locals say",
+          "has anyone tried it",
+          "what are people's experiences",
+          "what does the community say",
+          "what did people say about the place",
+          "any tips about it"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "الناس تقول",
+          "أهل مكة",
+          "أحد جربه",
+          "تجارب الناس",
+          "رأي المجتمع",
+          "النصائح"
+        ],
+        "keywords_en": [
+          "people say",
+          "locals say",
+          "anyone tried",
+          "people's experiences",
+          "community say",
+          "tips"
+        ],
+        "entities": [
+          "object",
+          "contribution",
+          "community"
+        ]
+      },
+      "answer": {
+        "type": "dynamic",
+        "handler": "community_object_summary",
+        "responses": {
+          "ar": [
+            "من مساهمات المجتمع المرتبطة بـ{{object}}: {{community_summary}}.",
+            "الناس ذكروا عن {{object}}: {{community_summary}}."
+          ],
+          "en": [
+            "From community contributions linked to {{object}}: {{community_summary}}.",
+            "People mentioned the following about {{object}}: {{community_summary}}."
+          ]
+        },
+        "result_shape": "structured_summary"
+      },
+      "context": {
+        "applicable_pages": [
+          "المجتمع",
+          "اكتشف",
+          "*"
+        ],
+        "followup_keys": [
+          "followup_more_detail",
+          "followup_show_recent",
+          "followup_second_result"
+        ]
+      },
+      "priority": 100
+    },
+    {
+      "id": "community_recommendations",
+      "category": "community",
+      "purpose": "Return community recommendations relevant to current context.",
+      "examples": {
+        "ar": [
+          "وش ينصحون أهل مكة",
+          "عطني توصيات المجتمع",
+          "وش الناس تقترح",
+          "أبغى اقتراح من المجتمع",
+          "وش توصيات الحي",
+          "عطني شي الناس تمدحه",
+          "وش الناس تنصح فيه"
+        ],
+        "en": [
+          "what do Makkah locals recommend",
+          "show community recommendations",
+          "what do people suggest",
+          "I want a community recommendation",
+          "what does the neighborhood recommend",
+          "show something people praise",
+          "what do people recommend"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "ينصحون أهل مكة",
+          "توصيات المجتمع",
+          "الناس تقترح",
+          "اقتراح من المجتمع",
+          "توصيات الحي",
+          "الناس تنصح"
+        ],
+        "keywords_en": [
+          "locals recommend",
+          "community recommendations",
+          "people suggest",
+          "neighborhood recommend",
+          "people recommend"
+        ],
+        "entities": [
+          "community",
+          "neighborhood",
+          "object",
+          "interest"
+        ]
+      },
+      "answer": {
+        "type": "dynamic",
+        "handler": "community_recommendations",
+        "responses": {
+          "ar": [
+            "هذه توصيات مرتبطة بالمجتمع وسياقك الحالي: {{recommendations}}.",
+            "من المجتمع، هذه أبرز الأشياء اللي انذكرت بشكل مفيد: {{recommendations}}."
+          ],
+          "en": [
+            "These recommendations come from community-linked context relevant to you: {{recommendations}}.",
+            "From the community, these are the strongest useful mentions: {{recommendations}}."
+          ]
+        },
+        "result_shape": "ranked_list"
+      },
+      "context": {
+        "applicable_pages": [
+          "المجتمع",
+          "الرئيسية",
+          "*"
+        ],
+        "followup_keys": [
+          "followup_nearby",
+          "followup_with_offer",
+          "followup_second_result"
+        ]
+      },
+      "priority": 98
+    },
+    {
+      "id": "community_find_group",
+      "category": "community",
+      "purpose": "Recommend relevant communities/clubs based on interests, area, visitor/resident context.",
+      "examples": {
+        "ar": [
+          "فيه مجتمع يناسبني",
+          "وش المجتمع اللي أدخله",
+          "عطني مجتمع لاهتماماتي",
+          "أبغى مجموعة في حيّي",
+          "فيه مجتمع للزوار",
+          "وش فيه للأكل المكي",
+          "أبغى نادي للهواية"
+        ],
+        "en": [
+          "is there a community for me",
+          "which community should I join",
+          "show a community for my interests",
+          "I want a group in my neighborhood",
+          "is there a visitor community",
+          "what is there for Makkah food",
+          "I want a hobby club"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "مجتمع يناسبني",
+          "أدخله",
+          "لاهتماماتي",
+          "مجموعة في حيّي",
+          "مجتمع للزوار",
+          "الأكل المكي",
+          "نادي للهواية"
+        ],
+        "keywords_en": [
+          "community for me",
+          "community should I join",
+          "my interests",
+          "group in my neighborhood",
+          "visitor community",
+          "hobby club"
+        ],
+        "entities": [
+          "community",
+          "club",
+          "interest",
+          "neighborhood",
+          "mode"
+        ]
+      },
+      "answer": {
+        "type": "dynamic",
+        "handler": "community_find_relevant",
+        "responses": {
+          "ar": [
+            "هذه المجتمعات/الأندية الأقرب لاهتماماتك وسياقك: {{communities}}.",
+            "إذا تبغى تدخل مجتمع مناسب، ابدأ بـ: {{communities}}."
+          ],
+          "en": [
+            "These communities/clubs best match your interests and context: {{communities}}.",
+            "If you want a relevant community, start with: {{communities}}."
+          ]
+        },
+        "result_shape": "ranked_list"
+      },
+      "context": {
+        "applicable_pages": [
+          "المجتمع",
+          "*"
+        ],
+        "followup_keys": [
+          "followup_join_community",
+          "followup_second_result"
+        ]
+      },
+      "priority": 100
+    },
+    {
+      "id": "community_active_discussions",
+      "category": "community",
+      "purpose": "Return active/recent useful discussions without fabricating activity levels.",
+      "examples": {
+        "ar": [
+          "وش النقاشات الحالية",
+          "وش الناس تتكلم عنه",
+          "وش المواضيع النشطة",
+          "وش فيه أسئلة اليوم",
+          "عطني نقاشات مفيدة",
+          "وش صاير بالمجتمع",
+          "وش المواضيع الجديدة"
+        ],
+        "en": [
+          "what discussions are active",
+          "what are people talking about",
+          "what topics are active",
+          "what questions are there today",
+          "show useful discussions",
+          "what is happening in Community",
+          "what topics are new"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "النقاشات",
+          "الناس تتكلم",
+          "المواضيع النشطة",
+          "أسئلة اليوم",
+          "نقاشات مفيدة",
+          "المواضيع الجديدة"
+        ],
+        "keywords_en": [
+          "active discussions",
+          "people talking",
+          "active topics",
+          "questions today",
+          "useful discussions",
+          "new topics"
+        ],
+        "entities": [
+          "community",
+          "contribution",
+          "time"
+        ]
+      },
+      "answer": {
+        "type": "dynamic",
+        "handler": "community_active_discussions",
+        "responses": {
+          "ar": [
+            "هذه أبرز النقاشات/المساهمات الحديثة في السياق الحالي: {{discussions}}.",
+            "الحديث الجاري حاليًا في المجتمعات المناسبة لك: {{discussions}}."
+          ],
+          "en": [
+            "These are the strongest recent discussions/contributions in the current context: {{discussions}}.",
+            "Current conversation in communities relevant to you: {{discussions}}."
+          ]
+        },
+        "result_shape": "ranked_list"
+      },
+      "context": {
+        "applicable_pages": [
+          "المجتمع",
+          "الرئيسية",
+          "*"
+        ],
+        "followup_keys": [
+          "followup_open_thread",
+          "followup_second_result"
+        ]
+      },
+      "priority": 96
+    },
+    {
+      "id": "community_ask_question",
+      "category": "community",
+      "purpose": "Create a community question contribution in the relevant community/object context.",
+      "examples": {
+        "ar": [
+          "أبغى أسأل المجتمع",
+          "اسأل الناس",
+          "اكتب سؤال",
+          "أبغى أنشر سؤال",
+          "حط سؤالي بالمجتمع",
+          "اسأل أهل الحي",
+          "أبغى أسأل عن المكان"
+        ],
+        "en": [
+          "I want to ask the community",
+          "ask people",
+          "write a question",
+          "I want to post a question",
+          "post my question in Community",
+          "ask people in the neighborhood",
+          "I want to ask about the place"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "أسأل المجتمع",
+          "اسأل الناس",
+          "اكتب سؤال",
+          "أنشر سؤال",
+          "سؤالي بالمجتمع",
+          "أسأل عن المكان"
+        ],
+        "keywords_en": [
+          "ask the community",
+          "ask people",
+          "write a question",
+          "post a question",
+          "ask about the place"
+        ],
+        "entities": [
+          "community",
+          "object",
+          "contribution_text"
+        ]
+      },
+      "answer": {
+        "type": "action",
+        "handler": "action_create_community_question",
+        "responses": {
+          "ar": [
+            "أقدر أجهز سؤالك داخل {{community_or_object}} كمساهمة «سؤال». النص: {{question_text}}.",
+            "جاهز لنشر سؤالك في السياق المناسب: {{question_text}}."
+          ],
+          "en": [
+            "I can prepare your question inside {{community_or_object}} as a Question contribution. Text: {{question_text}}.",
+            "Ready to post your question in the relevant context: {{question_text}}."
+          ]
+        },
+        "result_shape": "action_confirmation"
+      },
+      "context": {
+        "applicable_pages": [
+          "المجتمع",
+          "*"
+        ],
+        "followup_keys": []
+      },
+      "priority": 100
+    },
+    {
+      "id": "community_contribute_experience",
+      "category": "community",
+      "purpose": "Create a tip/photo/experience-report contribution after a meaningful experience/completion.",
+      "examples": {
+        "ar": [
+          "أبغى أشارك تجربتي",
+          "اكتب نصيحة",
+          "أبغى أضيف صورة",
+          "خلني أكتب عن النشاط",
+          "أبغى أقول للناس وش صار",
+          "شارك تجربتي بالمجتمع",
+          "أبغى أضيف تحديث"
+        ],
+        "en": [
+          "I want to share my experience",
+          "write a tip",
+          "I want to add a photo",
+          "let me write about the activity",
+          "I want to tell people what happened",
+          "share my experience in Community",
+          "I want to add an update"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "أشارك تجربتي",
+          "اكتب نصيحة",
+          "أضيف صورة",
+          "أكتب عن النشاط",
+          "شارك تجربتي",
+          "أضيف تحديث"
+        ],
+        "keywords_en": [
+          "share my experience",
+          "write a tip",
+          "add a photo",
+          "write about the activity",
+          "add an update"
+        ],
+        "entities": [
+          "object",
+          "completed",
+          "contribution_type"
+        ]
+      },
+      "answer": {
+        "type": "action",
+        "handler": "action_create_contribution",
+        "responses": {
+          "ar": [
+            "أقدر أبدأ مساهمة مرتبطة بـ{{object}} من نوع {{contribution_type}} بدون تحويلها لمراجعة عامة إجبارية.",
+            "جاهز. بنربط مساهمتك بـ{{object}} حتى تفيد الأشخاص اللي يشوفونه لاحقًا."
+          ],
+          "en": [
+            "I can start a contribution linked to {{object}} as {{contribution_type}} without forcing it into a generic review.",
+            "Ready. Your contribution will be linked to {{object}} so it can help people who view it later."
+          ]
+        },
+        "result_shape": "action_confirmation"
+      },
+      "context": {
+        "applicable_pages": [
+          "المجتمع",
+          "خطتي",
+          "*"
+        ],
+        "followup_keys": []
+      },
+      "priority": 100
+    },
+    {
+      "id": "community_join_leave",
+      "category": "community",
+      "purpose": "Join or leave a durable community without exposing identity/location.",
+      "examples": {
+        "ar": [
+          "انضم للمجتمع",
+          "تابع هذا المجتمع",
+          "أبغى أدخل المجتمع",
+          "خلني عضو",
+          "الغ عضويتي بالمجتمع",
+          "اطلع من المجتمع",
+          "وقف متابعة المجتمع"
+        ],
+        "en": [
+          "join the community",
+          "follow this community",
+          "I want to enter the community",
+          "make me a member",
+          "leave the community",
+          "remove me from the community",
+          "stop following the community"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "انضم للمجتمع",
+          "تابع",
+          "عضو",
+          "الغ عضويتي",
+          "اطلع من المجتمع",
+          "وقف متابعة"
+        ],
+        "keywords_en": [
+          "join the community",
+          "follow",
+          "member",
+          "leave the community",
+          "stop following"
+        ],
+        "entities": [
+          "community",
+          "membership_action"
+        ]
+      },
+      "answer": {
+        "type": "action",
+        "handler": "action_community_membership",
+        "responses": {
+          "ar": [
+            "تم تنفيذ {{membership_action}} على {{community}}. هذا ما يكشف موقعك أو حضورك للآخرين تلقائيًا.",
+            "حالة {{community}} عندك أصبحت: {{membership_state}}."
+          ],
+          "en": [
+            "{{membership_action}} was applied to {{community}}. This does not automatically expose your location or attendance to others.",
+            "Your status for {{community}} is now: {{membership_state}}."
+          ]
+        },
+        "result_shape": "action_confirmation"
+      },
+      "context": {
+        "applicable_pages": [
+          "المجتمع",
+          "*"
+        ],
+        "followup_keys": []
+      },
+      "priority": 100
+    },
+    {
+      "id": "community_to_activity",
+      "category": "community",
+      "purpose": "Recommend real activities/clubs linked to a community so discussion can lead to participation.",
+      "examples": {
+        "ar": [
+          "وش نشاط أقدر أروح له من هذا المجتمع",
+          "فيه فعالية مرتبطة بالمجتمع",
+          "أبغى أشارك مو بس أقرأ",
+          "وش يسوون على أرض الواقع",
+          "فيه نادي تابع للمجتمع",
+          "عطني نشاط من هالمجموعة"
+        ],
+        "en": [
+          "what activity can I attend from this community",
+          "is there an event linked to the community",
+          "I want to participate not just read",
+          "what do they do in real life",
+          "is there a club linked to the community",
+          "show an activity from this group"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "نشاط من هذا المجتمع",
+          "فعالية مرتبطة",
+          "أشارك مو بس أقرأ",
+          "على أرض الواقع",
+          "نادي تابع",
+          "نشاط من هالمجموعة"
+        ],
+        "keywords_en": [
+          "activity from this community",
+          "event linked",
+          "participate",
+          "real life",
+          "club linked",
+          "activity from this group"
+        ],
+        "entities": [
+          "community",
+          "club",
+          "activity"
+        ]
+      },
+      "answer": {
+        "type": "dynamic",
+        "handler": "community_linked_activities",
+        "responses": {
+          "ar": [
+            "من {{community}} تقدر تنتقل لهذه الأنشطة/الأندية المرتبطة: {{recommendations}}.",
+            "إذا تبغى تحول المجتمع لمشاركة فعلية، هذه الخيارات: {{recommendations}}."
+          ],
+          "en": [
+            "From {{community}}, you can move into these linked activities/clubs: {{recommendations}}.",
+            "If you want to turn community into real participation, these are the options: {{recommendations}}."
+          ]
+        },
+        "result_shape": "ranked_list"
+      },
+      "context": {
+        "applicable_pages": [
+          "المجتمع",
+          "اكتشف",
+          "*"
+        ],
+        "followup_keys": [
+          "followup_join_activity",
+          "followup_add_to_plan",
+          "followup_second_result"
+        ]
+      },
+      "priority": 100
+    }
+  ]
+}
