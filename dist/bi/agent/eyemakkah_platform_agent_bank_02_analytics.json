@@ -1,0 +1,2784 @@
+{
+  "file": "eyemakkah_platform_agent_bank_02_analytics.json",
+  "version": "1.0.0",
+  "phase": 1,
+  "part": "02_analytics",
+  "source_alignment": {
+    "bi_branch": "BI-Platform",
+    "bi_head_reviewed": "99ff97f58debe8c3ffff7769d0be111ca964c6a2",
+    "scope_reviewed": [
+      "Dashboard",
+      "Demand Analysis",
+      "Area Analysis",
+      "Activities & Experiences",
+      "Communities & Interests"
+    ],
+    "note": "Intent semantics, metrics, funnel stages, areas/categories, and answer boundaries are aligned to the current EyeMakkah BI prototype. This file does not modify or integrate the BI."
+  },
+  "product": {
+    "name_ar": "منصة EyeMakkah لتحليلات الأعمال",
+    "name_en": "EyeMakkah Business Analytics Platform",
+    "assistant_name_ar": "مساعد EyeMakkah التحليلي",
+    "assistant_name_en": "EyeMakkah Analytics Assistant"
+  },
+  "purpose": "Bilingual analytical intent bank for Dashboard, Demand, Areas, Activities, and Communities. All analytical answers are dynamic and must be resolved from the active BI filters and current synthetic/demo data.",
+  "integration_contract": {
+    "languages": [
+      "ar",
+      "en"
+    ],
+    "requires_active_context": [
+      "period",
+      "area",
+      "category",
+      "audience",
+      "page"
+    ],
+    "dynamic_only": true,
+    "placeholder_rule": "Never hardcode a current winner/value where the BI can change it from filters. Resolve {{placeholders}} from the existing BI calculation functions.",
+    "ranking_rule": "Rank only the data represented in the current synthetic BI model.",
+    "comparison_rule": "When comparing two entities, use the same active period/category/audience context for both unless the query explicitly changes it.",
+    "truthfulness": [
+      "Treat all values as synthetic/illustrative prototype data.",
+      "Do not present demand/supply signals as guaranteed commercial opportunities.",
+      "Do not infer individuals, identities, psychological profiles, or personal data.",
+      "Do not generate pricing, revenue forecasts, ROI, break-even, or financial feasibility conclusions."
+    ]
+  },
+  "supported_entities": {
+    "areas_ar": [
+      "العزيزية",
+      "الشوقية",
+      "العوالي",
+      "النسيم",
+      "الزاهر",
+      "الشرائع",
+      "بطحاء قريش",
+      "مكة المكرمة"
+    ],
+    "categories_ar": [
+      "المطاعم والمقاهي",
+      "التجارب والأنشطة",
+      "التسوق",
+      "الترفيه",
+      "الثقافة",
+      "الخدمات",
+      "المجتمعات",
+      "الضيافة"
+    ],
+    "audiences_ar": [
+      "سكان مكة",
+      "الزوار"
+    ],
+    "known_search_terms_ar": [
+      "مطاعم عائلية",
+      "قهوة مختصة",
+      "أنشطة للأطفال",
+      "فعاليات نهاية الأسبوع",
+      "تجارب ثقافية",
+      "أماكن هادئة",
+      "ورش فنية",
+      "أماكن قريبة",
+      "مطاعم بإطلالة",
+      "أنشطة مسائية",
+      "تجارب للعائلة",
+      "متاحف"
+    ],
+    "known_activity_examples_ar": [
+      "جولة ذاكرة مكة",
+      "مساء الخط العربي",
+      "تجربة القهوة السعودية",
+      "مسار الأسواق القديمة",
+      "مختبر الصغار الإبداعي",
+      "جلسة تصوير معالم مكة",
+      "ورشة الحرف المحلية",
+      "ليلة القصص المكية",
+      "مشي العوالي المسائي",
+      "تجربة المذاقات الحجازية"
+    ]
+  },
+  "stats": {
+    "intent_count": 45,
+    "utterances_ar": 238,
+    "utterances_en": 200,
+    "utterances_total": 438,
+    "by_category": {
+      "dashboard": 8,
+      "demand": 10,
+      "areas": 9,
+      "activities": 10,
+      "communities": 8
+    },
+    "by_answer_type": {
+      "dynamic": 45
+    }
+  },
+  "intents": [
+    {
+      "id": "dashboard_summary",
+      "category": "dashboard",
+      "purpose": "Give an executive summary of the current filtered dashboard.",
+      "examples": {
+        "ar": [
+          "لخص لي الوضع",
+          "اعطني ملخص",
+          "أعطني ملخص",
+          "وش الوضع بشكل عام",
+          "وش أهم شي ظاهر",
+          "لخص الداشبورد",
+          "اعطني الزبدة",
+          "وش تقول البيانات الحين"
+        ],
+        "en": [
+          "summarize the dashboard",
+          "give me a summary",
+          "what's the overall picture",
+          "what stands out right now",
+          "give me the executive summary",
+          "what do the current data say"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "لخص",
+          "ملخص",
+          "الوضع",
+          "الزبدة"
+        ],
+        "keywords_en": [
+          "summary",
+          "overall",
+          "stands out"
+        ],
+        "entities": []
+      },
+      "answer": {
+        "type": "dynamic",
+        "handler": "dashboard_summary",
+        "responses": {
+          "ar": [
+            "ضمن الفلاتر الحالية: التفاعلات {{interactions}}، المستخدمون النشطون {{active_users}}، البحث {{searches}}، الإضافات إلى «خطتي» {{plans}}، والانتقال للإجراء {{actions}}. أبرز ما يظهر الآن: {{highlight}}."
+          ],
+          "en": [
+            "Under the active filters: {{interactions}} interactions, {{active_users}} active users, {{searches}} searches, {{plans}} additions to My Plan, and {{actions}} action handoffs. The main point right now is: {{highlight}}."
+          ]
+        },
+        "result_shape": "single_answer"
+      },
+      "context": {
+        "applicable_pages": [
+          "لوحة المعلومات",
+          "*"
+        ],
+        "followup_keys": [
+          "explain_highlight",
+          "compare_previous_period"
+        ]
+      },
+      "priority": 98
+    },
+    {
+      "id": "dashboard_top_category",
+      "category": "dashboard",
+      "purpose": "Return the highest-interest/highest-demand category in the dashboard context.",
+      "examples": {
+        "ar": [
+          "وش أعلى فئة",
+          "وش أكثر فئة عليها اهتمام",
+          "ايش أكثر قطاع جاذب",
+          "وش الفئة الأولى",
+          "مين أعلى قطاع",
+          "وش أكثر فئة طلب",
+          "وش أكثر شي عليه اهتمام"
+        ],
+        "en": [
+          "what is the top category",
+          "which category has the most interest",
+          "what sector is leading",
+          "which category ranks first",
+          "what is the highest demand category"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "أعلى فئة",
+          "قطاع",
+          "اهتمام",
+          "طلب"
+        ],
+        "keywords_en": [
+          "top category",
+          "sector",
+          "interest",
+          "demand"
+        ],
+        "entities": [
+          "category"
+        ]
+      },
+      "answer": {
+        "type": "dynamic",
+        "handler": "dashboard_top_category",
+        "responses": {
+          "ar": [
+            "أعلى فئة ضمن السياق الحالي هي {{category}}، مع تفاعل تجريبي يقارب {{value}}."
+          ],
+          "en": [
+            "The leading category in the current context is {{category}}, with illustrative engagement of about {{value}}."
+          ]
+        },
+        "result_shape": "single_answer"
+      },
+      "context": {
+        "applicable_pages": [
+          "لوحة المعلومات",
+          "*"
+        ],
+        "followup_keys": [
+          "second_category",
+          "why_top_category",
+          "compare_categories"
+        ]
+      },
+      "priority": 96
+    },
+    {
+      "id": "dashboard_fastest_area",
+      "category": "dashboard",
+      "purpose": "Return the area with fastest interest growth.",
+      "examples": {
+        "ar": [
+          "وش أسرع منطقة نمو",
+          "أي منطقة تنمو أسرع",
+          "وين الاهتمام يزيد أكثر",
+          "وش المنطقة الأعلى نمو",
+          "أي حي قاعد يصعد",
+          "وين أسرع نمو بالاهتمام"
+        ],
+        "en": [
+          "which area is growing fastest",
+          "where is interest growing fastest",
+          "what area has the highest growth",
+          "which neighborhood is rising fastest",
+          "what is the fastest growing area"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "أسرع",
+          "منطقة",
+          "نمو",
+          "اهتمام"
+        ],
+        "keywords_en": [
+          "fastest",
+          "area",
+          "growth",
+          "interest"
+        ],
+        "entities": [
+          "area"
+        ]
+      },
+      "answer": {
+        "type": "dynamic",
+        "handler": "dashboard_fastest_area",
+        "responses": {
+          "ar": [
+            "أسرع نمو في الاهتمام يظهر حاليًا في {{area}} بنحو {{growth}}."
+          ],
+          "en": [
+            "The fastest interest growth currently appears in {{area}} at about {{growth}}."
+          ]
+        },
+        "result_shape": "single_answer"
+      },
+      "context": {
+        "applicable_pages": [
+          "لوحة المعلومات",
+          "تحليل المناطق",
+          "*"
+        ],
+        "followup_keys": [
+          "second_area",
+          "why_growth",
+          "compare_areas"
+        ]
+      },
+      "priority": 96
+    },
+    {
+      "id": "dashboard_key_signal",
+      "category": "dashboard",
+      "purpose": "Return the strongest decision-support signal.",
+      "examples": {
+        "ar": [
+          "وش أهم إشارة",
+          "وش أبرز إشارة",
+          "وش الشي اللي يحتاج انتباه",
+          "وش أهم شي أتابعه",
+          "وين أقوى إشارة",
+          "وش يحتاج متابعة الآن"
+        ],
+        "en": [
+          "what is the key signal",
+          "what needs attention",
+          "what should I watch",
+          "what is the strongest signal",
+          "what should I follow up on"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "إشارة",
+          "انتباه",
+          "متابعة",
+          "أقوى"
+        ],
+        "keywords_en": [
+          "signal",
+          "attention",
+          "watch",
+          "strongest"
+        ],
+        "entities": []
+      },
+      "answer": {
+        "type": "dynamic",
+        "handler": "dashboard_key_signal",
+        "responses": {
+          "ar": [
+            "أبرز إشارة تحتاج متابعة تظهر في {{area}} · {{category}} بمؤشر {{score}}/100. هذه إشارة للتحقق وليست ضمانًا تجاريًا."
+          ],
+          "en": [
+            "The signal that most needs attention appears in {{area}} · {{category}} with a {{score}}/100 signal index. It is a validation signal, not a commercial guarantee."
+          ]
+        },
+        "result_shape": "single_answer"
+      },
+      "context": {
+        "applicable_pages": [
+          "لوحة المعلومات",
+          "الفرص والفجوات",
+          "*"
+        ],
+        "followup_keys": [
+          "why_signal",
+          "show_gap",
+          "compare_signal"
+        ]
+      },
+      "priority": 95
+    },
+    {
+      "id": "dashboard_metric_snapshot",
+      "category": "dashboard",
+      "purpose": "Return current KPI snapshot.",
+      "examples": {
+        "ar": [
+          "كم التفاعلات الآن",
+          "كم المستخدمين النشطين",
+          "كم عمليات البحث",
+          "كم اللي أضافوا لخطتي",
+          "كم الانتقال للإجراء",
+          "اعطني أرقام الداشبورد"
+        ],
+        "en": [
+          "how many interactions are there",
+          "how many active users",
+          "how many searches",
+          "how many My Plan additions",
+          "how many action handoffs",
+          "give me the dashboard numbers"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "كم",
+          "التفاعلات",
+          "المستخدمين",
+          "البحث",
+          "خطتي",
+          "الإجراء"
+        ],
+        "keywords_en": [
+          "how many",
+          "interactions",
+          "active users",
+          "searches",
+          "My Plan",
+          "action"
+        ],
+        "entities": []
+      },
+      "answer": {
+        "type": "dynamic",
+        "handler": "dashboard_metric_snapshot",
+        "responses": {
+          "ar": [
+            "الأرقام الحالية تحت الفلاتر النشطة: التفاعلات {{interactions}}، المستخدمون النشطون {{active_users}}، البحث {{searches}}، «خطتي» {{plans}}، والإجراء {{actions}}."
+          ],
+          "en": [
+            "Current figures under the active filters: {{interactions}} interactions, {{active_users}} active users, {{searches}} searches, {{plans}} My Plan additions, and {{actions}} action handoffs."
+          ]
+        },
+        "result_shape": "single_answer"
+      },
+      "context": {
+        "applicable_pages": [
+          "لوحة المعلومات",
+          "*"
+        ],
+        "followup_keys": []
+      },
+      "priority": 92
+    },
+    {
+      "id": "dashboard_demand_trend",
+      "category": "dashboard",
+      "purpose": "Summarize demand trend direction across current period.",
+      "examples": {
+        "ar": [
+          "كيف اتجاه الطلب",
+          "الطلب طالع ولا نازل",
+          "وش وضع الطلب عبر الوقت",
+          "هل البحث يزيد",
+          "كيف حركة البحث والحفظ",
+          "وش ترند الطلب"
+        ],
+        "en": [
+          "what is the demand trend",
+          "is demand going up or down",
+          "how is demand moving over time",
+          "are searches increasing",
+          "what is the trend in searches and saves"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "اتجاه الطلب",
+          "طالع",
+          "نازل",
+          "ترند",
+          "البحث"
+        ],
+        "keywords_en": [
+          "demand trend",
+          "up",
+          "down",
+          "search trend"
+        ],
+        "entities": []
+      },
+      "answer": {
+        "type": "dynamic",
+        "handler": "dashboard_demand_trend",
+        "responses": {
+          "ar": [
+            "اتجاه الطلب في الفترة الحالية يظهر {{direction}}، مع البحث عند {{searches}} والحفظ عند {{saves}} والإضافة إلى «خطتي» عند {{plans}}."
+          ],
+          "en": [
+            "Demand in the current period is {{direction}}, with {{searches}} searches, {{saves}} saves, and {{plans}} additions to My Plan."
+          ]
+        },
+        "result_shape": "single_answer"
+      },
+      "context": {
+        "applicable_pages": [
+          "لوحة المعلومات",
+          "تحليل الطلب",
+          "*"
+        ],
+        "followup_keys": [
+          "why_trend",
+          "compare_previous_period"
+        ]
+      },
+      "priority": 90
+    },
+    {
+      "id": "dashboard_community_highlight",
+      "category": "dashboard",
+      "purpose": "Return the strongest community highlight from dashboard.",
+      "examples": {
+        "ar": [
+          "وش أبرز مجتمع",
+          "أي مجتمع نشط أكثر",
+          "وش المجتمع اللي طالع",
+          "مين أكثر مجتمع عليه تفاعل",
+          "وش مختصر المجتمعات"
+        ],
+        "en": [
+          "what community stands out",
+          "which community is most active",
+          "what is the top community",
+          "which community has the most engagement",
+          "give me the community highlight"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "مجتمع",
+          "نشط",
+          "تفاعل"
+        ],
+        "keywords_en": [
+          "community",
+          "active",
+          "engagement"
+        ],
+        "entities": []
+      },
+      "answer": {
+        "type": "dynamic",
+        "handler": "dashboard_community_highlight",
+        "responses": {
+          "ar": [
+            "المجتمع الأبرز حاليًا هو {{community}} بتفاعل {{engagement}} ونمو {{growth}}."
+          ],
+          "en": [
+            "The leading community right now is {{community}} with {{engagement}} engagement and {{growth}} growth."
+          ]
+        },
+        "result_shape": "single_answer"
+      },
+      "context": {
+        "applicable_pages": [
+          "لوحة المعلومات",
+          "المجتمعات والاهتمامات",
+          "*"
+        ],
+        "followup_keys": [
+          "community_topics",
+          "second_community"
+        ]
+      },
+      "priority": 88
+    },
+    {
+      "id": "dashboard_compare_period",
+      "category": "dashboard",
+      "purpose": "Compare current dashboard against previous period using existing deltas.",
+      "examples": {
+        "ar": [
+          "قارن بالفترة السابقة",
+          "وش تغير عن الفترة اللي قبل",
+          "هل الأرقام تحسنت",
+          "وش الفرق عن قبل",
+          "قارن الحين بالسابق",
+          "كيف الأداء مقابل الفترة السابقة"
+        ],
+        "en": [
+          "compare with the previous period",
+          "what changed versus the previous period",
+          "did the numbers improve",
+          "how is performance versus the prior period",
+          "compare now with before"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "قارن",
+          "الفترة السابقة",
+          "تغير",
+          "قبل"
+        ],
+        "keywords_en": [
+          "compare",
+          "previous period",
+          "changed",
+          "prior"
+        ],
+        "entities": []
+      },
+      "answer": {
+        "type": "dynamic",
+        "handler": "dashboard_compare_previous_period",
+        "responses": {
+          "ar": [
+            "مقارنة بالفترة السابقة: {{comparison_summary}}. أكبر تغير ظاهر هو {{largest_change}}."
+          ],
+          "en": [
+            "Versus the previous period: {{comparison_summary}}. The largest visible change is {{largest_change}}."
+          ]
+        },
+        "result_shape": "single_answer"
+      },
+      "context": {
+        "applicable_pages": [
+          "لوحة المعلومات",
+          "*"
+        ],
+        "followup_keys": [
+          "explain_largest_change"
+        ]
+      },
+      "priority": 90
+    },
+    {
+      "id": "demand_top_search_term",
+      "category": "demand",
+      "purpose": "Return top search term by demand index.",
+      "examples": {
+        "ar": [
+          "وش أكثر شي الناس تبحث عنه",
+          "وش أعلى مصطلح بحث",
+          "ايش أكثر كلمة بحث",
+          "وش الناس تدور عليه أكثر",
+          "وش البحث الأول",
+          "وش أعلى بحث"
+        ],
+        "en": [
+          "what are people searching for most",
+          "what is the top search term",
+          "which search term is highest",
+          "what do people look for most",
+          "what is the number one search"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "مصطلح بحث",
+          "بحث",
+          "الناس تدور",
+          "أعلى"
+        ],
+        "keywords_en": [
+          "search term",
+          "searching",
+          "look for",
+          "top"
+        ],
+        "entities": []
+      },
+      "answer": {
+        "type": "dynamic",
+        "handler": "demand_top_search_term",
+        "responses": {
+          "ar": [
+            "أعلى مصطلح بحث ضمن الفلاتر الحالية هو {{term}} بمؤشر طلب {{index}}/100 ونمو {{growth}}."
+          ],
+          "en": [
+            "The top search term under the active filters is {{term}} with a {{index}}/100 demand index and {{growth}} growth."
+          ]
+        },
+        "result_shape": "single_answer"
+      },
+      "context": {
+        "applicable_pages": [
+          "تحليل الطلب",
+          "*"
+        ],
+        "followup_keys": [
+          "second_search_term",
+          "why_search_term",
+          "search_term_category"
+        ]
+      },
+      "priority": 98
+    },
+    {
+      "id": "demand_fastest_search_growth",
+      "category": "demand",
+      "purpose": "Return fastest-growing search term.",
+      "examples": {
+        "ar": [
+          "وش أسرع بحث نمو",
+          "ايش البحث اللي قاعد يكبر أسرع",
+          "وش أكثر مصطلح ينمو",
+          "أي بحث نموه أعلى",
+          "وش البحث الصاعد"
+        ],
+        "en": [
+          "which search term is growing fastest",
+          "what search is rising fastest",
+          "what is the fastest growing search",
+          "which query has the highest growth"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "أسرع بحث",
+          "نمو",
+          "مصطلح"
+        ],
+        "keywords_en": [
+          "fastest growing search",
+          "growth",
+          "search term"
+        ],
+        "entities": []
+      },
+      "answer": {
+        "type": "dynamic",
+        "handler": "demand_fastest_search_growth",
+        "responses": {
+          "ar": [
+            "أسرع مصطلح بحث نموًا هو {{term}} بنمو {{growth}}، وينتمي إلى فئة {{category}}."
+          ],
+          "en": [
+            "The fastest-growing search term is {{term}} at {{growth}}, in the {{category}} category."
+          ]
+        },
+        "result_shape": "single_answer"
+      },
+      "context": {
+        "applicable_pages": [
+          "تحليل الطلب",
+          "*"
+        ],
+        "followup_keys": [
+          "why_search_growth",
+          "second_search_growth"
+        ]
+      },
+      "priority": 97
+    },
+    {
+      "id": "demand_search_volume",
+      "category": "demand",
+      "purpose": "Return current search volume.",
+      "examples": {
+        "ar": [
+          "كم عمليات البحث",
+          "كم البحث الحالي",
+          "وش حجم البحث",
+          "كم عدد عمليات البحث الآن",
+          "كم search عندنا"
+        ],
+        "en": [
+          "how many searches are there",
+          "what is the search volume",
+          "how many searches do we have",
+          "what is the current search count"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "كم",
+          "عمليات البحث",
+          "حجم البحث"
+        ],
+        "keywords_en": [
+          "how many searches",
+          "search volume",
+          "search count"
+        ],
+        "entities": []
+      },
+      "answer": {
+        "type": "dynamic",
+        "handler": "demand_search_volume",
+        "responses": {
+          "ar": [
+            "حجم البحث الحالي تحت الفلاتر النشطة هو {{searches}}."
+          ],
+          "en": [
+            "The current search volume under the active filters is {{searches}}."
+          ]
+        },
+        "result_shape": "single_answer"
+      },
+      "context": {
+        "applicable_pages": [
+          "تحليل الطلب",
+          "لوحة المعلومات",
+          "*"
+        ],
+        "followup_keys": []
+      },
+      "priority": 92
+    },
+    {
+      "id": "demand_search_to_plan",
+      "category": "demand",
+      "purpose": "Explain search-to-My Plan path.",
+      "examples": {
+        "ar": [
+          "كيف ينتقل المستخدم من البحث لخطتي",
+          "وش رحلة البحث لخطتي",
+          "كم يوصلون من البحث لخطتي",
+          "كيف الطلب يتحول لتخطيط",
+          "وش العلاقة بين البحث وخطتي"
+        ],
+        "en": [
+          "how do users move from search to My Plan",
+          "what is the path from search to planning",
+          "how many move from search to My Plan",
+          "what is the search to My Plan journey"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "رحلة",
+          "البحث",
+          "خطتي",
+          "تخطيط"
+        ],
+        "keywords_en": [
+          "journey",
+          "search",
+          "My Plan",
+          "planning"
+        ],
+        "entities": []
+      },
+      "answer": {
+        "type": "dynamic",
+        "handler": "demand_search_to_plan",
+        "responses": {
+          "ar": [
+            "ضمن السياق الحالي: البحث {{searches}} → عرض التفاصيل {{views}} → الحفظ {{saves}} → «خطتي» {{plans}}. هذه مراحل منفصلة وليست تحويلًا مضمونًا."
+          ],
+          "en": [
+            "In the current context: {{searches}} searches → {{views}} detail views → {{saves}} saves → {{plans}} My Plan additions. These are separate stages, not a guaranteed conversion."
+          ]
+        },
+        "result_shape": "single_answer"
+      },
+      "context": {
+        "applicable_pages": [
+          "تحليل الطلب",
+          "*"
+        ],
+        "followup_keys": [
+          "save_to_plan_rate",
+          "plan_to_action_rate"
+        ]
+      },
+      "priority": 94
+    },
+    {
+      "id": "demand_save_to_plan_rate",
+      "category": "demand",
+      "purpose": "Return save-to-My Plan ratio.",
+      "examples": {
+        "ar": [
+          "كم نسبة الحفظ إلى خطتي",
+          "كم يتحول من الحفظ لخطتي",
+          "وش نسبة اللي يحفظون وبعدين يضيفون للخطة",
+          "نسبة save to plan كم"
+        ],
+        "en": [
+          "what is the save to My Plan rate",
+          "how many saves become My Plan additions",
+          "what percentage moves from saves to My Plan",
+          "what is save to plan"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "نسبة",
+          "الحفظ",
+          "خطتي"
+        ],
+        "keywords_en": [
+          "rate",
+          "saves",
+          "My Plan"
+        ],
+        "entities": []
+      },
+      "answer": {
+        "type": "dynamic",
+        "handler": "demand_save_to_plan_rate",
+        "responses": {
+          "ar": [
+            "ينتقل نحو {{rate}} من الحفظ إلى «خطتي» ضمن الفلاتر الحالية: {{saves}} حفظ مقابل {{plans}} إضافة إلى «خطتي»."
+          ],
+          "en": [
+            "About {{rate}} moves from saves to My Plan under the active filters: {{saves}} saves versus {{plans}} My Plan additions."
+          ]
+        },
+        "result_shape": "single_answer"
+      },
+      "context": {
+        "applicable_pages": [
+          "تحليل الطلب",
+          "*"
+        ],
+        "followup_keys": [
+          "search_to_plan",
+          "plan_to_action_rate"
+        ]
+      },
+      "priority": 94
+    },
+    {
+      "id": "demand_plan_to_action_rate",
+      "category": "demand",
+      "purpose": "Return My Plan-to-action ratio.",
+      "examples": {
+        "ar": [
+          "كم ينتقل من خطتي للإجراء",
+          "وش نسبة خطتي إلى الإجراء",
+          "كم من التخطيط يوصل للإجراء",
+          "نسبة plan to action"
+        ],
+        "en": [
+          "what is the My Plan to action rate",
+          "how many plans reach action",
+          "what percentage goes from planning to action"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "خطتي",
+          "الإجراء",
+          "نسبة"
+        ],
+        "keywords_en": [
+          "My Plan",
+          "action",
+          "rate"
+        ],
+        "entities": []
+      },
+      "answer": {
+        "type": "dynamic",
+        "handler": "demand_plan_to_action_rate",
+        "responses": {
+          "ar": [
+            "من {{plans}} إضافة إلى «خطتي»، يصل نحو {{actions}} إلى الانتقال للإجراء، بنسبة تقريبية {{rate}} ضمن النموذج."
+          ],
+          "en": [
+            "From {{plans}} My Plan additions, about {{actions}} reach action handoff, an illustrative rate of {{rate}}."
+          ]
+        },
+        "result_shape": "single_answer"
+      },
+      "context": {
+        "applicable_pages": [
+          "تحليل الطلب",
+          "*"
+        ],
+        "followup_keys": [
+          "demand_funnel_summary"
+        ]
+      },
+      "priority": 92
+    },
+    {
+      "id": "demand_audience_compare",
+      "category": "demand",
+      "purpose": "Compare residents and visitors in demand.",
+      "examples": {
+        "ar": [
+          "قارن السكان والزوار",
+          "وش الفرق بين سكان مكة والزوار",
+          "مين يبحث أكثر السكان ولا الزوار",
+          "كيف يختلف الطلب بين السكان والزوار",
+          "قارن الجمهورين"
+        ],
+        "en": [
+          "compare residents and visitors",
+          "what is the difference between residents and visitors",
+          "who searches more residents or visitors",
+          "how does demand differ by audience"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "السكان",
+          "الزوار",
+          "قارن",
+          "الجمهور"
+        ],
+        "keywords_en": [
+          "residents",
+          "visitors",
+          "compare",
+          "audience"
+        ],
+        "entities": [
+          "audience"
+        ]
+      },
+      "answer": {
+        "type": "dynamic",
+        "handler": "demand_audience_compare",
+        "responses": {
+          "ar": [
+            "ضمن النموذج الحالي: سكان مكة يمثلون نحو {{resident_searches}} من البحث مقابل {{visitor_searches}} للزوار. {{comparison_note}}."
+          ],
+          "en": [
+            "In the current model, Makkah residents account for about {{resident_searches}} searches versus {{visitor_searches}} for visitors. {{comparison_note}}."
+          ]
+        },
+        "result_shape": "single_answer"
+      },
+      "context": {
+        "applicable_pages": [
+          "تحليل الطلب",
+          "*"
+        ],
+        "followup_keys": [
+          "residents_only",
+          "visitors_only",
+          "audience_plan_compare"
+        ]
+      },
+      "priority": 98
+    },
+    {
+      "id": "demand_residents_profile",
+      "category": "demand",
+      "purpose": "Summarize residents demand under current filters.",
+      "examples": {
+        "ar": [
+          "وش وضع سكان مكة",
+          "حلل لي السكان",
+          "وش يبحث عنه السكان",
+          "كيف طلب السكان",
+          "اعطني ملخص سكان مكة"
+        ],
+        "en": [
+          "what about Makkah residents",
+          "analyze residents",
+          "what are residents searching for",
+          "how is resident demand",
+          "summarize residents"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "سكان مكة",
+          "السكان"
+        ],
+        "keywords_en": [
+          "Makkah residents",
+          "residents"
+        ],
+        "entities": [
+          "audience"
+        ]
+      },
+      "answer": {
+        "type": "dynamic",
+        "handler": "demand_residents_profile",
+        "responses": {
+          "ar": [
+            "لسكان مكة ضمن السياق الحالي: البحث {{searches}}، «خطتي» {{plans}}، والإجراء {{actions}}. أبرز نمط ظاهر: {{highlight}}."
+          ],
+          "en": [
+            "For Makkah residents in the current context: {{searches}} searches, {{plans}} My Plan additions, and {{actions}} action handoffs. Main pattern: {{highlight}}."
+          ]
+        },
+        "result_shape": "single_answer"
+      },
+      "context": {
+        "applicable_pages": [
+          "تحليل الطلب",
+          "*"
+        ],
+        "followup_keys": []
+      },
+      "priority": 90
+    },
+    {
+      "id": "demand_visitors_profile",
+      "category": "demand",
+      "purpose": "Summarize visitors demand under current filters.",
+      "examples": {
+        "ar": [
+          "وش وضع الزوار",
+          "حلل لي الزوار",
+          "وش يبحث عنه الزوار",
+          "كيف طلب الزوار",
+          "اعطني ملخص الزوار"
+        ],
+        "en": [
+          "what about visitors",
+          "analyze visitors",
+          "what are visitors searching for",
+          "how is visitor demand",
+          "summarize visitors"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "الزوار",
+          "زوار"
+        ],
+        "keywords_en": [
+          "visitors"
+        ],
+        "entities": [
+          "audience"
+        ]
+      },
+      "answer": {
+        "type": "dynamic",
+        "handler": "demand_visitors_profile",
+        "responses": {
+          "ar": [
+            "للزوار ضمن السياق الحالي: البحث {{searches}}، «خطتي» {{plans}}، والإجراء {{actions}}. أبرز نمط ظاهر: {{highlight}}."
+          ],
+          "en": [
+            "For visitors in the current context: {{searches}} searches, {{plans}} My Plan additions, and {{actions}} action handoffs. Main pattern: {{highlight}}."
+          ]
+        },
+        "result_shape": "single_answer"
+      },
+      "context": {
+        "applicable_pages": [
+          "تحليل الطلب",
+          "*"
+        ],
+        "followup_keys": []
+      },
+      "priority": 90
+    },
+    {
+      "id": "demand_funnel_summary",
+      "category": "demand",
+      "purpose": "Summarize the complete demand funnel.",
+      "examples": {
+        "ar": [
+          "لخص قمع الطلب",
+          "اشرح رحلة الطلب بالأرقام",
+          "وش القمع كامل",
+          "اعطني funnel الطلب",
+          "من البحث للإجراء وش يصير"
+        ],
+        "en": [
+          "summarize the demand funnel",
+          "show me the demand funnel",
+          "explain the demand journey with numbers",
+          "what happens from search to action"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "قمع",
+          "رحلة الطلب",
+          "من البحث للإجراء"
+        ],
+        "keywords_en": [
+          "funnel",
+          "demand journey",
+          "search to action"
+        ],
+        "entities": []
+      },
+      "answer": {
+        "type": "dynamic",
+        "handler": "demand_funnel_summary",
+        "responses": {
+          "ar": [
+            "رحلة الطلب الحالية: بحث {{searches}} → تفاصيل {{views}} → حفظ {{saves}} → «خطتي» {{plans}} → إجراء {{actions}}. أكبر انخفاض بين مرحلتين يظهر في {{largest_drop_stage}}."
+          ],
+          "en": [
+            "Current demand journey: {{searches}} searches → {{views}} detail views → {{saves}} saves → {{plans}} My Plan additions → {{actions}} action handoffs. The largest stage drop appears at {{largest_drop_stage}}."
+          ]
+        },
+        "result_shape": "single_answer"
+      },
+      "context": {
+        "applicable_pages": [
+          "تحليل الطلب",
+          "*"
+        ],
+        "followup_keys": [
+          "why_largest_drop"
+        ]
+      },
+      "priority": 95
+    },
+    {
+      "id": "areas_top_demand_area",
+      "category": "areas",
+      "purpose": "Return area with highest demand under context.",
+      "examples": {
+        "ar": [
+          "وش أعلى منطقة طلب",
+          "أي منطقة عليها طلب أكثر",
+          "وين الطلب أعلى",
+          "أي حي طلبه أعلى",
+          "وش المنطقة الأولى بالطلب",
+          "وين أقوى طلب"
+        ],
+        "en": [
+          "which area has the highest demand",
+          "where is demand highest",
+          "what area has the most demand",
+          "which neighborhood leads demand"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "أعلى منطقة",
+          "طلب",
+          "حي"
+        ],
+        "keywords_en": [
+          "highest demand",
+          "area",
+          "neighborhood"
+        ],
+        "entities": [
+          "area"
+        ]
+      },
+      "answer": {
+        "type": "dynamic",
+        "handler": "areas_top_demand_area",
+        "responses": {
+          "ar": [
+            "أعلى منطقة طلبًا ضمن السياق الحالي هي {{area}} بمؤشر طلب {{demand_index}}/100."
+          ],
+          "en": [
+            "The highest-demand area in the current context is {{area}} with a {{demand_index}}/100 demand index."
+          ]
+        },
+        "result_shape": "single_answer"
+      },
+      "context": {
+        "applicable_pages": [
+          "تحليل المناطق",
+          "*"
+        ],
+        "followup_keys": [
+          "second_area",
+          "area_top_category",
+          "compare_areas"
+        ]
+      },
+      "priority": 98
+    },
+    {
+      "id": "areas_fastest_growth_area",
+      "category": "areas",
+      "purpose": "Return fastest-growing area.",
+      "examples": {
+        "ar": [
+          "أي منطقة نموها أعلى",
+          "وش أسرع حي نمو",
+          "وين الطلب ينمو أسرع",
+          "وش أعلى منطقة في النمو",
+          "أي حي قاعد يتسارع"
+        ],
+        "en": [
+          "which area has the highest growth",
+          "what is the fastest-growing neighborhood",
+          "where is demand growing fastest",
+          "which area is accelerating"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "نمو",
+          "منطقة",
+          "حي",
+          "أسرع"
+        ],
+        "keywords_en": [
+          "growth",
+          "area",
+          "neighborhood",
+          "fastest"
+        ],
+        "entities": [
+          "area"
+        ]
+      },
+      "answer": {
+        "type": "dynamic",
+        "handler": "areas_fastest_growth_area",
+        "responses": {
+          "ar": [
+            "أعلى نمو يظهر في {{area}} بنحو {{growth}} ضمن الفلاتر الحالية."
+          ],
+          "en": [
+            "The highest growth appears in {{area}} at about {{growth}} under the active filters."
+          ]
+        },
+        "result_shape": "single_answer"
+      },
+      "context": {
+        "applicable_pages": [
+          "تحليل المناطق",
+          "لوحة المعلومات",
+          "*"
+        ],
+        "followup_keys": [
+          "why_area_growth",
+          "compare_areas"
+        ]
+      },
+      "priority": 97
+    },
+    {
+      "id": "areas_selected_profile",
+      "category": "areas",
+      "purpose": "Summarize currently selected area profile.",
+      "examples": {
+        "ar": [
+          "لخص لي المنطقة الحالية",
+          "وش وضع هذي المنطقة",
+          "اعطني ملف المنطقة",
+          "حلل المنطقة المختارة",
+          "وش مؤشرات الحي الحالي",
+          "اعطني ملخص الحي"
+        ],
+        "en": [
+          "summarize the selected area",
+          "what is the current area profile",
+          "analyze this area",
+          "give me the area profile",
+          "what are this area's indicators"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "ملف المنطقة",
+          "المنطقة الحالية",
+          "الحي",
+          "مؤشرات"
+        ],
+        "keywords_en": [
+          "area profile",
+          "selected area",
+          "indicators"
+        ],
+        "entities": [
+          "area"
+        ]
+      },
+      "answer": {
+        "type": "dynamic",
+        "handler": "areas_selected_profile",
+        "responses": {
+          "ar": [
+            "ملف {{area}}: مستوى الاهتمام {{interest}}/100، نمو الطلب {{growth}}، الفئة الأبرز {{top_category}}، ووقت الذروة {{peak_time}}."
+          ],
+          "en": [
+            "{{area}} profile: {{interest}}/100 interest level, {{growth}} demand growth, {{top_category}} as the leading category, and {{peak_time}} as peak time."
+          ]
+        },
+        "result_shape": "single_answer"
+      },
+      "context": {
+        "applicable_pages": [
+          "تحليل المناطق",
+          "*"
+        ],
+        "followup_keys": [
+          "area_top_category",
+          "area_gap",
+          "area_peak_time"
+        ]
+      },
+      "priority": 96
+    },
+    {
+      "id": "areas_top_category_in_area",
+      "category": "areas",
+      "purpose": "Return leading category in selected/named area.",
+      "examples": {
+        "ar": [
+          "وش أعلى فئة في المنطقة",
+          "وش أكثر فئة مطلوبة هنا",
+          "وش الفئة الأبرز في هذا الحي",
+          "في العزيزية وش أعلى فئة",
+          "أي قطاع متصدر بالمنطقة"
+        ],
+        "en": [
+          "what is the top category in this area",
+          "what category leads here",
+          "which category has the highest demand in this neighborhood",
+          "what is the leading sector in this area"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "فئة",
+          "المنطقة",
+          "الحي",
+          "متصدر"
+        ],
+        "keywords_en": [
+          "category",
+          "area",
+          "neighborhood",
+          "leading sector"
+        ],
+        "entities": [
+          "area",
+          "category"
+        ]
+      },
+      "answer": {
+        "type": "dynamic",
+        "handler": "areas_top_category",
+        "responses": {
+          "ar": [
+            "الفئة الأبرز في {{area}} هي {{category}} بمؤشر طلب {{demand_index}}/100 ونمو {{growth}}."
+          ],
+          "en": [
+            "The leading category in {{area}} is {{category}} with a {{demand_index}}/100 demand index and {{growth}} growth."
+          ]
+        },
+        "result_shape": "single_answer"
+      },
+      "context": {
+        "applicable_pages": [
+          "تحليل المناطق",
+          "*"
+        ],
+        "followup_keys": [
+          "area_category_supply",
+          "second_category"
+        ]
+      },
+      "priority": 97
+    },
+    {
+      "id": "areas_peak_time",
+      "category": "areas",
+      "purpose": "Return peak time for selected area from current model.",
+      "examples": {
+        "ar": [
+          "متى وقت الذروة",
+          "وش وقت الذروة في المنطقة",
+          "متى النشاط أعلى",
+          "أي ساعة الذروة",
+          "متى الحي يكون أنشط"
+        ],
+        "en": [
+          "what is the peak time",
+          "when is the area busiest",
+          "what time is activity highest",
+          "when is the peak period"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "وقت الذروة",
+          "متى",
+          "أنشط"
+        ],
+        "keywords_en": [
+          "peak time",
+          "busiest",
+          "activity highest"
+        ],
+        "entities": [
+          "area"
+        ]
+      },
+      "answer": {
+        "type": "dynamic",
+        "handler": "areas_peak_time",
+        "responses": {
+          "ar": [
+            "وقت الذروة التجريبي في {{area}} هو {{peak_time}}."
+          ],
+          "en": [
+            "The illustrative peak time in {{area}} is {{peak_time}}."
+          ]
+        },
+        "result_shape": "single_answer"
+      },
+      "context": {
+        "applicable_pages": [
+          "تحليل المناطق",
+          "*"
+        ],
+        "followup_keys": []
+      },
+      "priority": 88
+    },
+    {
+      "id": "areas_demand_supply_gap",
+      "category": "areas",
+      "purpose": "Return largest demand-supply gap within selected area.",
+      "examples": {
+        "ar": [
+          "وين أكبر فجوة في المنطقة",
+          "وش الفئة اللي طلبها أعلى من عرضها",
+          "أكبر فرق طلب وعرض هنا",
+          "وش الفجوة في هذا الحي",
+          "أي فئة عرضها أقل من طلبها"
+        ],
+        "en": [
+          "what is the largest gap in this area",
+          "which category has demand above supply",
+          "what is the biggest demand supply gap here",
+          "which category is undersupplied"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "فجوة",
+          "طلب",
+          "عرض",
+          "فرق"
+        ],
+        "keywords_en": [
+          "gap",
+          "demand",
+          "supply",
+          "difference"
+        ],
+        "entities": [
+          "area",
+          "category"
+        ]
+      },
+      "answer": {
+        "type": "dynamic",
+        "handler": "areas_demand_supply_gap",
+        "responses": {
+          "ar": [
+            "أكبر فجوة داخل {{area}} تظهر في {{category}}: الطلب {{demand_index}}/100 مقابل العرض {{supply_index}}/100، بفارق {{gap}} نقطة."
+          ],
+          "en": [
+            "The largest gap within {{area}} appears in {{category}}: {{demand_index}}/100 demand versus {{supply_index}}/100 supply, a {{gap}}-point difference."
+          ]
+        },
+        "result_shape": "single_answer"
+      },
+      "context": {
+        "applicable_pages": [
+          "تحليل المناطق",
+          "الفرص والفجوات",
+          "*"
+        ],
+        "followup_keys": [
+          "why_gap",
+          "area_signal"
+        ]
+      },
+      "priority": 98
+    },
+    {
+      "id": "areas_compare_two",
+      "category": "areas",
+      "purpose": "Compare two named areas.",
+      "examples": {
+        "ar": [
+          "قارن العزيزية والعوالي",
+          "قارن منطقتين",
+          "وش الفرق بين الشوقية والنسيم",
+          "مين أعلى بين العزيزية والشوقية",
+          "قارن هالحيين"
+        ],
+        "en": [
+          "compare Al Aziziyah and Al Awali",
+          "compare two areas",
+          "what is the difference between Ash Shawqiyah and An Naseem",
+          "which area is higher between these two"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "قارن",
+          "منطقتين",
+          "حيين"
+        ],
+        "keywords_en": [
+          "compare",
+          "two areas"
+        ],
+        "entities": [
+          "area_a",
+          "area_b"
+        ]
+      },
+      "answer": {
+        "type": "dynamic",
+        "handler": "areas_compare_two",
+        "responses": {
+          "ar": [
+            "مقارنة {{area_a}} و{{area_b}}: الطلب {{demand_a}} مقابل {{demand_b}}، النمو {{growth_a}} مقابل {{growth_b}}، وأقوى فئة {{category_a}} مقابل {{category_b}}."
+          ],
+          "en": [
+            "Comparing {{area_a}} and {{area_b}}: demand {{demand_a}} versus {{demand_b}}, growth {{growth_a}} versus {{growth_b}}, and leading category {{category_a}} versus {{category_b}}."
+          ]
+        },
+        "result_shape": "comparison"
+      },
+      "context": {
+        "applicable_pages": [
+          "تحليل المناطق",
+          "*"
+        ],
+        "followup_keys": [
+          "which_area_stronger_demand",
+          "which_area_bigger_gap"
+        ]
+      },
+      "priority": 99
+    },
+    {
+      "id": "areas_signal_index",
+      "category": "areas",
+      "purpose": "Return highest signal within selected area.",
+      "examples": {
+        "ar": [
+          "وش أعلى إشارة في المنطقة",
+          "ايش أقوى signal هنا",
+          "وش مؤشر الإشارة الأعلى بالحي",
+          "وين أقوى إشارة في هذي المنطقة"
+        ],
+        "en": [
+          "what is the strongest signal in this area",
+          "what is the highest signal here",
+          "which category has the top signal index in this area"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "إشارة",
+          "المنطقة",
+          "مؤشر"
+        ],
+        "keywords_en": [
+          "signal",
+          "area",
+          "signal index"
+        ],
+        "entities": [
+          "area",
+          "category"
+        ]
+      },
+      "answer": {
+        "type": "dynamic",
+        "handler": "areas_top_signal",
+        "responses": {
+          "ar": [
+            "أعلى إشارة في {{area}} هي {{category}} بمؤشر {{score}}/100. الإشارة للتحقق والدراسة وليست ضمانًا للجدوى."
+          ],
+          "en": [
+            "The strongest signal in {{area}} is {{category}} at {{score}}/100. It is for validation and study, not a feasibility guarantee."
+          ]
+        },
+        "result_shape": "single_answer"
+      },
+      "context": {
+        "applicable_pages": [
+          "تحليل المناطق",
+          "الفرص والفجوات",
+          "*"
+        ],
+        "followup_keys": []
+      },
+      "priority": 94
+    },
+    {
+      "id": "areas_category_across_areas",
+      "category": "areas",
+      "purpose": "Compare one category across areas.",
+      "examples": {
+        "ar": [
+          "وين المطاعم أعلى",
+          "أي منطقة أعلى في فئة المطاعم",
+          "وين الثقافة أقوى",
+          "قارن فئة وحدة بين المناطق",
+          "أي حي أعلى للأنشطة"
+        ],
+        "en": [
+          "where are restaurants highest",
+          "which area leads for restaurants",
+          "where is culture strongest",
+          "compare one category across areas",
+          "which area leads for activities"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "وين",
+          "فئة",
+          "المطاعم",
+          "الثقافة",
+          "الأنشطة"
+        ],
+        "keywords_en": [
+          "where",
+          "category",
+          "restaurants",
+          "culture",
+          "activities"
+        ],
+        "entities": [
+          "category",
+          "area"
+        ]
+      },
+      "answer": {
+        "type": "dynamic",
+        "handler": "areas_category_across_areas",
+        "responses": {
+          "ar": [
+            "لفئة {{category}}، أعلى منطقة حاليًا هي {{area}} بمؤشر طلب {{demand_index}}/100 ونمو {{growth}}."
+          ],
+          "en": [
+            "For {{category}}, the leading area is currently {{area}} with a {{demand_index}}/100 demand index and {{growth}} growth."
+          ]
+        },
+        "result_shape": "single_answer"
+      },
+      "context": {
+        "applicable_pages": [
+          "تحليل المناطق",
+          "*"
+        ],
+        "followup_keys": [
+          "second_area_for_category",
+          "category_gap"
+        ]
+      },
+      "priority": 95
+    },
+    {
+      "id": "activities_top_views",
+      "category": "activities",
+      "purpose": "Return most-viewed activity.",
+      "examples": {
+        "ar": [
+          "وش أكثر نشاط مشاهدة",
+          "ايش النشاط الأكثر مشاهدة",
+          "مين أعلى بالمشاهدات",
+          "وش أكثر تجربة عليها views",
+          "أعلى نشاط عرض"
+        ],
+        "en": [
+          "what is the most viewed activity",
+          "which activity has the most views",
+          "what experience gets the most views",
+          "top activity by views"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "نشاط",
+          "مشاهدة",
+          "مشاهدات"
+        ],
+        "keywords_en": [
+          "activity",
+          "views",
+          "most viewed"
+        ],
+        "entities": [
+          "activity"
+        ]
+      },
+      "answer": {
+        "type": "dynamic",
+        "handler": "activities_top_views",
+        "responses": {
+          "ar": [
+            "أكثر نشاط مشاهدة ضمن الفلاتر الحالية هو {{activity}} بعدد {{views}} مشاهدة."
+          ],
+          "en": [
+            "The most-viewed activity under the active filters is {{activity}} with {{views}} views."
+          ]
+        },
+        "result_shape": "single_answer"
+      },
+      "context": {
+        "applicable_pages": [
+          "الأنشطة والتجارب",
+          "*"
+        ],
+        "followup_keys": [
+          "second_activity_views",
+          "activity_detail"
+        ]
+      },
+      "priority": 98
+    },
+    {
+      "id": "activities_top_saves",
+      "category": "activities",
+      "purpose": "Return most-saved activity.",
+      "examples": {
+        "ar": [
+          "وش أكثر نشاط حفظ",
+          "ايش النشاط الأكثر حفظ",
+          "مين أعلى بالحفظ",
+          "وش التجربة اللي تنحفظ أكثر",
+          "أعلى نشاط saves"
+        ],
+        "en": [
+          "what is the most saved activity",
+          "which activity has the most saves",
+          "what experience gets saved most",
+          "top activity by saves"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "نشاط",
+          "حفظ"
+        ],
+        "keywords_en": [
+          "activity",
+          "saves",
+          "most saved"
+        ],
+        "entities": [
+          "activity"
+        ]
+      },
+      "answer": {
+        "type": "dynamic",
+        "handler": "activities_top_saves",
+        "responses": {
+          "ar": [
+            "أكثر نشاط حفظًا هو {{activity}} بعدد {{saves}} حفظ."
+          ],
+          "en": [
+            "The most-saved activity is {{activity}} with {{saves}} saves."
+          ]
+        },
+        "result_shape": "single_answer"
+      },
+      "context": {
+        "applicable_pages": [
+          "الأنشطة والتجارب",
+          "*"
+        ],
+        "followup_keys": [
+          "second_activity_saves",
+          "activity_detail"
+        ]
+      },
+      "priority": 98
+    },
+    {
+      "id": "activities_top_plans",
+      "category": "activities",
+      "purpose": "Return activity with most My Plan additions.",
+      "examples": {
+        "ar": [
+          "وش أكثر نشاط ينضاف لخطتي",
+          "ايش الأعلى في خطتي",
+          "وش النشاط الأكثر إضافة للخطة",
+          "مين متصدر خطتي",
+          "وش أكثر تجربة الناس تخطط لها"
+        ],
+        "en": [
+          "which activity is added to My Plan most",
+          "what is the top activity in My Plan",
+          "which experience gets planned most",
+          "what activity has the most My Plan additions"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "خطتي",
+          "نشاط",
+          "تخطط"
+        ],
+        "keywords_en": [
+          "My Plan",
+          "activity",
+          "planned"
+        ],
+        "entities": [
+          "activity"
+        ]
+      },
+      "answer": {
+        "type": "dynamic",
+        "handler": "activities_top_plans",
+        "responses": {
+          "ar": [
+            "أكثر نشاط إضافة إلى «خطتي» هو {{activity}} بعدد {{plans}}، مع نمو {{growth}}."
+          ],
+          "en": [
+            "The activity most often added to My Plan is {{activity}} with {{plans}} additions and {{growth}} growth."
+          ]
+        },
+        "result_shape": "single_answer"
+      },
+      "context": {
+        "applicable_pages": [
+          "الأنشطة والتجارب",
+          "لوحة المعلومات",
+          "*"
+        ],
+        "followup_keys": [
+          "why_activity_plans",
+          "second_activity_plans",
+          "activity_detail"
+        ]
+      },
+      "priority": 100
+    },
+    {
+      "id": "activities_top_joins",
+      "category": "activities",
+      "purpose": "Return activity with highest join/attendance intent.",
+      "examples": {
+        "ar": [
+          "وش أعلى نشاط في نية الحضور",
+          "وش أكثر نشاط الناس تبغى تنضم له",
+          "مين أعلى انضمام",
+          "وش النشاط الأعلى joins",
+          "أعلى نية حضور"
+        ],
+        "en": [
+          "which activity has the highest attendance intent",
+          "what activity has the most joins",
+          "which activity do people want to attend most",
+          "top activity by join intent"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "نية الحضور",
+          "انضمام",
+          "نشاط"
+        ],
+        "keywords_en": [
+          "attendance intent",
+          "joins",
+          "activity"
+        ],
+        "entities": [
+          "activity"
+        ]
+      },
+      "answer": {
+        "type": "dynamic",
+        "handler": "activities_top_joins",
+        "responses": {
+          "ar": [
+            "أعلى نية حضور تظهر في {{activity}} بعدد {{joins}}."
+          ],
+          "en": [
+            "The highest attendance intent appears for {{activity}} with {{joins}} joins."
+          ]
+        },
+        "result_shape": "single_answer"
+      },
+      "context": {
+        "applicable_pages": [
+          "الأنشطة والتجارب",
+          "*"
+        ],
+        "followup_keys": []
+      },
+      "priority": 94
+    },
+    {
+      "id": "activities_top_actions",
+      "category": "activities",
+      "purpose": "Return activity with most action handoffs.",
+      "examples": {
+        "ar": [
+          "وش أعلى نشاط بالإجراء",
+          "وش أكثر نشاط ينتقلون منه للإجراء",
+          "مين أعلى action",
+          "أعلى نشاط انتقال للإجراء",
+          "وش النشاط الأقرب للفعل"
+        ],
+        "en": [
+          "which activity has the most action handoffs",
+          "what activity leads in actions",
+          "which activity sends the most users to action",
+          "top activity by action"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "الإجراء",
+          "نشاط",
+          "انتقال"
+        ],
+        "keywords_en": [
+          "action handoff",
+          "activity",
+          "actions"
+        ],
+        "entities": [
+          "activity"
+        ]
+      },
+      "answer": {
+        "type": "dynamic",
+        "handler": "activities_top_actions",
+        "responses": {
+          "ar": [
+            "أعلى انتقال للإجراء يظهر في {{activity}} بعدد {{actions}}."
+          ],
+          "en": [
+            "The highest action handoff appears for {{activity}} with {{actions}} actions."
+          ]
+        },
+        "result_shape": "single_answer"
+      },
+      "context": {
+        "applicable_pages": [
+          "الأنشطة والتجارب",
+          "*"
+        ],
+        "followup_keys": []
+      },
+      "priority": 95
+    },
+    {
+      "id": "activities_top_completion",
+      "category": "activities",
+      "purpose": "Return activity with highest completion.",
+      "examples": {
+        "ar": [
+          "وش أعلى نشاط بالإكمال",
+          "ايش النشاط اللي يكملونه أكثر",
+          "مين أعلى completion",
+          "وش أكثر تجربة مكتملة",
+          "أعلى إكمال"
+        ],
+        "en": [
+          "which activity has the most completions",
+          "what activity is completed most",
+          "top activity by completion",
+          "which experience has the highest completion"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "إكمال",
+          "مكتملة",
+          "نشاط"
+        ],
+        "keywords_en": [
+          "completion",
+          "completed",
+          "activity"
+        ],
+        "entities": [
+          "activity"
+        ]
+      },
+      "answer": {
+        "type": "dynamic",
+        "handler": "activities_top_completion",
+        "responses": {
+          "ar": [
+            "أعلى إكمال يظهر في {{activity}} بعدد {{complete}}."
+          ],
+          "en": [
+            "The highest completion appears for {{activity}} with {{complete}} completions."
+          ]
+        },
+        "result_shape": "single_answer"
+      },
+      "context": {
+        "applicable_pages": [
+          "الأنشطة والتجارب",
+          "*"
+        ],
+        "followup_keys": []
+      },
+      "priority": 92
+    },
+    {
+      "id": "activities_fastest_growth",
+      "category": "activities",
+      "purpose": "Return fastest-growing activity.",
+      "examples": {
+        "ar": [
+          "وش أسرع نشاط نمو",
+          "أي نشاط قاعد يكبر أسرع",
+          "وش النشاط الأعلى نمو",
+          "مين أسرع تجربة نمو",
+          "وش النشاط الصاعد"
+        ],
+        "en": [
+          "which activity is growing fastest",
+          "what is the fastest-growing activity",
+          "which experience has the highest growth",
+          "what activity is rising fastest"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "أسرع",
+          "نشاط",
+          "نمو"
+        ],
+        "keywords_en": [
+          "fastest-growing",
+          "activity",
+          "growth"
+        ],
+        "entities": [
+          "activity"
+        ]
+      },
+      "answer": {
+        "type": "dynamic",
+        "handler": "activities_fastest_growth",
+        "responses": {
+          "ar": [
+            "أسرع نشاط نموًا ضمن الفلاتر الحالية هو {{activity}} بنمو {{growth}}."
+          ],
+          "en": [
+            "The fastest-growing activity under the active filters is {{activity}} at {{growth}} growth."
+          ]
+        },
+        "result_shape": "single_answer"
+      },
+      "context": {
+        "applicable_pages": [
+          "الأنشطة والتجارب",
+          "*"
+        ],
+        "followup_keys": [
+          "activity_detail",
+          "second_activity_growth"
+        ]
+      },
+      "priority": 96
+    },
+    {
+      "id": "activities_detail",
+      "category": "activities",
+      "purpose": "Return detailed metrics for a named activity.",
+      "examples": {
+        "ar": [
+          "اعطني تفاصيل النشاط",
+          "وش أرقام جولة ذاكرة مكة",
+          "حلل لي تجربة القهوة السعودية",
+          "وش أداء النشاط هذا",
+          "اعطني كل مؤشرات هالنشاط",
+          "كيف أداء ورشة الحرف المحلية"
+        ],
+        "en": [
+          "give me activity details",
+          "show metrics for Makkah Memory Walk",
+          "analyze Saudi Coffee Experience",
+          "how is this activity performing",
+          "give me all metrics for this activity"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "تفاصيل",
+          "أداء",
+          "نشاط"
+        ],
+        "keywords_en": [
+          "details",
+          "performance",
+          "activity"
+        ],
+        "entities": [
+          "activity"
+        ]
+      },
+      "answer": {
+        "type": "dynamic",
+        "handler": "activities_detail",
+        "responses": {
+          "ar": [
+            "أداء {{activity}}: مشاهدة {{views}}، حفظ {{saves}}، «خطتي» {{plans}}، انضمام {{joins}}، إجراء {{actions}}، إكمال {{complete}}، ونمو {{growth}}."
+          ],
+          "en": [
+            "{{activity}} performance: {{views}} views, {{saves}} saves, {{plans}} My Plan additions, {{joins}} joins, {{actions}} actions, {{complete}} completions, and {{growth}} growth."
+          ]
+        },
+        "result_shape": "single_answer"
+      },
+      "context": {
+        "applicable_pages": [
+          "الأنشطة والتجارب",
+          "*"
+        ],
+        "followup_keys": [
+          "compare_activities"
+        ]
+      },
+      "priority": 97
+    },
+    {
+      "id": "activities_compare_two",
+      "category": "activities",
+      "purpose": "Compare two named activities.",
+      "examples": {
+        "ar": [
+          "قارن نشاطين",
+          "قارن جولة ذاكرة مكة وتجربة القهوة السعودية",
+          "وش الفرق بين هالنشاطين",
+          "مين أفضل في الحفظ بينهم",
+          "قارن التجربتين"
+        ],
+        "en": [
+          "compare two activities",
+          "compare Makkah Memory Walk and Saudi Coffee Experience",
+          "what is the difference between these activities",
+          "compare the two experiences"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "قارن",
+          "نشاطين",
+          "تجربتين"
+        ],
+        "keywords_en": [
+          "compare",
+          "two activities",
+          "two experiences"
+        ],
+        "entities": [
+          "activity_a",
+          "activity_b"
+        ]
+      },
+      "answer": {
+        "type": "dynamic",
+        "handler": "activities_compare_two",
+        "responses": {
+          "ar": [
+            "مقارنة {{activity_a}} و{{activity_b}}: المشاهدة {{views_a}} مقابل {{views_b}}، الحفظ {{saves_a}} مقابل {{saves_b}}، «خطتي» {{plans_a}} مقابل {{plans_b}}، والإجراء {{actions_a}} مقابل {{actions_b}}."
+          ],
+          "en": [
+            "Comparing {{activity_a}} and {{activity_b}}: {{views_a}} vs {{views_b}} views, {{saves_a}} vs {{saves_b}} saves, {{plans_a}} vs {{plans_b}} My Plan additions, and {{actions_a}} vs {{actions_b}} actions."
+          ]
+        },
+        "result_shape": "comparison"
+      },
+      "context": {
+        "applicable_pages": [
+          "الأنشطة والتجارب",
+          "*"
+        ],
+        "followup_keys": []
+      },
+      "priority": 99
+    },
+    {
+      "id": "activities_funnel_summary",
+      "category": "activities",
+      "purpose": "Summarize aggregate activity interaction funnel.",
+      "examples": {
+        "ar": [
+          "لخص قمع الأنشطة",
+          "وش رحلة التفاعل للأنشطة",
+          "من المشاهدة للإكمال وش يصير",
+          "اعطني funnel الأنشطة",
+          "وين أكبر نزول في الأنشطة"
+        ],
+        "en": [
+          "summarize the activity funnel",
+          "what is the activity interaction journey",
+          "what happens from views to completion",
+          "show me the activities funnel",
+          "where is the biggest drop"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "قمع",
+          "الأنشطة",
+          "المشاهدة",
+          "الإكمال"
+        ],
+        "keywords_en": [
+          "funnel",
+          "activities",
+          "views",
+          "completion"
+        ],
+        "entities": []
+      },
+      "answer": {
+        "type": "dynamic",
+        "handler": "activities_funnel_summary",
+        "responses": {
+          "ar": [
+            "قمع الأنشطة: مشاهدة {{views}} → حفظ {{saves}} → «خطتي» {{plans}} → انضمام {{joins}} → إجراء {{actions}} → إكمال {{complete}}. أكبر انخفاض يظهر في {{largest_drop_stage}}."
+          ],
+          "en": [
+            "Activity funnel: {{views}} views → {{saves}} saves → {{plans}} My Plan additions → {{joins}} joins → {{actions}} actions → {{complete}} completions. The largest drop appears at {{largest_drop_stage}}."
+          ]
+        },
+        "result_shape": "single_answer"
+      },
+      "context": {
+        "applicable_pages": [
+          "الأنشطة والتجارب",
+          "*"
+        ],
+        "followup_keys": [
+          "why_activity_drop"
+        ]
+      },
+      "priority": 95
+    },
+    {
+      "id": "communities_most_active",
+      "category": "communities",
+      "purpose": "Return most active community.",
+      "examples": {
+        "ar": [
+          "وش أكثر مجتمع نشاط",
+          "أي مجتمع عليه تفاعل أكثر",
+          "مين المجتمع الأول",
+          "وش أعلى مجتمع",
+          "وش المجتمع الأكثر نشاطًا",
+          "مين متصدر المجتمعات"
+        ],
+        "en": [
+          "which community is most active",
+          "what community has the most engagement",
+          "what is the top community",
+          "which community ranks first",
+          "most active community"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "مجتمع",
+          "نشاط",
+          "تفاعل",
+          "متصدر"
+        ],
+        "keywords_en": [
+          "community",
+          "active",
+          "engagement",
+          "top"
+        ],
+        "entities": [
+          "community"
+        ]
+      },
+      "answer": {
+        "type": "dynamic",
+        "handler": "communities_most_active",
+        "responses": {
+          "ar": [
+            "المجتمع الأكثر نشاطًا هو {{community}} بتفاعل {{engagement}} ونمو {{growth}}."
+          ],
+          "en": [
+            "The most active community is {{community}} with {{engagement}} engagement and {{growth}} growth."
+          ]
+        },
+        "result_shape": "single_answer"
+      },
+      "context": {
+        "applicable_pages": [
+          "المجتمعات والاهتمامات",
+          "لوحة المعلومات",
+          "*"
+        ],
+        "followup_keys": [
+          "second_community",
+          "community_detail"
+        ]
+      },
+      "priority": 99
+    },
+    {
+      "id": "communities_fastest_growth",
+      "category": "communities",
+      "purpose": "Return fastest-growing community.",
+      "examples": {
+        "ar": [
+          "وش أسرع مجتمع نمو",
+          "أي مجتمع نموه أعلى",
+          "مين المجتمع الصاعد",
+          "وش أكثر مجتمع قاعد يكبر",
+          "أعلى نمو بالمجتمعات"
+        ],
+        "en": [
+          "which community is growing fastest",
+          "what is the fastest-growing community",
+          "which community has the highest growth",
+          "what community is rising fastest"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "مجتمع",
+          "نمو",
+          "أسرع"
+        ],
+        "keywords_en": [
+          "community",
+          "growth",
+          "fastest"
+        ],
+        "entities": [
+          "community"
+        ]
+      },
+      "answer": {
+        "type": "dynamic",
+        "handler": "communities_fastest_growth",
+        "responses": {
+          "ar": [
+            "أسرع مجتمع نموًا هو {{community}} بنمو {{growth}}."
+          ],
+          "en": [
+            "The fastest-growing community is {{community}} at {{growth}} growth."
+          ]
+        },
+        "result_shape": "single_answer"
+      },
+      "context": {
+        "applicable_pages": [
+          "المجتمعات والاهتمامات",
+          "*"
+        ],
+        "followup_keys": [
+          "community_detail"
+        ]
+      },
+      "priority": 96
+    },
+    {
+      "id": "communities_top_topic",
+      "category": "communities",
+      "purpose": "Return topic with fastest momentum.",
+      "examples": {
+        "ar": [
+          "وش الموضوع الصاعد",
+          "أي موضوع قاعد ينتشر",
+          "وش أسرع موضوع زخم",
+          "وش أكثر موضوع عليه حركة",
+          "وش الترند بالمجتمعات"
+        ],
+        "en": [
+          "what topic is gaining momentum",
+          "which topic is rising fastest",
+          "what is the fastest-growing topic",
+          "what topic is trending in communities"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "موضوع",
+          "زخم",
+          "صاعد",
+          "ترند"
+        ],
+        "keywords_en": [
+          "topic",
+          "momentum",
+          "trending",
+          "rising"
+        ],
+        "entities": []
+      },
+      "answer": {
+        "type": "dynamic",
+        "handler": "communities_top_topic",
+        "responses": {
+          "ar": [
+            "أسرع موضوع زخمًا حاليًا هو {{topic}} بنمو {{growth}}، ويرتبط بـ {{theme}}."
+          ],
+          "en": [
+            "The topic gaining momentum fastest is {{topic}} at {{growth}} growth, linked to {{theme}}."
+          ]
+        },
+        "result_shape": "single_answer"
+      },
+      "context": {
+        "applicable_pages": [
+          "المجتمعات والاهتمامات",
+          "*"
+        ],
+        "followup_keys": [
+          "second_topic",
+          "why_topic"
+        ]
+      },
+      "priority": 97
+    },
+    {
+      "id": "communities_topics_summary",
+      "category": "communities",
+      "purpose": "Summarize current topic momentum.",
+      "examples": {
+        "ar": [
+          "لخص المواضيع الصاعدة",
+          "وش المواضيع اللي عليها زخم",
+          "اعطني ملخص الاهتمامات",
+          "وش الناس تتكلم عنه بالمجتمعات",
+          "وش أبرز المواضيع"
+        ],
+        "en": [
+          "summarize trending topics",
+          "what topics are gaining momentum",
+          "give me an interests summary",
+          "what are communities discussing",
+          "what are the key topics"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "المواضيع",
+          "زخم",
+          "اهتمامات",
+          "تتكلم"
+        ],
+        "keywords_en": [
+          "topics",
+          "momentum",
+          "interests",
+          "discussing"
+        ],
+        "entities": []
+      },
+      "answer": {
+        "type": "dynamic",
+        "handler": "communities_topics_summary",
+        "responses": {
+          "ar": [
+            "أبرز الموضوعات حاليًا: {{topics_summary}}."
+          ],
+          "en": [
+            "The leading topics right now are: {{topics_summary}}."
+          ]
+        },
+        "result_shape": "ranked_list"
+      },
+      "context": {
+        "applicable_pages": [
+          "المجتمعات والاهتمامات",
+          "*"
+        ],
+        "followup_keys": []
+      },
+      "priority": 93
+    },
+    {
+      "id": "communities_contribution_pattern",
+      "category": "communities",
+      "purpose": "Return dominant contribution pattern.",
+      "examples": {
+        "ar": [
+          "وش أكثر نمط مساهمة",
+          "كيف يساهم الناس",
+          "وش نوع المشاركة الأكثر",
+          "وش أنماط المساهمة",
+          "ايش أكثر نوع تفاعل بالمجتمعات"
+        ],
+        "en": [
+          "what is the main contribution pattern",
+          "how do people contribute",
+          "what contribution type is most common",
+          "what are the contribution patterns"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "مساهمة",
+          "مشاركة",
+          "نمط"
+        ],
+        "keywords_en": [
+          "contribution",
+          "participation",
+          "pattern"
+        ],
+        "entities": []
+      },
+      "answer": {
+        "type": "dynamic",
+        "handler": "communities_contribution_pattern",
+        "responses": {
+          "ar": [
+            "أبرز نمط مساهمة حاليًا هو {{type}} بحصة {{share}} من التفاعل المجتمعي المعروض."
+          ],
+          "en": [
+            "The leading contribution pattern is currently {{type}}, representing {{share}} of the displayed community engagement."
+          ]
+        },
+        "result_shape": "single_answer"
+      },
+      "context": {
+        "applicable_pages": [
+          "المجتمعات والاهتمامات",
+          "*"
+        ],
+        "followup_keys": []
+      },
+      "priority": 90
+    },
+    {
+      "id": "communities_detail",
+      "category": "communities",
+      "purpose": "Return detailed metrics for named community.",
+      "examples": {
+        "ar": [
+          "اعطني تفاصيل المجتمع",
+          "وش أداء مجتمع الأحياء",
+          "حلل لي مجتمع زوار مكة",
+          "وش أرقام المجتمع هذا",
+          "كيف نمو هالمجتمع",
+          "وش مواضيعه"
+        ],
+        "en": [
+          "give me community details",
+          "show metrics for the Neighborhoods community",
+          "analyze Makkah Visitors community",
+          "what are this community's numbers",
+          "what topics does this community have"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "تفاصيل",
+          "مجتمع",
+          "نمو",
+          "مواضيع"
+        ],
+        "keywords_en": [
+          "details",
+          "community",
+          "growth",
+          "themes"
+        ],
+        "entities": [
+          "community"
+        ]
+      },
+      "answer": {
+        "type": "dynamic",
+        "handler": "communities_detail",
+        "responses": {
+          "ar": [
+            "{{community}}: أعضاء {{members}}، تفاعل {{engagement}}، نمو {{growth}}، وأبرز الموضوعات: {{themes}}."
+          ],
+          "en": [
+            "{{community}}: {{members}} members, {{engagement}} engagement, {{growth}} growth, with key themes: {{themes}}."
+          ]
+        },
+        "result_shape": "single_answer"
+      },
+      "context": {
+        "applicable_pages": [
+          "المجتمعات والاهتمامات",
+          "*"
+        ],
+        "followup_keys": [
+          "compare_communities"
+        ]
+      },
+      "priority": 96
+    },
+    {
+      "id": "communities_compare_two",
+      "category": "communities",
+      "purpose": "Compare two communities.",
+      "examples": {
+        "ar": [
+          "قارن مجتمعين",
+          "قارن الأحياء وزوار مكة",
+          "وش الفرق بين هالمجتمعين",
+          "مين أنشط بينهم",
+          "قارن نمو المجتمعين"
+        ],
+        "en": [
+          "compare two communities",
+          "compare Neighborhoods and Makkah Visitors",
+          "what is the difference between these communities",
+          "which community is more active",
+          "compare their growth"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "قارن",
+          "مجتمعين"
+        ],
+        "keywords_en": [
+          "compare",
+          "two communities"
+        ],
+        "entities": [
+          "community_a",
+          "community_b"
+        ]
+      },
+      "answer": {
+        "type": "dynamic",
+        "handler": "communities_compare_two",
+        "responses": {
+          "ar": [
+            "مقارنة {{community_a}} و{{community_b}}: التفاعل {{engagement_a}} مقابل {{engagement_b}}، النمو {{growth_a}} مقابل {{growth_b}}، والأعضاء {{members_a}} مقابل {{members_b}}."
+          ],
+          "en": [
+            "Comparing {{community_a}} and {{community_b}}: {{engagement_a}} vs {{engagement_b}} engagement, {{growth_a}} vs {{growth_b}} growth, and {{members_a}} vs {{members_b}} members."
+          ]
+        },
+        "result_shape": "comparison"
+      },
+      "context": {
+        "applicable_pages": [
+          "المجتمعات والاهتمامات",
+          "*"
+        ],
+        "followup_keys": []
+      },
+      "priority": 99
+    },
+    {
+      "id": "communities_privacy_boundary",
+      "category": "communities",
+      "purpose": "Explain community analysis privacy boundary.",
+      "examples": {
+        "ar": [
+          "هل تقدر تعرف شخص معين بالمجتمع",
+          "هل تحلل شخصيات الناس",
+          "هل تعرف مين كتب",
+          "هل فيه بيانات أفراد بالمجتمعات",
+          "تقدر تطلع لي مستخدم معين"
+        ],
+        "en": [
+          "can you identify a person in a community",
+          "do you profile individuals",
+          "can you tell who posted",
+          "is there individual data in communities",
+          "show me a specific user"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "شخص",
+          "أفراد",
+          "مين كتب",
+          "بيانات شخصية"
+        ],
+        "keywords_en": [
+          "person",
+          "individual",
+          "who posted",
+          "personal data"
+        ],
+        "entities": []
+      },
+      "answer": {
+        "type": "dynamic",
+        "handler": "communities_privacy_boundary",
+        "responses": {
+          "ar": [
+            "تحليل المجتمعات في EyeMakkah مجمّع ويركز على أنماط الموضوعات والمشاركة. ما يعرض ملفات نفسية أو تعريفًا لأفراد أو بيانات شخصية."
+          ],
+          "en": [
+            "Community analysis in EyeMakkah is aggregated and focuses on topic and participation patterns. It does not provide psychological profiles, identify individuals, or expose personal data."
+          ]
+        },
+        "result_shape": "single_answer"
+      },
+      "context": {
+        "applicable_pages": [
+          "المجتمعات والاهتمامات",
+          "*"
+        ],
+        "followup_keys": []
+      },
+      "priority": 100
+    }
+  ]
+}

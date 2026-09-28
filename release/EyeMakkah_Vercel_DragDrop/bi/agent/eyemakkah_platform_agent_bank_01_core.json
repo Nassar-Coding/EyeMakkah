@@ -1,0 +1,2905 @@
+{
+  "file": "eyemakkah_platform_agent_bank_01_core.json",
+  "version": "1.0.0",
+  "phase": 1,
+  "part": "01_core",
+  "product": {
+    "name_ar": "منصة EyeMakkah لتحليلات الأعمال",
+    "name_en": "EyeMakkah Business Analytics Platform",
+    "assistant_name_ar": "مساعد EyeMakkah التحليلي",
+    "assistant_name_en": "EyeMakkah Analytics Assistant"
+  },
+  "purpose": "Core bilingual intent bank for a natural free-text EyeMakkah analytics assistant. Covers social conversation, agent identity, platform help, global filters/context, fallbacks, and out-of-scope handling. No BI interface or code integration is performed in Phase 1.",
+  "integration_contract": {
+    "languages": [
+      "ar",
+      "en"
+    ],
+    "match_order": [
+      "high_priority_exact_or_entity_match",
+      "normalized_example_similarity",
+      "keyword_and_entity_match",
+      "contextual_followup_match",
+      "fallback"
+    ],
+    "fixed_responses": "Select among response variants to reduce scripted repetition.",
+    "dynamic_responses": "Resolve {{placeholder}} values from the active BI state.",
+    "action_intents": "Actions describe future Phase 2 integration behavior only; this file does not change the BI.",
+    "truthfulness": [
+      "Do not claim live LLM/API connectivity when none exists.",
+      "Do not claim live operational data.",
+      "Do not expose or infer personal data.",
+      "Do not produce pricing, revenue forecasts, ROI, break-even, or financial feasibility assumptions.",
+      "Do not present analytical signals as guaranteed future outcomes."
+    ]
+  },
+  "normalization_guidance": {
+    "ar": [
+      "trim whitespace",
+      "normalize Arabic alef variants",
+      "remove tatweel",
+      "normalize light punctuation",
+      "preserve numbers and named areas/categories",
+      "support common Saudi colloquial variants",
+      "tolerate minor spelling errors"
+    ],
+    "en": [
+      "lowercase",
+      "trim whitespace",
+      "normalize light punctuation",
+      "preserve numbers and named entities",
+      "tolerate contractions and minor spelling errors"
+    ]
+  },
+  "stats": {
+    "intent_count": 50,
+    "utterances_ar": 299,
+    "utterances_en": 248,
+    "utterances_total": 547,
+    "by_category": {
+      "social": 10,
+      "identity": 7,
+      "platform_help": 14,
+      "filters": 11,
+      "fallback": 3,
+      "out_of_scope": 5
+    },
+    "by_answer_type": {
+      "fixed": 44,
+      "dynamic": 1,
+      "action": 5
+    }
+  },
+  "intents": [
+    {
+      "id": "greeting_general",
+      "category": "social",
+      "purpose": "Natural general greeting.",
+      "examples": {
+        "ar": [
+          "هلا",
+          "هلا والله",
+          "مرحبا",
+          "مرحبًا",
+          "أهلين",
+          "السلام عليكم",
+          "يا هلا",
+          "يا مرحبا",
+          "صباح الخير",
+          "مساء الخير"
+        ],
+        "en": [
+          "hi",
+          "hello",
+          "hey",
+          "hello there",
+          "good morning",
+          "good evening",
+          "good afternoon"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "هلا",
+          "مرحبا",
+          "السلام",
+          "صباح",
+          "مساء"
+        ],
+        "keywords_en": [
+          "hi",
+          "hello",
+          "hey",
+          "morning",
+          "evening"
+        ],
+        "entities": []
+      },
+      "answer": {
+        "type": "fixed",
+        "handler": null,
+        "responses": {
+          "ar": [
+            "هلا، كيف أقدر أساعدك في تحليلات EyeMakkah؟",
+            "أهلًا، اسألني عن الطلب أو المناطق أو الأنشطة أو المجتمعات أو الفرص داخل EyeMakkah.",
+            "وعليكم السلام، حاضر. وش تحب تعرف من بيانات EyeMakkah؟"
+          ],
+          "en": [
+            "Hello. How can I help with EyeMakkah analytics?",
+            "Hi. Ask me about demand, areas, activities, communities, campaigns, or opportunity signals.",
+            "Hello. What would you like to understand from EyeMakkah data?"
+          ]
+        }
+      },
+      "context": {
+        "applicable_pages": [
+          "*"
+        ],
+        "followup_keys": []
+      },
+      "priority": 95
+    },
+    {
+      "id": "how_are_you",
+      "category": "social",
+      "purpose": "Handle casual wellbeing questions.",
+      "examples": {
+        "ar": [
+          "كيف حالك",
+          "كيفك",
+          "شلونك",
+          "وش أخبارك",
+          "كيف الأمور",
+          "عساك طيب",
+          "كيف يومك",
+          "علومك"
+        ],
+        "en": [
+          "how are you",
+          "how are you doing",
+          "how's it going",
+          "how are things",
+          "how's your day",
+          "you good"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "كيفك",
+          "كيف حالك",
+          "شلونك",
+          "أخبارك"
+        ],
+        "keywords_en": [
+          "how are you",
+          "how's it going"
+        ],
+        "entities": []
+      },
+      "answer": {
+        "type": "fixed",
+        "handler": null,
+        "responses": {
+          "ar": [
+            "بخير وجاهز أساعدك. وش تبغى تعرف من EyeMakkah؟",
+            "تمام، خلنا ندخل في اللي تحتاجه. وش سؤالك؟",
+            "كل شيء تمام. اسألني عن أي جزء من تحليلات EyeMakkah."
+          ],
+          "en": [
+            "I'm ready to help. What would you like to know from EyeMakkah?",
+            "Doing well. What would you like to explore?",
+            "All good. Ask me anything within the EyeMakkah analytics scope."
+          ]
+        }
+      },
+      "context": {
+        "applicable_pages": [
+          "*"
+        ],
+        "followup_keys": []
+      },
+      "priority": 90
+    },
+    {
+      "id": "thanks",
+      "category": "social",
+      "purpose": "Acknowledge thanks.",
+      "examples": {
+        "ar": [
+          "شكرا",
+          "شكرًا",
+          "يعطيك العافية",
+          "مشكور",
+          "تسلم",
+          "الله يعطيك العافية",
+          "ما قصرت",
+          "ممتاز شكرا"
+        ],
+        "en": [
+          "thanks",
+          "thank you",
+          "thank you so much",
+          "much appreciated",
+          "appreciate it",
+          "great thanks"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "شكرا",
+          "العافية",
+          "مشكور",
+          "تسلم"
+        ],
+        "keywords_en": [
+          "thanks",
+          "thank you",
+          "appreciate"
+        ],
+        "entities": []
+      },
+      "answer": {
+        "type": "fixed",
+        "handler": null,
+        "responses": {
+          "ar": [
+            "العفو، حاضر لأي سؤال ثاني.",
+            "الله يعافيك. إذا تبغى نكمل بتحليل ثاني أنا حاضر.",
+            "حياك، اسألني عن أي نقطة ثانية في EyeMakkah."
+          ],
+          "en": [
+            "You're welcome. Ask me anything else about EyeMakkah.",
+            "Happy to help. We can continue with another analysis whenever you want.",
+            "Anytime. What would you like to check next?"
+          ]
+        }
+      },
+      "context": {
+        "applicable_pages": [
+          "*"
+        ],
+        "followup_keys": []
+      },
+      "priority": 80
+    },
+    {
+      "id": "goodbye",
+      "category": "social",
+      "purpose": "Handle farewells.",
+      "examples": {
+        "ar": [
+          "مع السلامة",
+          "سلام",
+          "أشوفك",
+          "في أمان الله",
+          "نشوفك بعدين",
+          "تصبح على خير",
+          "إلى اللقاء"
+        ],
+        "en": [
+          "bye",
+          "goodbye",
+          "see you",
+          "see you later",
+          "talk later",
+          "good night",
+          "catch you later"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "مع السلامة",
+          "إلى اللقاء",
+          "في أمان الله"
+        ],
+        "keywords_en": [
+          "bye",
+          "goodbye",
+          "see you"
+        ],
+        "entities": []
+      },
+      "answer": {
+        "type": "fixed",
+        "handler": null,
+        "responses": {
+          "ar": [
+            "مع السلامة، وحياك بأي وقت.",
+            "في أمان الله.",
+            "حياك، نشوفك على خير."
+          ],
+          "en": [
+            "Goodbye. Come back anytime.",
+            "See you later.",
+            "Take care."
+          ]
+        }
+      },
+      "context": {
+        "applicable_pages": [
+          "*"
+        ],
+        "followup_keys": []
+      },
+      "priority": 75
+    },
+    {
+      "id": "acknowledgement_yes",
+      "category": "social",
+      "purpose": "Handle brief confirmation.",
+      "examples": {
+        "ar": [
+          "ايه",
+          "ايوه",
+          "نعم",
+          "تمام",
+          "أوكي",
+          "ممتاز",
+          "حلو",
+          "صح",
+          "بالضبط",
+          "يب"
+        ],
+        "en": [
+          "yes",
+          "yeah",
+          "yep",
+          "ok",
+          "okay",
+          "correct",
+          "exactly"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "نعم",
+          "تمام",
+          "أوكي",
+          "صح"
+        ],
+        "keywords_en": [
+          "yes",
+          "okay",
+          "correct"
+        ],
+        "entities": []
+      },
+      "answer": {
+        "type": "fixed",
+        "handler": null,
+        "responses": {
+          "ar": [
+            "تمام. وش الخطوة أو السؤال اللي بعده؟",
+            "ممتاز، كمل وأنا معك.",
+            "تمام، اسأل اللي بعده."
+          ],
+          "en": [
+            "Great. What's next?",
+            "Okay, go ahead.",
+            "Got it. What would you like to ask next?"
+          ]
+        }
+      },
+      "context": {
+        "applicable_pages": [
+          "*"
+        ],
+        "followup_keys": []
+      },
+      "priority": 45
+    },
+    {
+      "id": "acknowledgement_no",
+      "category": "social",
+      "purpose": "Handle brief correction/rejection.",
+      "examples": {
+        "ar": [
+          "لا",
+          "مو كذا",
+          "غلط",
+          "مو صحيح",
+          "لا مو هذا",
+          "غير كذا",
+          "لا أقصد شي ثاني",
+          "لا قصدي غير"
+        ],
+        "en": [
+          "no",
+          "nope",
+          "not that",
+          "that's not it",
+          "wrong",
+          "I meant something else"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "لا",
+          "غلط",
+          "مو صحيح",
+          "قصدي"
+        ],
+        "keywords_en": [
+          "no",
+          "wrong",
+          "meant"
+        ],
+        "entities": []
+      },
+      "answer": {
+        "type": "fixed",
+        "handler": null,
+        "responses": {
+          "ar": [
+            "تمام. وضّح لي وش تقصد وأنا أعدل المسار.",
+            "مفهوم. اكتبها بطريقتك وأنا أحاول أفهم المقصود.",
+            "تمام، قل لي وش تقصد بالضبط."
+          ],
+          "en": [
+            "Understood. Tell me what you meant and I'll adjust.",
+            "Got it. Rephrase it your way and I'll try again.",
+            "Okay. What did you mean exactly?"
+          ]
+        }
+      },
+      "context": {
+        "applicable_pages": [
+          "*"
+        ],
+        "followup_keys": []
+      },
+      "priority": 60
+    },
+    {
+      "id": "compliment_agent",
+      "category": "social",
+      "purpose": "Respond to praise.",
+      "examples": {
+        "ar": [
+          "رهيب",
+          "كفو",
+          "شغل ممتاز",
+          "مرة ممتاز",
+          "جميل",
+          "حلو مرة",
+          "ذكي",
+          "ما شاء الله",
+          "عجبني",
+          "مبدع"
+        ],
+        "en": [
+          "awesome",
+          "nice",
+          "very good",
+          "excellent",
+          "smart",
+          "love it",
+          "well done"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "رهيب",
+          "كفو",
+          "عجبني",
+          "مبدع"
+        ],
+        "keywords_en": [
+          "awesome",
+          "excellent",
+          "nice"
+        ],
+        "entities": []
+      },
+      "answer": {
+        "type": "fixed",
+        "handler": null,
+        "responses": {
+          "ar": [
+            "يسعدني إنه مناسب لك. نكمل؟",
+            "ممتاز. وش تبغى نحلل بعد؟",
+            "حلو، خلنا نكمل على نفس السياق."
+          ],
+          "en": [
+            "Glad it works for you. What should we look at next?",
+            "Great. What would you like to analyze next?",
+            "Nice. We can keep going from here."
+          ]
+        }
+      },
+      "context": {
+        "applicable_pages": [
+          "*"
+        ],
+        "followup_keys": []
+      },
+      "priority": 40
+    },
+    {
+      "id": "frustration",
+      "category": "social",
+      "purpose": "Handle frustration and recover.",
+      "examples": {
+        "ar": [
+          "ما فهمتني",
+          "مو فاهم",
+          "أنت ما فهمت",
+          "غلطت",
+          "هذا مو اللي أقصده",
+          "هذا مو المطلوب",
+          "الجواب غلط",
+          "ركز معي"
+        ],
+        "en": [
+          "you didn't understand",
+          "that's not what I meant",
+          "wrong answer",
+          "you got it wrong",
+          "not what I asked",
+          "please focus"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "ما فهمت",
+          "غلط",
+          "مو المطلوب",
+          "ركز"
+        ],
+        "keywords_en": [
+          "didn't understand",
+          "wrong",
+          "not what"
+        ],
+        "entities": []
+      },
+      "answer": {
+        "type": "fixed",
+        "handler": null,
+        "responses": {
+          "ar": [
+            "واضح أني أخذت السؤال باتجاه غير اللي تقصده. اكتب لي المطلوب بجملة قصيرة وأنا أجاوب عليه مباشرة.",
+            "تمام، أعطني المقصود بصياغتك وأنا أضبطه بدون ما أغير السياق.",
+            "وصلت. قل لي وش الجزء اللي تبغاه تحديدًا."
+          ],
+          "en": [
+            "I took your question in the wrong direction. Give me the exact point you want and I'll answer it directly.",
+            "Understood. Rephrase the target briefly and I'll correct course.",
+            "Got it. Tell me exactly which part you want."
+          ]
+        }
+      },
+      "context": {
+        "applicable_pages": [
+          "*"
+        ],
+        "followup_keys": []
+      },
+      "priority": 85
+    },
+    {
+      "id": "casual_laughter",
+      "category": "social",
+      "purpose": "Handle laughter/emotive chat.",
+      "examples": {
+        "ar": [
+          "هههه",
+          "ههههه",
+          "😂",
+          "ضحكتني",
+          "لول",
+          "هههه تمام"
+        ],
+        "en": [
+          "lol",
+          "haha",
+          "hahaha",
+          "😂",
+          "that's funny"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "هههه",
+          "لول"
+        ],
+        "keywords_en": [
+          "lol",
+          "haha"
+        ],
+        "entities": []
+      },
+      "answer": {
+        "type": "fixed",
+        "handler": null,
+        "responses": {
+          "ar": [
+            "😄 نكمل؟ وش تبغى تعرف من EyeMakkah؟",
+            "هههه، تمام. وش السؤال اللي بعده؟"
+          ],
+          "en": [
+            "😄 Shall we continue? What would you like to know from EyeMakkah?",
+            "Haha. What's next?"
+          ]
+        }
+      },
+      "context": {
+        "applicable_pages": [
+          "*"
+        ],
+        "followup_keys": []
+      },
+      "priority": 25
+    },
+    {
+      "id": "smalltalk_weather_redirect",
+      "category": "social",
+      "purpose": "Redirect casual weather questions to platform scope.",
+      "examples": {
+        "ar": [
+          "الجو كيف",
+          "وش رايك بالجو",
+          "اليوم حر",
+          "الجو حلو اليوم",
+          "وش الطقس اليوم"
+        ],
+        "en": [
+          "how's the weather",
+          "what do you think of the weather",
+          "it's hot today",
+          "nice weather today"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "الجو",
+          "الطقس",
+          "حر",
+          "برد"
+        ],
+        "keywords_en": [
+          "weather",
+          "hot",
+          "cold"
+        ],
+        "entities": []
+      },
+      "answer": {
+        "type": "fixed",
+        "handler": null,
+        "responses": {
+          "ar": [
+            "الطقس الحالي مو ضمن بيانات الـBI الحالية. إذا سؤالك عن أثر الفترة أو المنطقة على الطلب، أقدر أساعدك.",
+            "إذا تقصد الطقس الحالي فهو خارج نطاق بيانات EyeMakkah التحليلية في النسخة الحالية."
+          ],
+          "en": [
+            "Current weather is outside this BI prototype's data scope. I can help with period- or area-based demand analysis.",
+            "Live weather isn't part of the current EyeMakkah analytics data."
+          ]
+        }
+      },
+      "context": {
+        "applicable_pages": [
+          "*"
+        ],
+        "followup_keys": []
+      },
+      "priority": 30
+    },
+    {
+      "id": "agent_identity",
+      "category": "identity",
+      "purpose": "Explain who the assistant is.",
+      "examples": {
+        "ar": [
+          "من أنت",
+          "مين أنت",
+          "وش أنت",
+          "عرف نفسك",
+          "أنت مين",
+          "ايش اسمك",
+          "ما اسمك"
+        ],
+        "en": [
+          "who are you",
+          "what are you",
+          "what's your name",
+          "what is your name",
+          "introduce yourself",
+          "who am I talking to"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "من أنت",
+          "مين أنت",
+          "اسمك",
+          "عرف نفسك"
+        ],
+        "keywords_en": [
+          "who are you",
+          "your name",
+          "introduce"
+        ],
+        "entities": []
+      },
+      "answer": {
+        "type": "fixed",
+        "handler": null,
+        "responses": {
+          "ar": [
+            "أنا مساعد EyeMakkah التحليلي. أساعدك تفهم بيانات الطلب والمناطق والأنشطة والمجتمعات والحملات والفرص داخل منصة EyeMakkah لتحليلات الأعمال.",
+            "أنا المساعد التحليلي داخل EyeMakkah، ومهمتي أحوّل بيانات المنصة الحالية إلى إجابات مباشرة حسب سؤالك والفلاتر المستخدمة."
+          ],
+          "en": [
+            "I'm the EyeMakkah Analytics Assistant. I help you understand demand, areas, activities, communities, campaigns, and opportunity signals in the EyeMakkah Business Analytics Platform.",
+            "I'm the analytics assistant inside EyeMakkah. My job is to turn the platform's current data and filters into direct answers."
+          ]
+        }
+      },
+      "context": {
+        "applicable_pages": [
+          "*"
+        ],
+        "followup_keys": []
+      },
+      "priority": 98
+    },
+    {
+      "id": "agent_capabilities",
+      "category": "identity",
+      "purpose": "Explain assistant capabilities.",
+      "examples": {
+        "ar": [
+          "وش تقدر تسوي",
+          "ايش تقدر تسوي",
+          "كيف تساعدني",
+          "وش أقدر أسألك",
+          "وش ممكن أسألك عنه",
+          "وش خدماتك",
+          "وش دورك"
+        ],
+        "en": [
+          "what can you do",
+          "how can you help",
+          "what can I ask you",
+          "what do you help with",
+          "what are your capabilities"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "تقدر",
+          "تسوي",
+          "تساعدني",
+          "أسألك"
+        ],
+        "keywords_en": [
+          "can you do",
+          "help",
+          "ask you",
+          "capabilities"
+        ],
+        "entities": []
+      },
+      "answer": {
+        "type": "fixed",
+        "handler": null,
+        "responses": {
+          "ar": [
+            "أقدر أجاوبك عن مؤشرات الـDashboard، الطلب، المناطق، الأنشطة، المجتمعات، الحملات، الفرص والفجوات، والتقارير، وأربط الإجابة بالفلاتر الحالية.",
+            "تقدر تسألني بشكل طبيعي عن أي تحليل ظاهر داخل EyeMakkah، وأتابع معك بأسئلة قصيرة مثل «ليش؟» أو «قارنهم» أو «طيب الزوار؟»."
+          ],
+          "en": [
+            "You can ask me about dashboard metrics, demand, areas, activities, communities, campaigns, opportunities and gaps, reports, and the current filters.",
+            "Ask naturally about anything represented in EyeMakkah analytics, including short follow-ups such as 'why?', 'compare them', or 'what about visitors?'."
+          ]
+        }
+      },
+      "context": {
+        "applicable_pages": [
+          "*"
+        ],
+        "followup_keys": []
+      },
+      "priority": 95
+    },
+    {
+      "id": "agent_scope_limits",
+      "category": "identity",
+      "purpose": "Explain scope boundaries.",
+      "examples": {
+        "ar": [
+          "وش ما تقدر تسوي",
+          "وش حدودك",
+          "ايش خارج نطاقك",
+          "هل تجاوب على كل شي",
+          "هل تعرف كل شيء"
+        ],
+        "en": [
+          "what can't you do",
+          "what are your limits",
+          "is anything out of scope",
+          "can you answer anything",
+          "do you know everything"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "حدودك",
+          "خارج نطاقك",
+          "كل شي"
+        ],
+        "keywords_en": [
+          "limits",
+          "out of scope",
+          "anything"
+        ],
+        "entities": []
+      },
+      "answer": {
+        "type": "fixed",
+        "handler": null,
+        "responses": {
+          "ar": [
+            "أنا مخصص لتحليلات EyeMakkah. ما أختلق بيانات غير موجودة، وإذا كان السؤال خارج نطاق المنصة أقول لك مباشرة.",
+            "نطاقي هو بيانات وتجربة EyeMakkah التحليلية الحالية، مو كل المعلومات العامة خارج المنصة."
+          ],
+          "en": [
+            "I'm scoped to EyeMakkah analytics. I won't invent unavailable data, and if something is outside the platform scope I'll say so directly.",
+            "My scope is the current EyeMakkah analytics experience, not unrelated general information."
+          ]
+        }
+      },
+      "context": {
+        "applicable_pages": [
+          "*"
+        ],
+        "followup_keys": []
+      },
+      "priority": 75
+    },
+    {
+      "id": "agent_data_source",
+      "category": "identity",
+      "purpose": "Explain data source truthfully.",
+      "examples": {
+        "ar": [
+          "من وين تجيب معلوماتك",
+          "من وين البيانات",
+          "مصدر إجاباتك",
+          "على إيش تعتمد",
+          "هل البيانات حقيقية",
+          "هل البيانات مباشرة",
+          "هل البيانات لايف"
+        ],
+        "en": [
+          "where does your information come from",
+          "what data do you use",
+          "what is your data source",
+          "is the data live",
+          "is this real data"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "مصدر",
+          "البيانات",
+          "حقيقية",
+          "لايف"
+        ],
+        "keywords_en": [
+          "source",
+          "data",
+          "live",
+          "real"
+        ],
+        "entities": []
+      },
+      "answer": {
+        "type": "fixed",
+        "handler": null,
+        "responses": {
+          "ar": [
+            "إجاباتي التحليلية مبنية على البيانات الاصطناعية/التوضيحية الموجودة في نموذج EyeMakkah الحالي وعلى الفلاتر النشطة. هي ليست بيانات تشغيلية حية.",
+            "في هذه النسخة، المؤشرات والأجوبة تعتمد على بيانات تجريبية مصممة لاختبار تجربة المنصة."
+          ],
+          "en": [
+            "My analytical answers use the synthetic/illustrative data in the current EyeMakkah prototype and the active filters. They are not live operational data.",
+            "In this version, the metrics and answers are based on demo data designed to test the product experience."
+          ]
+        }
+      },
+      "context": {
+        "applicable_pages": [
+          "*"
+        ],
+        "followup_keys": []
+      },
+      "priority": 100
+    },
+    {
+      "id": "agent_llm_api_question",
+      "category": "identity",
+      "purpose": "Answer honestly about live LLM/API connectivity.",
+      "examples": {
+        "ar": [
+          "هل أنت مربوط ب api",
+          "هل مربوط بذكاء اصطناعي",
+          "هل أنت llm",
+          "هل الردود من ChatGPT",
+          "هل عندك مودل حي",
+          "هل تستخدم نموذج ذكاء اصطناعي حي"
+        ],
+        "en": [
+          "are you connected to an api",
+          "are you powered by an llm",
+          "is this chatgpt",
+          "are you using a live ai model",
+          "is there a live model behind this"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "api",
+          "llm",
+          "مودل",
+          "نموذج حي",
+          "ChatGPT"
+        ],
+        "keywords_en": [
+          "api",
+          "llm",
+          "chatgpt",
+          "live model"
+        ],
+        "entities": []
+      },
+      "answer": {
+        "type": "fixed",
+        "handler": null,
+        "responses": {
+          "ar": [
+            "في النسخة الحالية من النموذج، تجربة المساعد مبنية على بيانات EyeMakkah التجريبية ومنطق تحليلي محدد، وليست مرتبطة بنموذج ذكاء اصطناعي حي في الخلفية.",
+            "هذه النسخة Prototype. سلوك المساعد يحاكي وكيلًا تحليليًا، لكن الإجابات الحالية ليست ناتجة من LLM حي."
+          ],
+          "en": [
+            "In the current prototype, the assistant experience is driven by EyeMakkah demo data and predefined analytics logic rather than a live LLM backend.",
+            "This is a prototype. The assistant behaves like an analytics agent, but the current answers are not generated by a live LLM."
+          ]
+        }
+      },
+      "context": {
+        "applicable_pages": [
+          "*"
+        ],
+        "followup_keys": []
+      },
+      "priority": 100
+    },
+    {
+      "id": "agent_language_support",
+      "category": "identity",
+      "purpose": "Explain Arabic/English support.",
+      "examples": {
+        "ar": [
+          "تتكلم عربي",
+          "تدعم الإنجليزي",
+          "أقدر أكلمك إنجليزي",
+          "ترد عربي وإنجليزي",
+          "وش اللغات"
+        ],
+        "en": [
+          "do you speak Arabic",
+          "do you support English",
+          "can I ask in Arabic",
+          "can I ask in English",
+          "what languages do you support"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "عربي",
+          "إنجليزي",
+          "اللغات"
+        ],
+        "keywords_en": [
+          "Arabic",
+          "English",
+          "languages"
+        ],
+        "entities": []
+      },
+      "answer": {
+        "type": "fixed",
+        "handler": null,
+        "responses": {
+          "ar": [
+            "نعم. أقدر أتعامل مع العربي والإنجليزي، وأفهم صياغات عربية طبيعية ولهجة سعودية بسيطة ضمن نطاق المنصة.",
+            "اسأل بالعربي أو بالإنجليزي، وما تحتاج تصيغ السؤال بطريقة رسمية."
+          ],
+          "en": [
+            "Yes. You can ask in Arabic or English, including natural Arabic phrasing and simple Saudi colloquial wording within the platform scope.",
+            "Ask in Arabic or English. You don't need to phrase the question formally."
+          ]
+        }
+      },
+      "context": {
+        "applicable_pages": [
+          "*"
+        ],
+        "followup_keys": []
+      },
+      "priority": 80
+    },
+    {
+      "id": "agent_context_memory",
+      "category": "identity",
+      "purpose": "Explain short-session context.",
+      "examples": {
+        "ar": [
+          "تتذكر سؤالي السابق",
+          "تفهم السياق",
+          "تفهم سؤالي السابق",
+          "إذا قلت ليش تفهم",
+          "لو قلت قارنهم تفهم",
+          "هل تتابع الكلام"
+        ],
+        "en": [
+          "do you remember my previous question",
+          "do you understand context",
+          "can you follow up",
+          "if I say why will you know what I mean",
+          "do you remember the conversation"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "تتذكر",
+          "السياق",
+          "سؤالي السابق",
+          "تتابع"
+        ],
+        "keywords_en": [
+          "remember",
+          "context",
+          "previous question",
+          "follow up"
+        ],
+        "entities": []
+      },
+      "answer": {
+        "type": "fixed",
+        "handler": null,
+        "responses": {
+          "ar": [
+            "أقدر أتابع سياق المحادثة القصير داخل جلسة المساعد، مثل آخر سؤال وآخر نتيجة والفلاتر الحالية، عشان أفهم متابعات مثل «ليش؟» أو «قارنهم».",
+            "المتابعات القصيرة تعتمد على آخر سياق متاح داخل تجربة المساعد."
+          ],
+          "en": [
+            "I can follow short conversational context inside the assistant session, such as the previous question, latest result, and active filters.",
+            "Short follow-ups can use the most recent assistant context, especially the previous intent, result, and filters."
+          ]
+        }
+      },
+      "context": {
+        "applicable_pages": [
+          "*"
+        ],
+        "followup_keys": []
+      },
+      "priority": 80
+    },
+    {
+      "id": "platform_what_is_eyemakkah",
+      "category": "platform_help",
+      "purpose": "Explain EyeMakkah Business Analytics Platform.",
+      "examples": {
+        "ar": [
+          "وش هي EyeMakkah",
+          "ايش EyeMakkah",
+          "وش المنصة",
+          "ايش هذي المنصة",
+          "ما هي EyeMakkah",
+          "اشرح لي EyeMakkah",
+          "وش هدف المنصة"
+        ],
+        "en": [
+          "what is EyeMakkah",
+          "what is this platform",
+          "explain EyeMakkah",
+          "what is the purpose of this platform"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "EyeMakkah",
+          "المنصة",
+          "هدف"
+        ],
+        "keywords_en": [
+          "EyeMakkah",
+          "platform",
+          "purpose"
+        ],
+        "entities": []
+      },
+      "answer": {
+        "type": "fixed",
+        "handler": null,
+        "responses": {
+          "ar": [
+            "EyeMakkah هنا هي منصة لتحليلات الأعمال تساعد على فهم أنماط الطلب والاهتمام والتفاعل عبر مناطق مكة وفئات الأنشطة والمجتمعات والحملات باستخدام مؤشرات النموذج الحالي.",
+            "منصة EyeMakkah لتحليلات الأعمال تجمع المؤشرات والتحليل حسب الفترة والمنطقة والفئة والجمهور في تجربة واحدة."
+          ],
+          "en": [
+            "EyeMakkah here is a business analytics platform for understanding demand, interest, and engagement patterns across Makkah areas, activity categories, communities, and campaigns using the current prototype indicators.",
+            "The EyeMakkah Business Analytics Platform brings metrics and analysis by period, area, category, and audience into one experience."
+          ]
+        }
+      },
+      "context": {
+        "applicable_pages": [
+          "*"
+        ],
+        "followup_keys": []
+      },
+      "priority": 85
+    },
+    {
+      "id": "platform_pages_overview",
+      "category": "platform_help",
+      "purpose": "List major analytics pages.",
+      "examples": {
+        "ar": [
+          "وش الصفحات الموجودة",
+          "ايش الأقسام",
+          "وش أقسام المنصة",
+          "وش موجود في القائمة",
+          "اعطني أقسام EyeMakkah",
+          "وش صفحات التحليل"
+        ],
+        "en": [
+          "what pages are available",
+          "what sections are there",
+          "what analytics pages exist",
+          "what is in the navigation"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "الصفحات",
+          "الأقسام",
+          "القائمة"
+        ],
+        "keywords_en": [
+          "pages",
+          "sections",
+          "navigation"
+        ],
+        "entities": []
+      },
+      "answer": {
+        "type": "fixed",
+        "handler": null,
+        "responses": {
+          "ar": [
+            "المنصة فيها: لوحة المعلومات، تحليل الطلب، تحليل المناطق، الأنشطة والتجارب، المجتمعات والاهتمامات، الحملات والعروض، الفرص والفجوات، والتقارير."
+          ],
+          "en": [
+            "The main analytics pages are Dashboard, Demand Analysis, Area Analysis, Activities & Experiences, Communities & Interests, Campaigns & Offers, Opportunities & Gaps, and Reports."
+          ]
+        }
+      },
+      "context": {
+        "applicable_pages": [
+          "*"
+        ],
+        "followup_keys": []
+      },
+      "priority": 85
+    },
+    {
+      "id": "platform_dashboard_help",
+      "category": "platform_help",
+      "purpose": "Explain Dashboard.",
+      "examples": {
+        "ar": [
+          "وش تعرض لوحة المعلومات",
+          "وش في الداشبورد",
+          "اشرح لوحة المعلومات",
+          "وش أستفيد من لوحة المعلومات",
+          "وش موجود بالصفحة الرئيسية"
+        ],
+        "en": [
+          "what does the dashboard show",
+          "what is on the dashboard",
+          "explain the dashboard",
+          "what can I see on the main page"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "لوحة المعلومات",
+          "الداشبورد",
+          "الصفحة الرئيسية"
+        ],
+        "keywords_en": [
+          "dashboard",
+          "main page"
+        ],
+        "entities": []
+      },
+      "answer": {
+        "type": "fixed",
+        "handler": null,
+        "responses": {
+          "ar": [
+            "لوحة المعلومات تعطيك لقطة تنفيذية تشمل التفاعلات والمستخدمين النشطين والبحث والإضافة إلى «خطتي» والانتقال للإجراء، مع اتجاهات الطلب وأعلى الفئات والمناطق والمجتمعات."
+          ],
+          "en": [
+            "The Dashboard gives an executive snapshot of interactions, active users, searches, additions to My Plan, action handoffs, demand trends, leading categories, areas, and communities."
+          ]
+        }
+      },
+      "context": {
+        "applicable_pages": [
+          "لوحة المعلومات",
+          "*"
+        ],
+        "followup_keys": []
+      },
+      "priority": 85
+    },
+    {
+      "id": "platform_demand_help",
+      "category": "platform_help",
+      "purpose": "Explain Demand Analysis.",
+      "examples": {
+        "ar": [
+          "وش تحليل الطلب",
+          "اشرح صفحة الطلب",
+          "وش أشوف في تحليل الطلب",
+          "وش فايدة تحليل الطلب"
+        ],
+        "en": [
+          "what is demand analysis",
+          "explain the demand page",
+          "what can I see in demand analysis",
+          "what is the demand page for"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "تحليل الطلب",
+          "صفحة الطلب"
+        ],
+        "keywords_en": [
+          "demand analysis",
+          "demand page"
+        ],
+        "entities": []
+      },
+      "answer": {
+        "type": "fixed",
+        "handler": null,
+        "responses": {
+          "ar": [
+            "تحليل الطلب يركز على اتجاهات البحث والاهتمام، أكثر مصطلحات البحث، أسرعها نموًا، الفرق بين السكان والزوار، ورحلة الطلب من البحث إلى الإجراء."
+          ],
+          "en": [
+            "Demand Analysis focuses on search and interest trends, top and fastest-growing search terms, residents versus visitors, and the journey from search to action."
+          ]
+        }
+      },
+      "context": {
+        "applicable_pages": [
+          "تحليل الطلب",
+          "*"
+        ],
+        "followup_keys": []
+      },
+      "priority": 85
+    },
+    {
+      "id": "platform_areas_help",
+      "category": "platform_help",
+      "purpose": "Explain Area Analysis.",
+      "examples": {
+        "ar": [
+          "وش تحليل المناطق",
+          "اشرح صفحة المناطق",
+          "وش أشوف في المناطق",
+          "وش فايدة تحليل المناطق",
+          "كيف أحلل حي"
+        ],
+        "en": [
+          "what is area analysis",
+          "explain the areas page",
+          "what can I see for an area",
+          "how do I analyze an area"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "تحليل المناطق",
+          "صفحة المناطق",
+          "حي"
+        ],
+        "keywords_en": [
+          "area analysis",
+          "areas page"
+        ],
+        "entities": []
+      },
+      "answer": {
+        "type": "fixed",
+        "handler": null,
+        "responses": {
+          "ar": [
+            "تحليل المناطق يعرض مستوى الاهتمام والنمو والفئة الأبرز ووقت الذروة، ويقارن الطلب والعرض حسب الفئة داخل المنطقة المختارة."
+          ],
+          "en": [
+            "Area Analysis shows interest level, growth, top category, peak time, and demand-versus-supply comparisons for the selected area."
+          ]
+        }
+      },
+      "context": {
+        "applicable_pages": [
+          "تحليل المناطق",
+          "*"
+        ],
+        "followup_keys": []
+      },
+      "priority": 85
+    },
+    {
+      "id": "platform_activities_help",
+      "category": "platform_help",
+      "purpose": "Explain Activities & Experiences.",
+      "examples": {
+        "ar": [
+          "وش صفحة الأنشطة",
+          "اشرح الأنشطة والتجارب",
+          "وش أشوف في الأنشطة",
+          "وش فايدة صفحة الأنشطة"
+        ],
+        "en": [
+          "what is activities and experiences",
+          "explain the activities page",
+          "what can I see in activities",
+          "what does activity analysis show"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "الأنشطة",
+          "التجارب"
+        ],
+        "keywords_en": [
+          "activities",
+          "experiences"
+        ],
+        "entities": []
+      },
+      "answer": {
+        "type": "fixed",
+        "handler": null,
+        "responses": {
+          "ar": [
+            "صفحة الأنشطة والتجارب تفصل بين المشاهدة والحفظ والإضافة إلى «خطتي» ونية الحضور والانتقال للإجراء والإكمال، وتعرض أداء كل نشاط."
+          ],
+          "en": [
+            "Activities & Experiences separates views, saves, additions to My Plan, attendance intent, action handoffs, and completion, and shows performance for each activity."
+          ]
+        }
+      },
+      "context": {
+        "applicable_pages": [
+          "الأنشطة والتجارب",
+          "*"
+        ],
+        "followup_keys": []
+      },
+      "priority": 85
+    },
+    {
+      "id": "platform_communities_help",
+      "category": "platform_help",
+      "purpose": "Explain Communities & Interests.",
+      "examples": {
+        "ar": [
+          "وش صفحة المجتمعات",
+          "اشرح المجتمعات والاهتمامات",
+          "وش أشوف بالمجتمعات",
+          "وش فايدة تحليل المجتمعات"
+        ],
+        "en": [
+          "what is communities and interests",
+          "explain the communities page",
+          "what can I see in communities",
+          "what is community intelligence here"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "المجتمعات",
+          "الاهتمامات"
+        ],
+        "keywords_en": [
+          "communities",
+          "interests"
+        ],
+        "entities": []
+      },
+      "answer": {
+        "type": "fixed",
+        "handler": null,
+        "responses": {
+          "ar": [
+            "صفحة المجتمعات والاهتمامات تركز على نشاط المجتمعات وأنماط المساهمة والموضوعات التي تكتسب زخمًا، بدون التعرف على أفراد."
+          ],
+          "en": [
+            "Communities & Interests focuses on community activity, contribution patterns, and topics gaining momentum, without identifying individuals."
+          ]
+        }
+      },
+      "context": {
+        "applicable_pages": [
+          "المجتمعات والاهتمامات",
+          "*"
+        ],
+        "followup_keys": []
+      },
+      "priority": 85
+    },
+    {
+      "id": "platform_campaigns_help",
+      "category": "platform_help",
+      "purpose": "Explain Campaigns & Offers.",
+      "examples": {
+        "ar": [
+          "وش صفحة الحملات",
+          "اشرح الحملات والعروض",
+          "وش أشوف في الحملات",
+          "كيف تحلل الحملة"
+        ],
+        "en": [
+          "what is campaigns and offers",
+          "explain the campaigns page",
+          "what can I see for campaigns",
+          "how is a campaign analyzed"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "الحملات",
+          "العروض",
+          "الحملة"
+        ],
+        "keywords_en": [
+          "campaigns",
+          "offers",
+          "campaign"
+        ],
+        "entities": []
+      },
+      "answer": {
+        "type": "fixed",
+        "handler": null,
+        "responses": {
+          "ar": [
+            "صفحة الحملات والعروض تعرض قمع الحملة من الظهور إلى المشاهدة وفتح التفاصيل والحفظ والانتقال للعرض، مع قراءة الأداء الجغرافي."
+          ],
+          "en": [
+            "Campaigns & Offers shows the campaign funnel from impressions to views, detail opens, saves, and offer handoffs, plus geographic performance."
+          ]
+        }
+      },
+      "context": {
+        "applicable_pages": [
+          "الحملات والعروض",
+          "*"
+        ],
+        "followup_keys": []
+      },
+      "priority": 85
+    },
+    {
+      "id": "platform_opportunities_help",
+      "category": "platform_help",
+      "purpose": "Explain Opportunities & Gaps.",
+      "examples": {
+        "ar": [
+          "وش صفحة الفرص",
+          "اشرح الفرص والفجوات",
+          "وش يعني فجوة طلب وعرض",
+          "وش فايدة مؤشر الإشارة"
+        ],
+        "en": [
+          "what is opportunities and gaps",
+          "explain the opportunities page",
+          "what is a demand supply gap",
+          "what does the signal index mean"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "الفرص",
+          "الفجوات",
+          "مؤشر الإشارة"
+        ],
+        "keywords_en": [
+          "opportunities",
+          "gaps",
+          "signal index"
+        ],
+        "entities": []
+      },
+      "answer": {
+        "type": "fixed",
+        "handler": null,
+        "responses": {
+          "ar": [
+            "صفحة الفرص والفجوات تجمع مؤشر الطلب والنمو ومستوى العرض لإظهار إشارات تستحق التحقق والدراسة. هذه الإشارات ليست ضمانًا لجدوى مشروع أو استثمار."
+          ],
+          "en": [
+            "Opportunities & Gaps combines demand, growth, and supply indicators to surface signals worth validating and studying. These are not guarantees of business or investment feasibility."
+          ]
+        }
+      },
+      "context": {
+        "applicable_pages": [
+          "الفرص والفجوات",
+          "*"
+        ],
+        "followup_keys": []
+      },
+      "priority": 85
+    },
+    {
+      "id": "platform_reports_help",
+      "category": "platform_help",
+      "purpose": "Explain Reports.",
+      "examples": {
+        "ar": [
+          "وش صفحة التقارير",
+          "اشرح التقارير",
+          "وش موجود بالتقارير",
+          "وش أقدر أطلع من التقارير",
+          "هل أقدر أصدر ملف"
+        ],
+        "en": [
+          "what is the reports page",
+          "explain reports",
+          "what reports are available",
+          "can I export data"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "التقارير",
+          "تصدير",
+          "CSV"
+        ],
+        "keywords_en": [
+          "reports",
+          "export",
+          "CSV"
+        ],
+        "entities": []
+      },
+      "answer": {
+        "type": "fixed",
+        "handler": null,
+        "responses": {
+          "ar": [
+            "صفحة التقارير تعرض تقارير دورية مبسطة وملخصات للمؤشرات الحالية، وتدعم تصدير ملخص CSV وفق الفلاتر النشطة."
+          ],
+          "en": [
+            "The Reports page provides simplified report structures and current metric summaries, with CSV export based on the active filters."
+          ]
+        }
+      },
+      "context": {
+        "applicable_pages": [
+          "التقارير",
+          "*"
+        ],
+        "followup_keys": []
+      },
+      "priority": 85
+    },
+    {
+      "id": "metric_interactions_help",
+      "category": "platform_help",
+      "purpose": "Explain total interactions.",
+      "examples": {
+        "ar": [
+          "وش يعني إجمالي التفاعلات",
+          "ايش التفاعلات",
+          "وش المقصود بالتفاعلات",
+          "التفاعلات تشمل ايش"
+        ],
+        "en": [
+          "what are total interactions",
+          "what does interactions mean",
+          "what is included in interactions"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "إجمالي التفاعلات",
+          "التفاعلات"
+        ],
+        "keywords_en": [
+          "total interactions",
+          "interactions"
+        ],
+        "entities": []
+      },
+      "answer": {
+        "type": "fixed",
+        "handler": null,
+        "responses": {
+          "ar": [
+            "إجمالي التفاعلات مؤشر مجمع داخل النموذج لقياس حجم النشاط عبر التجربة. الصفحات المتخصصة تفصل البحث والمشاهدة والحفظ و«خطتي» والانضمام والإجراء والإكمال."
+          ],
+          "en": [
+            "Total interactions is an aggregated prototype indicator of activity across the experience. Specialized pages separate searches, views, saves, My Plan additions, joins, actions, and completions."
+          ]
+        }
+      },
+      "context": {
+        "applicable_pages": [
+          "*"
+        ],
+        "followup_keys": []
+      },
+      "priority": 85
+    },
+    {
+      "id": "metric_active_users_help",
+      "category": "platform_help",
+      "purpose": "Explain active users.",
+      "examples": {
+        "ar": [
+          "وش يعني المستخدمون النشطون",
+          "ايش المستخدم النشط",
+          "وش يقصد بالمستخدمين النشطين"
+        ],
+        "en": [
+          "what are active users",
+          "what does active users mean",
+          "what is an active user"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "المستخدمون النشطون",
+          "مستخدم نشط"
+        ],
+        "keywords_en": [
+          "active users",
+          "active user"
+        ],
+        "entities": []
+      },
+      "answer": {
+        "type": "fixed",
+        "handler": null,
+        "responses": {
+          "ar": [
+            "المستخدمون النشطون مؤشر تجريبي لعدد المستخدمين الذين ظهر لهم نشاط ضمن الفترة والسياق المحدد في النموذج، وليس تعريفًا تشغيليًا حيًا."
+          ],
+          "en": [
+            "Active users is a demo indicator representing users with activity in the selected period and context, not a live operational definition."
+          ]
+        }
+      },
+      "context": {
+        "applicable_pages": [
+          "*"
+        ],
+        "followup_keys": []
+      },
+      "priority": 85
+    },
+    {
+      "id": "metric_my_plan_help",
+      "category": "platform_help",
+      "purpose": "Explain My Plan additions.",
+      "examples": {
+        "ar": [
+          "وش يعني خطتي",
+          "وش معنى الإضافة إلى خطتي",
+          "هل خطتي يعني حجز",
+          "هل الإضافة للخطة يعني شراء"
+        ],
+        "en": [
+          "what does My Plan mean",
+          "what is added to My Plan",
+          "does My Plan mean a booking",
+          "does adding to My Plan mean purchase"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "خطتي",
+          "حجز",
+          "شراء"
+        ],
+        "keywords_en": [
+          "My Plan",
+          "booking",
+          "purchase"
+        ],
+        "entities": []
+      },
+      "answer": {
+        "type": "fixed",
+        "handler": null,
+        "responses": {
+          "ar": [
+            "«خطتي» تمثل مرحلة تخطيط أو اهتمام أقوى من الحفظ، لكنها لا تعني حجزًا أو شراءً أو إكمالًا فعليًا."
+          ],
+          "en": [
+            "My Plan represents a stronger planning or intent stage than saving, but it does not mean a booking, purchase, or completed action."
+          ]
+        }
+      },
+      "context": {
+        "applicable_pages": [
+          "*"
+        ],
+        "followup_keys": []
+      },
+      "priority": 85
+    },
+    {
+      "id": "metric_action_help",
+      "category": "platform_help",
+      "purpose": "Explain action handoff.",
+      "examples": {
+        "ar": [
+          "وش يعني الانتقال للإجراء",
+          "ايش المقصود بالإجراء",
+          "هل الإجراء يعني اكتمال"
+        ],
+        "en": [
+          "what does action handoff mean",
+          "what is action handoff",
+          "does action mean completion"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "الانتقال للإجراء",
+          "الإجراء"
+        ],
+        "keywords_en": [
+          "action handoff",
+          "action"
+        ],
+        "entities": []
+      },
+      "answer": {
+        "type": "fixed",
+        "handler": null,
+        "responses": {
+          "ar": [
+            "الانتقال للإجراء يعني أن المستخدم وصل إلى خطوة تالية مرتبطة بالنشاط أو العرض داخل النموذج، ولا يعني بالضرورة أن الإجراء اكتمل فعليًا."
+          ],
+          "en": [
+            "Action handoff means the user reached a next-step action in the prototype. It does not necessarily mean the action was completed."
+          ]
+        }
+      },
+      "context": {
+        "applicable_pages": [
+          "*"
+        ],
+        "followup_keys": []
+      },
+      "priority": 85
+    },
+    {
+      "id": "filters_explain_all",
+      "category": "filters",
+      "purpose": "Explain the four global filters.",
+      "examples": {
+        "ar": [
+          "اشرح الفلاتر",
+          "وش الفلاتر",
+          "ايش الفلاتر اللي فوق",
+          "وش أقدر أغير",
+          "كيف أستخدم الفلاتر",
+          "وش تأثير الفلاتر"
+        ],
+        "en": [
+          "explain the filters",
+          "what filters are available",
+          "how do filters work",
+          "what can I filter by",
+          "what do the filters change"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "الفلاتر",
+          "تصفية",
+          "الفلتر"
+        ],
+        "keywords_en": [
+          "filters",
+          "filter"
+        ],
+        "entities": []
+      },
+      "answer": {
+        "type": "fixed",
+        "handler": null,
+        "responses": {
+          "ar": [
+            "الفلاتر الرئيسية أربعة: الفترة الزمنية، المنطقة، القطاع/الفئة، ونوع الجمهور. أي تغيير فيها يعيد قراءة المؤشرات والشارتات والجداول وفق السياق المحدد.",
+            "المساعد يعتمد نفس سياق الفلاتر عند الإجابة."
+          ],
+          "en": [
+            "There are four main filters: time period, area, sector/category, and audience type. Changing them recalculates the metrics, charts, and tables.",
+            "The assistant uses the same active filter context when answering."
+          ]
+        }
+      },
+      "context": {
+        "applicable_pages": [
+          "*"
+        ],
+        "followup_keys": []
+      },
+      "priority": 95
+    },
+    {
+      "id": "filters_current_context",
+      "category": "filters",
+      "purpose": "Return current active filters.",
+      "examples": {
+        "ar": [
+          "وش الفلاتر الحالية",
+          "وش محدد الحين",
+          "ايش مختار حاليا",
+          "وش السياق الحالي",
+          "على أي فترة أنا",
+          "وش المنطقة الحالية",
+          "وش الجمهور الحالي"
+        ],
+        "en": [
+          "what filters are active",
+          "what is selected right now",
+          "what is the current context",
+          "which period is active",
+          "which area is selected"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "الفلاتر الحالية",
+          "محدد",
+          "السياق"
+        ],
+        "keywords_en": [
+          "active filters",
+          "current context",
+          "selected"
+        ],
+        "entities": []
+      },
+      "answer": {
+        "type": "dynamic",
+        "handler": "describe_current_filters",
+        "responses": {
+          "ar": [
+            "الفلاتر الحالية: {{period}} · {{area}} · {{category}} · {{audience}}."
+          ],
+          "en": [
+            "The current filters are: {{period}} · {{area}} · {{category}} · {{audience}}."
+          ]
+        }
+      },
+      "context": {
+        "applicable_pages": [
+          "*"
+        ],
+        "followup_keys": []
+      },
+      "priority": 100
+    },
+    {
+      "id": "filters_period_options",
+      "category": "filters",
+      "purpose": "Explain supported periods.",
+      "examples": {
+        "ar": [
+          "وش الفترات المتاحة",
+          "ايش الفترات الزمنية",
+          "أقدر أشوف 7 أيام",
+          "هل فيه سنة",
+          "وش خيارات الفترة"
+        ],
+        "en": [
+          "what time periods are available",
+          "which periods can I choose",
+          "can I view 7 days",
+          "can I view a year",
+          "what are the time filter options"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "الفترات",
+          "7 أيام",
+          "30 يوم",
+          "3 أشهر",
+          "12 شهر"
+        ],
+        "keywords_en": [
+          "periods",
+          "7 days",
+          "30 days",
+          "3 months",
+          "12 months"
+        ],
+        "entities": []
+      },
+      "answer": {
+        "type": "fixed",
+        "handler": null,
+        "responses": {
+          "ar": [
+            "الفترات المتاحة: آخر 7 أيام، آخر 30 يومًا، آخر 3 أشهر، وآخر 12 شهرًا."
+          ],
+          "en": [
+            "The available periods are Last 7 days, Last 30 days, Last 3 months, and Last 12 months."
+          ]
+        }
+      },
+      "context": {
+        "applicable_pages": [
+          "*"
+        ],
+        "followup_keys": []
+      },
+      "priority": 85
+    },
+    {
+      "id": "filters_area_options",
+      "category": "filters",
+      "purpose": "Explain supported areas.",
+      "examples": {
+        "ar": [
+          "وش المناطق المتاحة",
+          "ايش الأحياء",
+          "وش الأحياء الموجودة",
+          "هل العزيزية موجودة",
+          "هل العوالي موجودة",
+          "وش خيارات المنطقة"
+        ],
+        "en": [
+          "what areas are available",
+          "which areas can I select",
+          "what neighborhoods are included",
+          "is Al Aziziyah available",
+          "what are the area options"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "المناطق",
+          "الأحياء",
+          "العزيزية",
+          "العوالي"
+        ],
+        "keywords_en": [
+          "areas",
+          "neighborhoods",
+          "Al Aziziyah",
+          "Al Awali"
+        ],
+        "entities": []
+      },
+      "answer": {
+        "type": "fixed",
+        "handler": null,
+        "responses": {
+          "ar": [
+            "المناطق الموجودة في النموذج تشمل: العزيزية، الشوقية، العوالي، النسيم، الزاهر، الشرائع، وبطحاء قريش، بالإضافة إلى مكة المكرمة ككل."
+          ],
+          "en": [
+            "The prototype includes Al Aziziyah, Ash Shawqiyah, Al Awali, An Naseem, Az Zahir, Ash Shara'i, and Batha Quraysh, plus Makkah overall."
+          ]
+        }
+      },
+      "context": {
+        "applicable_pages": [
+          "*"
+        ],
+        "followup_keys": []
+      },
+      "priority": 85
+    },
+    {
+      "id": "filters_category_options",
+      "category": "filters",
+      "purpose": "Explain supported categories.",
+      "examples": {
+        "ar": [
+          "وش الفئات المتاحة",
+          "ايش القطاعات",
+          "وش القطاعات الموجودة",
+          "وش أقدر أختار كفئة",
+          "هل المطاعم موجودة"
+        ],
+        "en": [
+          "what categories are available",
+          "which sectors can I filter by",
+          "what category options exist",
+          "are restaurants included"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "الفئات",
+          "القطاعات",
+          "المطاعم",
+          "الخدمات"
+        ],
+        "keywords_en": [
+          "categories",
+          "sectors",
+          "restaurants",
+          "services"
+        ],
+        "entities": []
+      },
+      "answer": {
+        "type": "fixed",
+        "handler": null,
+        "responses": {
+          "ar": [
+            "الفئات في النموذج: المطاعم والمقاهي، التجارب والأنشطة، التسوق، الترفيه، الثقافة، الخدمات، المجتمعات، والضيافة، بالإضافة إلى «الكل»."
+          ],
+          "en": [
+            "The prototype categories are Restaurants & Cafés, Experiences & Activities, Shopping, Entertainment, Culture, Services, Communities, and Hospitality, plus All."
+          ]
+        }
+      },
+      "context": {
+        "applicable_pages": [
+          "*"
+        ],
+        "followup_keys": []
+      },
+      "priority": 85
+    },
+    {
+      "id": "filters_audience_options",
+      "category": "filters",
+      "purpose": "Explain supported audiences.",
+      "examples": {
+        "ar": [
+          "وش أنواع الجمهور",
+          "ايش الجمهور المتاح",
+          "أقدر أختار زوار بس",
+          "أقدر أختار سكان بس",
+          "وش خيارات الجمهور"
+        ],
+        "en": [
+          "what audience types are available",
+          "can I filter visitors only",
+          "can I filter residents only",
+          "what are the audience options"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "الجمهور",
+          "سكان مكة",
+          "الزوار"
+        ],
+        "keywords_en": [
+          "audience",
+          "residents",
+          "visitors"
+        ],
+        "entities": []
+      },
+      "answer": {
+        "type": "fixed",
+        "handler": null,
+        "responses": {
+          "ar": [
+            "فلتر الجمهور يدعم: الكل، سكان مكة، والزوار."
+          ],
+          "en": [
+            "The audience filter supports All, Makkah Residents, and Visitors."
+          ]
+        }
+      },
+      "context": {
+        "applicable_pages": [
+          "*"
+        ],
+        "followup_keys": []
+      },
+      "priority": 85
+    },
+    {
+      "id": "filters_change_period",
+      "category": "filters",
+      "purpose": "Recognize period-change request.",
+      "examples": {
+        "ar": [
+          "خلها آخر 7 أيام",
+          "غير الفترة لسبعة أيام",
+          "اعرض 30 يوم",
+          "خلها 3 أشهر",
+          "شوف آخر سنة",
+          "غيرها لآخر 12 شهر"
+        ],
+        "en": [
+          "set it to last 7 days",
+          "show last 30 days",
+          "switch to 3 months",
+          "show the last 12 months",
+          "change the period to a year"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "غير الفترة",
+          "آخر 7 أيام",
+          "آخر 30",
+          "3 أشهر",
+          "12 شهر"
+        ],
+        "keywords_en": [
+          "set period",
+          "last 7 days",
+          "last 30 days",
+          "3 months",
+          "12 months"
+        ],
+        "entities": [
+          "period"
+        ]
+      },
+      "answer": {
+        "type": "action",
+        "handler": "set_period_from_query",
+        "responses": {
+          "ar": [
+            "تمام، أغيّر الفترة إلى {{period}} وأبقي باقي الفلاتر كما هي."
+          ],
+          "en": [
+            "Okay. I'll switch the period to {{period}} and keep the other filters unchanged."
+          ]
+        }
+      },
+      "context": {
+        "applicable_pages": [
+          "*"
+        ],
+        "followup_keys": []
+      },
+      "priority": 100
+    },
+    {
+      "id": "filters_change_area",
+      "category": "filters",
+      "purpose": "Recognize area-change request.",
+      "examples": {
+        "ar": [
+          "خلها العزيزية",
+          "شوف العوالي",
+          "غير المنطقة للشوقية",
+          "اعرض النسيم",
+          "ركز على الزاهر",
+          "خل التحليل في الشرائع",
+          "شوف بطحاء قريش"
+        ],
+        "en": [
+          "switch to Al Aziziyah",
+          "show Al Awali",
+          "change area to Ash Shawqiyah",
+          "focus on An Naseem",
+          "show Az Zahir",
+          "analyze Ash Shara'i"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "العزيزية",
+          "العوالي",
+          "الشوقية",
+          "النسيم",
+          "الزاهر",
+          "الشرائع",
+          "بطحاء قريش"
+        ],
+        "keywords_en": [
+          "Al Aziziyah",
+          "Al Awali",
+          "Ash Shawqiyah",
+          "An Naseem",
+          "Az Zahir",
+          "Ash Shara'i"
+        ],
+        "entities": [
+          "area"
+        ]
+      },
+      "answer": {
+        "type": "action",
+        "handler": "set_area_from_query",
+        "responses": {
+          "ar": [
+            "تمام، أغيّر المنطقة إلى {{area}} وأبقي باقي الفلاتر كما هي."
+          ],
+          "en": [
+            "Okay. I'll switch the area to {{area}} and keep the other filters unchanged."
+          ]
+        }
+      },
+      "context": {
+        "applicable_pages": [
+          "*"
+        ],
+        "followup_keys": []
+      },
+      "priority": 100
+    },
+    {
+      "id": "filters_change_category",
+      "category": "filters",
+      "purpose": "Recognize category-change request.",
+      "examples": {
+        "ar": [
+          "خلها مطاعم",
+          "ركز على المطاعم والمقاهي",
+          "شوف الأنشطة",
+          "غير الفئة للتسوق",
+          "اعرض الثقافة",
+          "خلها خدمات",
+          "شوف الضيافة",
+          "ركز على الترفيه"
+        ],
+        "en": [
+          "show restaurants and cafes",
+          "focus on activities",
+          "switch category to shopping",
+          "show culture",
+          "filter services",
+          "focus on hospitality",
+          "show entertainment"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "مطاعم",
+          "أنشطة",
+          "تسوق",
+          "ثقافة",
+          "خدمات",
+          "ضيافة",
+          "ترفيه"
+        ],
+        "keywords_en": [
+          "restaurants",
+          "activities",
+          "shopping",
+          "culture",
+          "services",
+          "hospitality",
+          "entertainment"
+        ],
+        "entities": [
+          "category"
+        ]
+      },
+      "answer": {
+        "type": "action",
+        "handler": "set_category_from_query",
+        "responses": {
+          "ar": [
+            "تمام، أطبّق فئة {{category}} وأحافظ على باقي السياق."
+          ],
+          "en": [
+            "Okay. I'll apply the {{category}} category and keep the rest of the context unchanged."
+          ]
+        }
+      },
+      "context": {
+        "applicable_pages": [
+          "*"
+        ],
+        "followup_keys": []
+      },
+      "priority": 100
+    },
+    {
+      "id": "filters_change_audience",
+      "category": "filters",
+      "purpose": "Recognize audience-change request.",
+      "examples": {
+        "ar": [
+          "خلها زوار",
+          "شوف الزوار بس",
+          "ركز على سكان مكة",
+          "اعرض السكان فقط",
+          "رجع الجمهور للكل"
+        ],
+        "en": [
+          "show visitors only",
+          "filter to visitors",
+          "show residents only",
+          "focus on Makkah residents",
+          "set audience to all"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "زوار",
+          "سكان مكة",
+          "الجمهور",
+          "الكل"
+        ],
+        "keywords_en": [
+          "visitors",
+          "residents",
+          "audience",
+          "all"
+        ],
+        "entities": [
+          "audience"
+        ]
+      },
+      "answer": {
+        "type": "action",
+        "handler": "set_audience_from_query",
+        "responses": {
+          "ar": [
+            "تمام، أغيّر الجمهور إلى {{audience}} وأبقي باقي الفلاتر كما هي."
+          ],
+          "en": [
+            "Okay. I'll switch the audience to {{audience}} and keep the other filters unchanged."
+          ]
+        }
+      },
+      "context": {
+        "applicable_pages": [
+          "*"
+        ],
+        "followup_keys": []
+      },
+      "priority": 100
+    },
+    {
+      "id": "filters_reset",
+      "category": "filters",
+      "purpose": "Recognize reset request.",
+      "examples": {
+        "ar": [
+          "رجع الفلاتر",
+          "إعادة ضبط الفلاتر",
+          "رجع كل شي افتراضي",
+          "امسح الفلاتر",
+          "خليها افتراضية",
+          "رجع الإعدادات الافتراضية"
+        ],
+        "en": [
+          "reset filters",
+          "reset all filters",
+          "clear filters",
+          "restore defaults",
+          "go back to default filters"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "إعادة ضبط",
+          "رجع الفلاتر",
+          "افتراضي",
+          "امسح"
+        ],
+        "keywords_en": [
+          "reset filters",
+          "clear filters",
+          "defaults"
+        ],
+        "entities": []
+      },
+      "answer": {
+        "type": "action",
+        "handler": "reset_filters",
+        "responses": {
+          "ar": [
+            "تمام، أرجّع الفلاتر للإعدادات الافتراضية."
+          ],
+          "en": [
+            "Okay. I'll reset the filters to their default settings."
+          ]
+        }
+      },
+      "context": {
+        "applicable_pages": [
+          "*"
+        ],
+        "followup_keys": []
+      },
+      "priority": 100
+    },
+    {
+      "id": "fallback_unclear",
+      "category": "fallback",
+      "purpose": "General fallback for vague requests.",
+      "examples": {
+        "ar": [
+          "وش",
+          "طيب",
+          "ايش",
+          "كيف",
+          "ممكن",
+          "ساعدني",
+          "ما أدري وش أسأل"
+        ],
+        "en": [
+          "what",
+          "okay then",
+          "help me",
+          "I don't know what to ask",
+          "can you help"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "ساعدني",
+          "ما أدري"
+        ],
+        "keywords_en": [
+          "help",
+          "don't know"
+        ],
+        "entities": []
+      },
+      "answer": {
+        "type": "fixed",
+        "handler": null,
+        "responses": {
+          "ar": [
+            "أكيد. تقدر تسألني عن الطلب، منطقة معينة، نشاط، مجتمع، حملة، فجوة طلب وعرض، أو تقرير. وإذا عندك سؤال بطريقتك اكتبه مباشرة.",
+            "اكتب سؤالك بطريقتك. أمثلة بسيطة: «وش أعلى منطقة نموًا؟» أو «وش أكثر نشاط ينضاف لخطتي؟» — وهذه أمثلة وليست قائمة محدودة."
+          ],
+          "en": [
+            "Sure. You can ask about demand, a specific area, an activity, a community, a campaign, a demand-supply gap, or a report. Just ask naturally.",
+            "Write the question in your own words. For example, 'Which area is growing fastest?' or 'Which activity gets added to My Plan most?' — those are examples, not a fixed menu."
+          ]
+        }
+      },
+      "context": {
+        "applicable_pages": [
+          "*"
+        ],
+        "followup_keys": []
+      },
+      "priority": 10
+    },
+    {
+      "id": "fallback_ambiguous_metric",
+      "category": "fallback",
+      "purpose": "Clarify ambiguous ranking/metric request.",
+      "examples": {
+        "ar": [
+          "وش الأعلى",
+          "ايش أكثر شي",
+          "وش الأفضل",
+          "مين أعلى",
+          "كم النسبة",
+          "وش الرقم",
+          "اعطني الأعلى"
+        ],
+        "en": [
+          "what's highest",
+          "which is the most",
+          "what's the best",
+          "what's the number",
+          "what percentage",
+          "show me the top one"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "الأعلى",
+          "أكثر",
+          "الأفضل",
+          "النسبة"
+        ],
+        "keywords_en": [
+          "highest",
+          "most",
+          "best",
+          "percentage"
+        ],
+        "entities": []
+      },
+      "answer": {
+        "type": "fixed",
+        "handler": null,
+        "responses": {
+          "ar": [
+            "تقصد الأعلى في أي شيء تحديدًا: الطلب، النمو، المشاهدة، الحفظ، «خطتي»، الإجراء، أو مؤشر الإشارة؟",
+            "حدد لي المقياس وأنا أجاوبك مباشرة."
+          ],
+          "en": [
+            "Highest in which metric: demand, growth, views, saves, My Plan additions, action handoff, or signal index?",
+            "Specify the metric and I'll answer directly."
+          ]
+        }
+      },
+      "context": {
+        "applicable_pages": [
+          "*"
+        ],
+        "followup_keys": []
+      },
+      "priority": 70
+    },
+    {
+      "id": "out_of_scope_general_knowledge",
+      "category": "out_of_scope",
+      "purpose": "Redirect unrelated general knowledge.",
+      "examples": {
+        "ar": [
+          "من هو رئيس أمريكا",
+          "وش عاصمة فرنسا",
+          "كم عدد سكان العالم",
+          "من اخترع الإنترنت",
+          "اعطني معلومات عن الفضاء",
+          "من فاز بكأس العالم"
+        ],
+        "en": [
+          "who is the president of the US",
+          "what is the capital of France",
+          "what is the world population",
+          "who invented the internet",
+          "tell me about space",
+          "who won the world cup"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "رئيس",
+          "عاصمة",
+          "العالم",
+          "الفضاء",
+          "كأس العالم"
+        ],
+        "keywords_en": [
+          "president",
+          "capital",
+          "world population",
+          "space",
+          "world cup"
+        ],
+        "entities": []
+      },
+      "answer": {
+        "type": "fixed",
+        "handler": null,
+        "responses": {
+          "ar": [
+            "هذا خارج نطاق بيانات EyeMakkah التحليلية. داخل المنصة أقدر أساعدك في الطلب والمناطق والأنشطة والمجتمعات والحملات والفرص والتقارير.",
+            "سؤالك عام وخارج نطاق الـBI الحالي."
+          ],
+          "en": [
+            "That's outside the EyeMakkah analytics scope. I can help with demand, areas, activities, communities, campaigns, opportunities, and reports inside the platform.",
+            "That's a general question outside the current BI scope."
+          ]
+        }
+      },
+      "context": {
+        "applicable_pages": [
+          "*"
+        ],
+        "followup_keys": []
+      },
+      "priority": 35
+    },
+    {
+      "id": "out_of_scope_live_news",
+      "category": "out_of_scope",
+      "purpose": "Redirect live news/current events.",
+      "examples": {
+        "ar": [
+          "وش آخر الأخبار",
+          "ايش صار اليوم",
+          "عطني أخبار اليوم",
+          "وش الجديد في مكة اليوم",
+          "فيه حدث صار اليوم"
+        ],
+        "en": [
+          "what's the latest news",
+          "what happened today",
+          "give me today's news",
+          "what's new in Makkah today"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "الأخبار",
+          "اليوم",
+          "الجديد"
+        ],
+        "keywords_en": [
+          "news",
+          "today",
+          "latest"
+        ],
+        "entities": []
+      },
+      "answer": {
+        "type": "fixed",
+        "handler": null,
+        "responses": {
+          "ar": [
+            "الأخبار الحية ليست ضمن بيانات هذا النموذج. أقدر أقرأ لك ما تعرضه EyeMakkah حاليًا من مؤشرات وتحليلات فقط.",
+            "هذه النسخة لا تجلب أخبارًا مباشرة."
+          ],
+          "en": [
+            "Live news is not part of this prototype's data. I can analyze the indicators represented inside EyeMakkah.",
+            "This version does not fetch live news."
+          ]
+        }
+      },
+      "context": {
+        "applicable_pages": [
+          "*"
+        ],
+        "followup_keys": []
+      },
+      "priority": 40
+    },
+    {
+      "id": "out_of_scope_personal_data",
+      "category": "out_of_scope",
+      "purpose": "Protect individual/private data.",
+      "examples": {
+        "ar": [
+          "اعطني بيانات شخص",
+          "أبغا معلومات عن مستخدم",
+          "مين هذا المستخدم",
+          "طلع لي أسماء المستخدمين",
+          "اعطني رقم شخص",
+          "اعطني بيانات فردية"
+        ],
+        "en": [
+          "give me a user's data",
+          "who is this user",
+          "list user names",
+          "give me someone's phone number",
+          "show individual records",
+          "show me personal information"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "بيانات شخص",
+          "مستخدم",
+          "أسماء المستخدمين",
+          "رقم شخص"
+        ],
+        "keywords_en": [
+          "personal data",
+          "user data",
+          "user names",
+          "phone number"
+        ],
+        "entities": []
+      },
+      "answer": {
+        "type": "fixed",
+        "handler": null,
+        "responses": {
+          "ar": [
+            "المنصة التحليلية هنا تعرض مؤشرات مجمعة، ولا أتعامل مع معلومات شخصية أو تعريف أفراد. أقدر أساعدك في الأنماط المجمعة فقط.",
+            "ما عندي وصول لبيانات شخصية عن أفراد في هذا النموذج."
+          ],
+          "en": [
+            "This analytics experience uses aggregated indicators and does not expose personal information or identify individuals. I can help with aggregated patterns only.",
+            "I don't have access to individual personal data in this prototype."
+          ]
+        }
+      },
+      "context": {
+        "applicable_pages": [
+          "*"
+        ],
+        "followup_keys": []
+      },
+      "priority": 100
+    },
+    {
+      "id": "out_of_scope_financial_projection",
+      "category": "out_of_scope",
+      "purpose": "Avoid pricing, ROI, revenue, and feasibility projections.",
+      "examples": {
+        "ar": [
+          "كم تتوقع الإيرادات",
+          "وش العائد المتوقع",
+          "احسب ROI",
+          "كم أرباح المشروع",
+          "وش سعر الخدمة المناسب",
+          "كم الاستثمار المطلوب",
+          "هل الفرصة مربحة"
+        ],
+        "en": [
+          "what revenue do you expect",
+          "calculate ROI",
+          "how profitable is this",
+          "what price should we charge",
+          "how much investment is needed",
+          "is this opportunity profitable"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "إيرادات",
+          "ROI",
+          "أرباح",
+          "سعر",
+          "استثمار",
+          "مربحة",
+          "جدوى"
+        ],
+        "keywords_en": [
+          "revenue",
+          "ROI",
+          "profit",
+          "price",
+          "investment",
+          "profitable",
+          "feasibility"
+        ],
+        "entities": []
+      },
+      "answer": {
+        "type": "fixed",
+        "handler": null,
+        "responses": {
+          "ar": [
+            "المنصة الحالية لا تقدّم تسعيرًا أو توقعات إيرادات أو ROI أو جدوى مالية. أقدر أوضح لك إشارات الطلب والعرض والنمو التي قد تُستخدم كمدخل لدراسة متخصصة.",
+            "التقييم المالي والتسعير والجدوى يحتاج دراسة متخصصة خارج نطاق EyeMakkah BI الحالي."
+          ],
+          "en": [
+            "The current platform does not provide pricing, revenue forecasts, ROI, or financial feasibility estimates. I can explain demand, supply, and growth signals that may later inform a specialized study.",
+            "Financial feasibility, pricing, and investment evaluation require separate specialist analysis outside the current EyeMakkah BI scope."
+          ]
+        }
+      },
+      "context": {
+        "applicable_pages": [
+          "*"
+        ],
+        "followup_keys": []
+      },
+      "priority": 100
+    },
+    {
+      "id": "out_of_scope_prediction_certainty",
+      "category": "out_of_scope",
+      "purpose": "Avoid guaranteed future predictions.",
+      "examples": {
+        "ar": [
+          "هل أكيد بيزيد الطلب",
+          "تضمن أن الفرصة تنجح",
+          "هل هذا الشي مضمون",
+          "هل المؤشر يعني نجاح",
+          "هل هذا ضمان"
+        ],
+        "en": [
+          "will demand definitely increase",
+          "can you guarantee this opportunity will work",
+          "is this guaranteed",
+          "does the signal mean success",
+          "is this a sure thing"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "أكيد",
+          "تضمن",
+          "مضمون",
+          "ضمان",
+          "نجاح"
+        ],
+        "keywords_en": [
+          "definitely",
+          "guarantee",
+          "guaranteed",
+          "sure"
+        ],
+        "entities": []
+      },
+      "answer": {
+        "type": "fixed",
+        "handler": null,
+        "responses": {
+          "ar": [
+            "لا. مؤشرات EyeMakkah في النموذج هي إشارات تحليلية تساعد على الفهم والتحقق، وليست ضمانًا لنتيجة مستقبلية أو نجاح تجاري.",
+            "المؤشر يوضح نمطًا أو فجوة داخل البيانات الحالية، لكنه لا يضمن ما سيحدث مستقبلًا."
+          ],
+          "en": [
+            "No. EyeMakkah indicators in this prototype are analytical signals for understanding and validation, not guarantees of future outcomes or commercial success.",
+            "The signal describes a current pattern or gap in the data, but it does not guarantee what will happen next."
+          ]
+        }
+      },
+      "context": {
+        "applicable_pages": [
+          "*"
+        ],
+        "followup_keys": []
+      },
+      "priority": 95
+    },
+    {
+      "id": "fallback_spelling_noise",
+      "category": "fallback",
+      "purpose": "Handle noisy/misspelled analytics queries.",
+      "examples": {
+        "ar": [
+          "وش اكثثر طللب",
+          "وين اعللا نموا",
+          "اي منطقع اكثر",
+          "وش النشات الاعلى",
+          "ابي اعرف الفلترز"
+        ],
+        "en": [
+          "whats the higest demnd",
+          "wich area grow fastest",
+          "show top activty",
+          "what flters r on"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [],
+        "keywords_en": [],
+        "entities": []
+      },
+      "answer": {
+        "type": "fixed",
+        "handler": null,
+        "responses": {
+          "ar": [
+            "أفهم إنك تسأل عن تحليل داخل EyeMakkah، لكن الصياغة غير واضحة بالكامل. جرّب تكتبها بكلمتين أو ثلاث مثل «أعلى طلب» أو «أعلى منطقة نمو» أو «الفلاتر الحالية».",
+            "قريب أفهم المقصود. اكتب اسم الشيء اللي تبغاه مع المقياس."
+          ],
+          "en": [
+            "I can tell you're asking about EyeMakkah analytics, but the wording is not fully clear. Try a shorter phrase such as 'highest demand', 'fastest-growing area', or 'current filters'.",
+            "I'm close to the intent. Add the object and metric."
+          ]
+        }
+      },
+      "context": {
+        "applicable_pages": [
+          "*"
+        ],
+        "followup_keys": []
+      },
+      "priority": 5
+    }
+  ],
+  "bank_plan": {
+    "target_total_intents_across_all_parts": 150,
+    "target_total_example_utterances_across_all_parts": "approximately 2000",
+    "this_part_role": "Core conversational, platform, filter, and fallback coverage."
+  }
+}
