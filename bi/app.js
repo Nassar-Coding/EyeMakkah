@@ -71,11 +71,14 @@
     settings:'<path d="M12 15.5A3.5 3.5 0 1 0 12 8a3.5 3.5 0 0 0 0 7.5Z"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.88l.06.06-2.83 2.83-.06-.06A1.7 1.7 0 0 0 15 19.4a1.7 1.7 0 0 0-1 .6 1.7 1.7 0 0 0-.4 1.1V21H9v-.1A1.7 1.7 0 0 0 8.6 20a1.7 1.7 0 0 0-1-.6 1.7 1.7 0 0 0-1.88.34l-.06.06-2.83-2.83.06-.06A1.7 1.7 0 0 0 3.23 15a1.7 1.7 0 0 0-.6-1 1.7 1.7 0 0 0-1.1-.4H1V9h.1A1.7 1.7 0 0 0 2 8.6a1.7 1.7 0 0 0 .6-1 1.7 1.7 0 0 0-.34-1.88l-.06-.06 2.83-2.83.06.06A1.7 1.7 0 0 0 7 3.23a1.7 1.7 0 0 0 1-.6 1.7 1.7 0 0 0 .4-1.1V1h4.6v.1a1.7 1.7 0 0 0 .4 1.1 1.7 1.7 0 0 0 1 .6 1.7 1.7 0 0 0 1.88-.34l.06-.06 2.83 2.83-.06.06A1.7 1.7 0 0 0 18.77 7a1.7 1.7 0 0 0 .6 1 1.7 1.7 0 0 0 1.1.4H21V13h-.1a1.7 1.7 0 0 0-1.1.4 1.7 1.7 0 0 0-.4 1Z"/>',
     logOut:'<path d="M10 17l5-5-5-5"/><path d="M15 12H3"/><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/>',
     sparkles:'<path d="m12 3-1.2 3.3L7.5 7.5l3.3 1.2L12 12l1.2-3.3 3.3-1.2-3.3-1.2L12 3Z"/><path d="m5 14-.8 2.2L2 17l2.2.8L5 20l.8-2.2L8 17l-2.2-.8L5 14Z"/><path d="m19 13-.8 2.2L16 16l2.2.8L19 19l.8-2.2L22 16l-2.2-.8L19 13Z"/>',
-    download:'<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/><path d="M12 15V3"/>'
+    download:'<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/><path d="M12 15V3"/>',
+    compass:'<circle cx="12" cy="12" r="10"/><path d="m16 8-2.4 5.6L8 16l2.4-5.6L16 8Z"/>',
+    alertTriangle:'<path d="m21.73 18-8-14a2 2 0 0 0-3.46 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/>',
+    refreshCw:'<path d="M21 12a9 9 0 0 0-15.2-6.5L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 15.2 6.5L21 16"/><path d="M16 16h5v5"/>'
   };
   function iconSvg(name,size){
-    const p=ICON_PATHS[name]||ICON_PATHS.dashboard,s=size||18;
-    return '<svg class="ui-icon" aria-hidden="true" viewBox="0 0 24 24" width="'+s+'" height="'+s+'" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'+p+'</svg>'
+    const p=ICON_PATHS[name]||ICON_PATHS.dashboard,s=size||18,directional=name==="logOut"?" directional-icon":"";
+    return '<svg class="ui-icon'+directional+'" aria-hidden="true" viewBox="0 0 24 24" width="'+s+'" height="'+s+'" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">'+p+'</svg>'
   }
   function wordmark(size,light){
     return '<div class="wordmark '+(light?"wordmark-light":"wordmark-dark")+'" style="--wm-size:'+(size||32)+'px" dir="ltr"><div class="wordmark-text"><span>Eye</span><strong>Makkah</strong></div><i></i></div>'
@@ -247,6 +250,7 @@
     ["watch-signal","ما أبرز إشارة تحتاج متابعة؟","What signal needs the most attention?"]
   ];
   let aiQuestion="top-category";
+  let uiIssue=null;
   function aiAnswer(id){
     const m=metrics(),op=scaledOppRows(OPPS.filter(r=>(state.area==="مكة المكرمة"||r.area===state.area)&&(state.category==="الكل"||r.category===state.category))).sort((a,b)=>b.score-a.score),acts=activityRows(),areas=(state.area==="مكة المكرمة"?AREAS:[state.area]).map(a=>({area:a,growth:scaledRate(.04+(AF[a]-.68)*.18,a+"ai")})).sort((a,b)=>b.growth-a.growth),cats=(state.category==="الكل"?CATS:[state.category]).map(c=>({category:c,value:Math.round(m.interactions*CF[c]*rowNoise(c+"ai"))})).sort((a,b)=>b.value-a.value),gaps=op.slice().sort((a,b)=>(b.demand_index-b.supply_index)-(a.demand_index-a.supply_index)),topAct=acts.slice().sort((a,b)=>b.plans-a.plans)[0],residents=Math.round(m.searches*.58),visitors=Math.round(m.searches*.42);
     if(id==="top-category"){const x=cats[0];return tr("الفئة الأعلى طلبًا ضمن الفلاتر الحالية هي <b>"+esc(x?x.category:"—")+"</b>، مع مستوى تفاعل تجريبي يقارب <b>"+fmt(x?x.value:0)+"</b>.","The highest-demand category under the active filters is <b>"+esc(enText(x?x.category:"—"))+"</b>, with illustrative engagement of about <b>"+fmt(x?x.value:0)+"</b>.")}
@@ -287,7 +291,7 @@
   }
   function activities(){
     const a=activityRows();
-    if(!a.length)return header("الأنشطة والتجارب","تحليل سلوك المشاركة مع الحفاظ على الفرق بين العرض والحفظ والتخطيط والانضمام والإجراء والإكمال.")+filters()+emptyState("لا توجد أنشطة تجريبية مطابقة لهذه الفلاتر.");
+    if(!a.length)return header("الأنشطة والتجارب","تحليل سلوك المشاركة مع الحفاظ على الفرق بين العرض والحفظ والتخطيط والانضمام والإجراء والإكمال.")+filters()+emptyState("لا توجد أنشطة تجريبية مطابقة لهذه الفلاتر.","No demo activities match these filters.");
     const max=k=>a.slice().sort((x,y)=>y[k]-x[k])[0],lead=max("plans");
     return header("الأنشطة والتجارب","تحليل سلوك المشاركة مع الحفاظ على الفرق بين العرض والحفظ والتخطيط والانضمام والإجراء والإكمال.")+filters()+
       '<div class="kpi-grid">'+kpi("الأكثر مشاهدة",max("views").activity,.12,"ضمن بيانات النموذج",true)+kpi("الأكثر حفظًا",max("saves").activity,.16,"ضمن بيانات النموذج",true)+kpi("الأكثر إضافة إلى خطتي",lead.activity,lead.growth,"ضمن بيانات النموذج",true)+kpi("الأعلى في نية الحضور",max("joins").activity,.09,"ضمن بيانات النموذج",true)+kpi("الأعلى انتقالًا للإجراء",max("actions").activity,.11,"ضمن بيانات النموذج",true)+'</div>'+
@@ -309,7 +313,7 @@
   }
   function campaigns(){
     let rows=campaignRows();
-    if(!rows.length)return header("الحملات والعروض","قراءة أداء حملات تجريبية للشركاء والعلامات التجارية.")+filters()+emptyState("لا توجد حملات تجريبية مطابقة للفلاتر المحددة.");
+    if(!rows.length)return header("الحملات والعروض","قراءة أداء حملات تجريبية للشركاء والعلامات التجارية.")+filters()+emptyState("لا توجد حملات تجريبية مطابقة للفلاتر المحددة.","No demo campaigns match the selected filters.");
     if(!rows.some(r=>r.campaign===state.campaign))state.campaign=rows[0].campaign;
     const r=rows.find(x=>x.campaign===state.campaign);
     const areaSet=state.area==="مكة المكرمة"?AREAS:[state.area];
@@ -353,11 +357,14 @@
     return rows;
   }
   function reports(){
-    const rr=[["التقرير الشهري للطلب والاهتمام","ملخص البحث والحفظ والتخطيط واتجاهات الطلب."],["تحليل مناطق مكة","مقارنة المناطق والفئات ومؤشرات النمو."],["تقرير المجتمعات والاهتمامات","أنماط النقاش والمساهمة والموضوعات الصاعدة."],["أداء الحملات والعروض","قمع الحملات والأداء حسب الجمهور والمنطقة."],["تقرير الفرص والفجوات","إشارات الطلب مقابل العرض لدعم التحقق والدراسة."]],rows=reportRows(),m=metrics(),trn=trend(["searches","plans"]);
+    const rr=[["التقرير الشهري للطلب والاهتمام","ملخص البحث والحفظ والتخطيط واتجاهات الطلب."],["تحليل مناطق مكة","مقارنة المناطق والفئات ومؤشرات النمو."],["تقرير المجتمعات والاهتمامات","أنماط النقاش والمساهمة والموضوعات الصاعدة."],["أداء الحملات والعروض","قمع الحملات والأداء حسب الجمهور والمنطقة."],["تقرير الفرص والفجوات","إشارات الطلب مقابل العرض لدعم التحقق والدراسة."]],rows=reportRows(),m=metrics(),trn=trend(["searches","plans"]),
+    exportBlock=uiIssue&&uiIssue.scope==="export"
+      ?errorState("export","تعذّر تجهيز ملف التصدير","The export could not be prepared","لم يتم تنزيل الملف. أعد المحاولة؛ بيانات التقرير والفلاتر الحالية لم تتأثر.","The file was not downloaded. Try again; the report data and active filters were not affected.","export")
+      :'<section class="report-export"><div class="report-export-head"><div><div class="panel-title">تصدير ملخص CSV</div><div class="panel-copy">يحتوي الملف على مؤشرات مجمعة وفق الفلاتر الحالية.</div></div><button class="download-btn" id="download-csv">'+iconSvg("download",16)+'<span>تصدير CSV</span></button></div>'+table(rows.slice(0,30),[["area","المنطقة"],["category","الفئة"],["audience","الجمهور"],["interactions","التفاعلات","num"],["active_users","المستخدمون النشطون","num"],["searches","البحث","num"],["views","العرض","num"],["saves","الحفظ","num"],["plans","الإضافة إلى خطتي","num"],["actions","الانتقال إلى الإجراء","num"]])+'</section>';
     return header("التقارير","مركز مبسط لعرض التقارير الدورية وتصدير ملخصات البيانات التجريبية.")+filters()+
       '<div class="report-summary"><div class="report-kpis">'+kpi("عمليات البحث",fmt(m.searches),delta(21))+kpi("الإضافات إلى «خطتي»",fmt(m.plans),delta(22))+kpi("الانتقال إلى الإجراء",fmt(m.actions),delta(23))+'</div>'+panel("اتجاه مختصر","ملخص بصري للفترة الحالية.",line([{name:"بحث",color:C.green,values:trn.searches},{name:"خطتي",color:C.gold,values:trn.plans}]))+'</div>'+
       '<div class="reports-list">'+rr.map(x=>'<details class="report"><summary><span>'+esc(x[0])+'</span><span class="report-chevron">'+iconSvg("chevronDown",16)+'</span></summary><div class="report-body">'+esc(x[1])+'<br><small>الفترة: '+esc(state.period)+' · المنطقة: '+esc(state.area)+' · الفئة: '+esc(state.category)+' · الجمهور: '+esc(state.audience)+'</small><br>يعرض النموذج بنية التقرير وتجربة التفاعل. البيانات توضيحية وليست بيانات تشغيلية حية.</div></details>').join("")+'</div>'+
-      '<section class="report-export"><div class="report-export-head"><div><div class="panel-title">تصدير ملخص CSV</div><div class="panel-copy">يحتوي الملف على مؤشرات مجمعة وفق الفلاتر الحالية.</div></div><button class="download-btn" id="download-csv">'+iconSvg("download",16)+'<span>تصدير CSV</span></button></div>'+table(rows.slice(0,30),[["area","المنطقة"],["category","الفئة"],["audience","الجمهور"],["interactions","التفاعلات","num"],["active_users","المستخدمون النشطون","num"],["searches","البحث","num"],["views","العرض","num"],["saves","الحفظ","num"],["plans","الإضافة إلى خطتي","num"],["actions","الانتقال للإجراء","num"]])+'</section>'+
+      exportBlock+
       '<script id="report-data" type="application/json">'+JSON.stringify(rows).replace(/</g,"\\u003c")+'</script>';
   }
 
@@ -543,32 +550,48 @@
   }
   function transitionUpdate(fn){
     document.body.classList.add("is-updating");
-    window.setTimeout(()=>{fn();render()},140)
+    window.setTimeout(()=>{uiIssue=null;fn();render()},220)
   }
   function resetFilters(){
     state.period="آخر 30 يومًا";state.area="مكة المكرمة";state.category="الكل";state.audience="الكل";state.selectedArea="العزيزية";state.campaign="نكهات مكة"
   }
-  function emptyState(message){
-    return '<div class="empty-state"><div class="empty-icon">◇</div><b>'+esc(message)+'</b><p>'+esc("جرّب توسيع الفلاتر أو العودة إلى الإعدادات الافتراضية.")+'</p><button type="button" class="secondary-btn" data-reset-filters>'+esc("إعادة ضبط الفلاتر")+'</button></div>'
+  function emptyState(message,englishMessage){
+    const title=state.lang==="en"?(englishMessage||enText(message)):message;
+    return '<div class="state-view empty-state" role="status"><div class="state-icon state-icon-empty">'+iconSvg("compass",24)+'</div><div class="state-title">'+esc(title)+'</div><div class="state-body">'+esc(tr("جرّب توسيع الفلاتر أو العودة إلى الإعدادات الافتراضية.","Try broadening the filters or return to the default settings."))+'</div><button type="button" class="state-action" data-reset-filters>'+iconSvg("refreshCw",16)+'<span>'+esc(tr("إعادة ضبط الفلاتر","Reset filters"))+'</span></button></div>'
   }
-
-  function page(){switch(state.page){case"لوحة المعلومات":return dashboard();case"تحليل الطلب":return demand();case"تحليل المناطق":return areas();case"الأنشطة والتجارب":return activities();case"المجتمعات والاهتمامات":return communities();case"الحملات والعروض":return campaigns();case"الفرص والفجوات":return opportunities();case"التقارير":return reports();default:return dashboard();}}
+  function errorState(kind,titleAr,titleEn,bodyAr,bodyEn,recovery){
+    const action=recovery||"page";
+    return '<div class="state-view error-state" role="alert"><div class="state-icon state-icon-error">'+iconSvg("alertTriangle",24)+'</div><div class="state-title">'+esc(tr(titleAr,titleEn))+'</div><div class="state-body">'+esc(tr(bodyAr,bodyEn))+'</div><button type="button" class="state-action" data-recover="'+esc(action)+'">'+iconSvg("refreshCw",16)+'<span>'+esc(tr(action==="export"?"إعادة المحاولة":"العودة إلى لوحة المعلومات",action==="export"?"Try again":"Back to Dashboard"))+'</span></button></div>'
+  }
+  function loadingSkeletons(){
+    const kpis='<div class="skeleton-kpis">'+Array.from({length:5},()=>'<div class="skeleton-kpi"><i class="shim sk-label"></i><i class="shim sk-value"></i><i class="shim sk-meta"></i></div>').join("")+'</div>';
+    const charts='<div class="skeleton-panels"><div class="skeleton-panel"><i class="shim sk-title"></i><i class="shim sk-chart"></i></div><div class="skeleton-panel"><i class="shim sk-title"></i><i class="shim sk-chart short"></i></div></div>';
+    const rows='<div class="skeleton-table"><i class="shim sk-title"></i>'+Array.from({length:5},(_,i)=>'<div class="skeleton-row"><i class="shim" style="width:'+(30+i%3*8)+'%"></i><i class="shim" style="width:'+(18+i%2*7)+'%"></i><i class="shim" style="width:'+(14+i%3*5)+'%"></i></div>').join("")+'</div>';
+    const reports='<div class="skeleton-reports">'+Array.from({length:5},()=>'<div class="skeleton-report"><i class="shim" style="width:38%"></i><i class="shim" style="width:18%"></i></div>').join("")+'</div>';
+    return '<div class="loading-state" aria-hidden="true">'+kpis+(state.page==="التقارير"?reports:charts+rows)+'</div>'
+  }
+  function page(){switch(state.page){case"لوحة المعلومات":return dashboard();case"تحليل الطلب":return demand();case"تحليل المناطق":return areas();case"الأنشطة والتجارب":return activities();case"المجتمعات والاهتمامات":return communities();case"الحملات والعروض":return campaigns();case"الفرص والفجوات":return opportunities();case"التقارير":return reports();default:return errorState("unexpected","تعذّر عرض هذه الشاشة","This screen could not be displayed","حدثت حالة غير متوقعة. بياناتك التجريبية وإعدادات الفلاتر لم تتأثر.","An unexpected UI state occurred. Your demo data and filter settings were not affected.","page");}}
+  function safePage(){
+    try{return page()}catch(err){console.error("EyeMakkah BI render error",err);uiIssue={scope:"page"};return errorState("page","تعذّر عرض هذه الشاشة","This screen could not be displayed","حدث خطأ غير متوقع أثناء عرض التحليلات. جرّب العودة إلى لوحة المعلومات.","An unexpected error occurred while rendering analytics. Try returning to the Dashboard.","page")}
+  }
   function shell(){
     const lang='<div class="lang-switch"><button data-lang="ar" class="'+(state.lang==="ar"?"active":"")+'">العربية</button><button data-lang="en" class="'+(state.lang==="en"?"active":"")+'">English</button></div>';
     return '<div class="bi-shell"><aside class="sidebar"><div class="brand">'+wordmark(28,false)+'<div class="brand-sub">'+esc(tr("منصة EyeMakkah لتحليلات الأعمال","EyeMakkah Business Analytics Platform"))+'</div>'+lang+'</div><nav class="nav">'+
       PAGES.map(x=>'<button data-page="'+esc(x[0])+'" class="'+(state.page===x[0]?"active":"")+'"><span class="nav-icon">'+iconSvg(x[1],19)+'</span><span>'+esc(x[0])+'</span></button>').join("")+
-      '</nav><div class="sidebar-meta">'+esc(tr("آخر تحديث للنموذج: 22 سبتمبر 2026","Prototype updated: 22 September 2026"))+'<br>'+esc(tr("بيانات اصطناعية لأغراض العرض","Synthetic data for demonstration"))+'<br>'+esc(tr("لا تتضمن معلومات شخصية.","No personal information is included."))+'</div></aside><main class="main"><div class="mobile-tools"><select id="mobile-page">'+opts(PAGES.map(x=>x[0]),state.page)+'</select>'+lang+userMenu()+'</div><div class="loading-strip" aria-hidden="true"><span></span><span></span><span></span></div><div id="page" class="page-motion">'+page()+'</div><div class="data-note">'+esc(tr("البيانات المعروضة في هذا النموذج توضيحية لأغراض تصميم وتجربة المنصة، ولا تمثل بيانات تشغيلية حية أو معلومات عن أفراد.","Data shown in this prototype is illustrative for product design and testing. It is not live operational data and contains no individual information."))+'</div><div class="footer-links">'+esc(tr("نموذج تحليلات الأعمال · بيانات توضيحية","Business Analytics prototype · illustrative data"))+'</div><div id="chart-tooltip" class="chart-tooltip" role="tooltip" aria-hidden="true"></div></main></div>';
+      '</nav><div class="sidebar-meta">'+esc(tr("آخر تحديث للنموذج: 22 سبتمبر 2026","Prototype updated: 22 September 2026"))+'<br>'+esc(tr("بيانات اصطناعية لأغراض العرض","Synthetic data for demonstration"))+'<br>'+esc(tr("لا تتضمن معلومات شخصية.","No personal information is included."))+'</div></aside><main class="main"><div class="mobile-tools"><select id="mobile-page">'+opts(PAGES.map(x=>x[0]),state.page)+'</select>'+lang+userMenu()+'</div><div class="loading-strip" aria-hidden="true"><span></span><span></span><span></span></div>'+loadingSkeletons()+'<div id="page" class="page-motion">'+safePage()+'</div><div class="data-note">'+esc(tr("البيانات المعروضة في هذا النموذج توضيحية لأغراض تصميم وتجربة المنصة، ولا تمثل بيانات تشغيلية حية أو معلومات عن أفراد.","Data shown in this prototype is illustrative for product design and testing. It is not live operational data and contains no individual information."))+'</div><div class="footer-links">'+esc(tr("نموذج تحليلات الأعمال · بيانات توضيحية","Business Analytics prototype · illustrative data"))+'</div><div id="chart-tooltip" class="chart-tooltip" role="tooltip" aria-hidden="true"></div></main></div>';
   }
   function downloadCsv(){
-    const e=document.getElementById("report-data");if(!e)return;
-    const rows=JSON.parse(e.textContent),cols=["area","category","audience","interactions","active_users","searches","views","saves","plans","joins","actions","completes","contributes"];
-    const headsAr=["المنطقة","الفئة","الجمهور","التفاعلات","المستخدمون النشطون","البحث","العرض","الحفظ","الإضافة إلى خطتي","الانضمام","الانتقال إلى الإجراء","الإكمال","المساهمات"];
-    const heads=state.lang==="en"?headsAr.map(enText):headsAr;
-    const q=v=>'"'+String(state.lang==="en"?enText(v):(v==null?"":v)).replace(/"/g,'""')+'"';
-    const csv="\uFEFF"+[heads].concat(rows.map(r=>cols.map(c=>r[c]))).map(r=>r.map(q).join(",")).join("\n");
-    const blob=new Blob([csv],{type:"text/csv;charset=utf-8"}),a=document.createElement("a");
-    a.href=URL.createObjectURL(blob);a.download="EyeMakkah_Business_Analytics_demo_summary.csv";
-    document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),500);
+    try{
+      const e=document.getElementById("report-data");if(!e)throw new Error("report-data missing");
+      const rows=JSON.parse(e.textContent),cols=["area","category","audience","interactions","active_users","searches","views","saves","plans","joins","actions","completes","contributes"];
+      const headsAr=["المنطقة","الفئة","الجمهور","التفاعلات","المستخدمون النشطون","البحث","العرض","الحفظ","الإضافة إلى خطتي","الانضمام","الانتقال إلى الإجراء","الإكمال","المساهمات"];
+      const heads=state.lang==="en"?headsAr.map(enText):headsAr;
+      const q=v=>'"'+String(state.lang==="en"?enText(v):(v==null?"":v)).replace(/"/g,'""')+'"';
+      const csv="\uFEFF"+[heads].concat(rows.map(r=>cols.map(c=>r[c]))).map(r=>r.map(q).join(",")).join("\n");
+      const blob=new Blob([csv],{type:"text/csv;charset=utf-8"}),a=document.createElement("a");
+      a.href=URL.createObjectURL(blob);a.download="EyeMakkah_Business_Analytics_demo_summary.csv";
+      document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),500);uiIssue=null
+    }catch(err){console.error("EyeMakkah BI export error",err);uiIssue={scope:"export"};render()}
   }
   function attach(){
     const enterLanguage=document.querySelector("[data-enter-language]");if(enterLanguage)enterLanguage.onclick=()=>{flow="language";render()};
@@ -593,10 +616,11 @@
     const dl=document.getElementById("download-csv");if(dl)dl.onclick=downloadCsv;
     document.querySelectorAll("[data-lang],[data-menu-lang]").forEach(b=>b.onclick=()=>{state.lang=b.dataset.lang||b.dataset.menuLang;localStorage.setItem("eyemakkah-ba-lang",state.lang);render()});
     document.querySelectorAll("[data-reset-filters]").forEach(b=>b.onclick=()=>transitionUpdate(resetFilters));
-    document.querySelectorAll("[data-ai-question]").forEach(b=>b.onclick=()=>{aiQuestion=b.dataset.aiQuestion;const box=document.querySelector(".ai-answer");if(box)box.classList.add("refreshing");window.setTimeout(render,130)});
+    document.querySelectorAll("[data-recover]").forEach(b=>b.onclick=()=>{const scope=b.dataset.recover;uiIssue=null;if(scope==="page")state.page=PAGES[0][0];render()});
+    document.querySelectorAll("[data-ai-question]").forEach(b=>b.onclick=()=>{aiQuestion=b.dataset.aiQuestion;const box=document.querySelector(".ai-answer");if(box)box.classList.add("refreshing");window.setTimeout(render,180)});
     const chartTip=document.getElementById("chart-tooltip");
     if(chartTip){
-      const moveTip=e=>{chartTip.style.left=(e.clientX+14)+"px";chartTip.style.top=(e.clientY+14)+"px"};
+      const moveTip=e=>{const gap=12,w=chartTip.offsetWidth||240,h=chartTip.offsetHeight||44;chartTip.style.left=Math.max(gap,Math.min(e.clientX+14,window.innerWidth-w-gap))+"px";chartTip.style.top=Math.max(gap,Math.min(e.clientY+14,window.innerHeight-h-gap))+"px"};
       document.querySelectorAll("[data-tip]").forEach(el=>{
         el.addEventListener("pointerenter",e=>{chartTip.textContent=el.dataset.tip||"";chartTip.classList.add("show");chartTip.setAttribute("aria-hidden","false");moveTip(e)});
         el.addEventListener("pointermove",moveTip);
