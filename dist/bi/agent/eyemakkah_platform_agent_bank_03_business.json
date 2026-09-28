@@ -1,0 +1,2165 @@
+{
+  "file": "eyemakkah_platform_agent_bank_03_business.json",
+  "version": "1.0.0",
+  "phase": 1,
+  "part": "03_business",
+  "source_alignment": {
+    "bi_branch": "BI-Platform",
+    "bi_head_reviewed": "99ff97f58debe8c3ffff7769d0be111ca964c6a2",
+    "scope_reviewed": [
+      "Campaigns & Offers",
+      "Opportunities & Gaps",
+      "Reports",
+      "Cross-page analytical relationships"
+    ],
+    "note": "Intent semantics and response placeholders are aligned to the current synthetic BI calculations and page structures. No BI code or UI was modified."
+  },
+  "product": {
+    "name_ar": "منصة EyeMakkah لتحليلات الأعمال",
+    "name_en": "EyeMakkah Business Analytics Platform",
+    "assistant_name_ar": "مساعد EyeMakkah التحليلي",
+    "assistant_name_en": "EyeMakkah Analytics Assistant"
+  },
+  "purpose": "Bilingual business-analysis intent bank covering campaigns, opportunity/gap signals, reports, and cross-page analytical questions. Values must be resolved dynamically from current BI state.",
+  "integration_contract": {
+    "languages": [
+      "ar",
+      "en"
+    ],
+    "requires_active_context": [
+      "period",
+      "area",
+      "category",
+      "audience",
+      "page"
+    ],
+    "dynamic_data_rule": "Resolve all metrics, rankings, rates, campaign values, opportunity signals, and report breakdowns from existing BI data/functions at query time.",
+    "campaign_rule": "Campaign answers must respect category/audience filters and the selected campaign when the user does not name another campaign.",
+    "opportunity_rule": "Opportunity rankings use the current prototype signal index and must never be reframed as profit, ROI, investment attractiveness, or financial feasibility.",
+    "report_rule": "Report answers and exports inherit the active filters and remain aggregated/synthetic.",
+    "cross_page_rule": "Cross-page comparisons must use one consistent active filter context unless the user explicitly requests different contexts.",
+    "truthfulness": [
+      "All data is synthetic/illustrative prototype data.",
+      "No live operational claims.",
+      "No personal data or individual identification.",
+      "No pricing, revenue projections, ROI, break-even, or financial feasibility assumptions.",
+      "No guarantee that a demand/supply signal represents a successful commercial opportunity."
+    ]
+  },
+  "supported_entities": {
+    "campaigns_ar": [
+      "عطلة نهاية الأسبوع",
+      "تجارب المساء",
+      "نكهات مكة",
+      "اكتشف الثقافة",
+      "قريب منك"
+    ],
+    "campaigns_en": [
+      "Weekend",
+      "Evening Experiences",
+      "Flavours of Makkah",
+      "Discover Culture",
+      "Near You"
+    ],
+    "opportunity_dimensions": [
+      "area",
+      "category",
+      "demand_index",
+      "growth",
+      "supply_index",
+      "score",
+      "reason"
+    ],
+    "report_types_ar": [
+      "التقرير الشهري للطلب والاهتمام",
+      "تحليل مناطق مكة",
+      "تقرير المجتمعات والاهتمامات",
+      "أداء الحملات والعروض",
+      "تقرير الفرص والفجوات"
+    ],
+    "report_export_columns": [
+      "area",
+      "category",
+      "audience",
+      "interactions",
+      "active_users",
+      "searches",
+      "views",
+      "saves",
+      "plans",
+      "actions"
+    ]
+  },
+  "bank_plan": {
+    "part_01_intents": 50,
+    "part_02_intents": 45,
+    "part_03_intents": 35,
+    "cumulative_intents_after_part_03": 130,
+    "planned_part_04_role": "Conversation context, follow-ups, contextual suggestions, aliases, routing metadata.",
+    "target_total_intents_across_all_parts": 150
+  },
+  "stats": {
+    "intent_count": 35,
+    "utterances_ar": 179,
+    "utterances_en": 169,
+    "utterances_total": 348,
+    "by_category": {
+      "campaigns": 10,
+      "opportunities": 10,
+      "reports": 7,
+      "cross_page": 8
+    },
+    "by_answer_type": {
+      "dynamic": 34,
+      "action": 1
+    }
+  },
+  "intents": [
+    {
+      "id": "campaigns_summary",
+      "category": "campaigns",
+      "purpose": "Summarize the currently selected campaign.",
+      "examples": {
+        "ar": [
+          "لخص لي الحملة",
+          "اعطني ملخص الحملة",
+          "وش وضع الحملة الحالية",
+          "كيف أداء الحملة",
+          "عطني الزبدة عن الحملة",
+          "وش تقول أرقام الحملة"
+        ],
+        "en": [
+          "summarize the campaign",
+          "give me a campaign summary",
+          "how is the current campaign doing",
+          "what is the campaign performance",
+          "give me the campaign overview"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "ملخص",
+          "الحملة",
+          "أداء"
+        ],
+        "keywords_en": [
+          "campaign summary",
+          "campaign performance",
+          "overview"
+        ],
+        "entities": [
+          "campaign"
+        ]
+      },
+      "answer": {
+        "type": "dynamic",
+        "handler": "campaign_summary",
+        "responses": {
+          "ar": [
+            "حملة {{campaign}} حققت {{impressions}} ظهور، {{views}} مشاهدة، {{details}} فتح تفاصيل، {{saves}} حفظ، و{{handoffs}} انتقالًا للعرض. معدل المشاهدة {{view_rate}} ومعدل الانتقال للعرض من المشاهدة {{handoff_rate}}."
+          ],
+          "en": [
+            "{{campaign}} generated {{impressions}} impressions, {{views}} views, {{details}} detail opens, {{saves}} saves, and {{handoffs}} offer handoffs. View rate is {{view_rate}}, and handoff rate from views is {{handoff_rate}}."
+          ]
+        },
+        "result_shape": "single_answer"
+      },
+      "context": {
+        "applicable_pages": [
+          "الحملات والعروض",
+          "*"
+        ],
+        "followup_keys": [
+          "campaign_funnel",
+          "campaign_geo",
+          "campaign_compare"
+        ]
+      },
+      "priority": 99
+    },
+    {
+      "id": "campaigns_top_impressions",
+      "category": "campaigns",
+      "purpose": "Return campaign with highest impressions under active filters.",
+      "examples": {
+        "ar": [
+          "وش أعلى حملة بالظهور",
+          "أي حملة عندها أكثر ظهور",
+          "مين متصدر impressions",
+          "وش أكثر حملة انعرضت",
+          "أي حملة وصلت أكثر"
+        ],
+        "en": [
+          "which campaign has the most impressions",
+          "what campaign leads impressions",
+          "which campaign was shown most",
+          "top campaign by impressions",
+          "which campaign had the greatest reach"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "الظهور",
+          "حملة",
+          "متصدر"
+        ],
+        "keywords_en": [
+          "impressions",
+          "campaign",
+          "top"
+        ],
+        "entities": [
+          "campaign"
+        ]
+      },
+      "answer": {
+        "type": "dynamic",
+        "handler": "campaign_top_impressions",
+        "responses": {
+          "ar": [
+            "أعلى حملة في الظهور هي {{campaign}} بعدد {{impressions}} ظهور ضمن الفلاتر الحالية."
+          ],
+          "en": [
+            "The campaign with the most impressions is {{campaign}} with {{impressions}} impressions under the active filters."
+          ]
+        },
+        "result_shape": "single_answer"
+      },
+      "context": {
+        "applicable_pages": [
+          "الحملات والعروض",
+          "*"
+        ],
+        "followup_keys": [
+          "campaign_detail",
+          "second_campaign_impressions"
+        ]
+      },
+      "priority": 96
+    },
+    {
+      "id": "campaigns_top_views",
+      "category": "campaigns",
+      "purpose": "Return campaign with highest views.",
+      "examples": {
+        "ar": [
+          "وش أعلى حملة بالمشاهدة",
+          "أي حملة مشاهداتها أكثر",
+          "مين متصدر views",
+          "وش أكثر حملة عليها مشاهدة",
+          "أعلى مشاهدة بين الحملات"
+        ],
+        "en": [
+          "which campaign has the most views",
+          "what campaign leads views",
+          "which campaign was viewed most",
+          "top campaign by views",
+          "which campaign has the highest view count"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "المشاهدة",
+          "حملة",
+          "views"
+        ],
+        "keywords_en": [
+          "views",
+          "campaign",
+          "most viewed"
+        ],
+        "entities": [
+          "campaign"
+        ]
+      },
+      "answer": {
+        "type": "dynamic",
+        "handler": "campaign_top_views",
+        "responses": {
+          "ar": [
+            "أعلى حملة في المشاهدة هي {{campaign}} بعدد {{views}} مشاهدة."
+          ],
+          "en": [
+            "The campaign with the most views is {{campaign}} with {{views}} views."
+          ]
+        },
+        "result_shape": "single_answer"
+      },
+      "context": {
+        "applicable_pages": [
+          "الحملات والعروض",
+          "*"
+        ],
+        "followup_keys": [
+          "campaign_view_rate",
+          "campaign_detail"
+        ]
+      },
+      "priority": 96
+    },
+    {
+      "id": "campaigns_top_saves",
+      "category": "campaigns",
+      "purpose": "Return campaign with most saves.",
+      "examples": {
+        "ar": [
+          "وش أكثر حملة حفظ",
+          "أي حملة تنحفظ أكثر",
+          "مين أعلى saves",
+          "وش الحملة الأكثر حفظًا",
+          "أعلى حملة بالحفظ"
+        ],
+        "en": [
+          "which campaign has the most saves",
+          "what campaign is saved most",
+          "top campaign by saves",
+          "which campaign leads saving"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "الحفظ",
+          "حملة",
+          "saves"
+        ],
+        "keywords_en": [
+          "saves",
+          "campaign",
+          "saved"
+        ],
+        "entities": [
+          "campaign"
+        ]
+      },
+      "answer": {
+        "type": "dynamic",
+        "handler": "campaign_top_saves",
+        "responses": {
+          "ar": [
+            "أكثر حملة حفظًا هي {{campaign}} بعدد {{saves}} حفظ."
+          ],
+          "en": [
+            "The most-saved campaign is {{campaign}} with {{saves}} saves."
+          ]
+        },
+        "result_shape": "single_answer"
+      },
+      "context": {
+        "applicable_pages": [
+          "الحملات والعروض",
+          "*"
+        ],
+        "followup_keys": [
+          "campaign_detail",
+          "campaign_save_rate"
+        ]
+      },
+      "priority": 95
+    },
+    {
+      "id": "campaigns_top_handoffs",
+      "category": "campaigns",
+      "purpose": "Return campaign with most offer/action handoffs.",
+      "examples": {
+        "ar": [
+          "وش أعلى حملة بالانتقال للعرض",
+          "أي حملة الناس تنتقل منها للعرض أكثر",
+          "مين أعلى handoff",
+          "وش الحملة الأقرب للإجراء",
+          "أعلى انتقال بين الحملات"
+        ],
+        "en": [
+          "which campaign has the most offer handoffs",
+          "what campaign leads handoffs",
+          "which campaign sends the most users to the offer",
+          "top campaign by handoff"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "الانتقال للعرض",
+          "handoff",
+          "حملة",
+          "إجراء"
+        ],
+        "keywords_en": [
+          "handoff",
+          "campaign",
+          "offer"
+        ],
+        "entities": [
+          "campaign"
+        ]
+      },
+      "answer": {
+        "type": "dynamic",
+        "handler": "campaign_top_handoffs",
+        "responses": {
+          "ar": [
+            "أعلى انتقال للعرض يظهر في حملة {{campaign}} بعدد {{handoffs}}."
+          ],
+          "en": [
+            "The highest offer handoff appears for {{campaign}} with {{handoffs}} handoffs."
+          ]
+        },
+        "result_shape": "single_answer"
+      },
+      "context": {
+        "applicable_pages": [
+          "الحملات والعروض",
+          "*"
+        ],
+        "followup_keys": [
+          "campaign_handoff_rate",
+          "campaign_detail"
+        ]
+      },
+      "priority": 98
+    },
+    {
+      "id": "campaigns_view_rate",
+      "category": "campaigns",
+      "purpose": "Return impression-to-view rate for selected/named campaign.",
+      "examples": {
+        "ar": [
+          "كم معدل المشاهدة للحملة",
+          "وش نسبة الظهور للمشاهدة",
+          "كم من الظهور صار مشاهدة",
+          "view rate كم",
+          "وش معدل مشاهدة الحملة"
+        ],
+        "en": [
+          "what is the campaign view rate",
+          "what percentage of impressions became views",
+          "how many impressions turned into views",
+          "what is the impression to view rate"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "معدل المشاهدة",
+          "الظهور",
+          "نسبة"
+        ],
+        "keywords_en": [
+          "view rate",
+          "impressions",
+          "percentage"
+        ],
+        "entities": [
+          "campaign"
+        ]
+      },
+      "answer": {
+        "type": "dynamic",
+        "handler": "campaign_view_rate",
+        "responses": {
+          "ar": [
+            "معدل المشاهدة لحملة {{campaign}} هو تقريبًا {{view_rate}}: {{views}} مشاهدة من {{impressions}} ظهور."
+          ],
+          "en": [
+            "The view rate for {{campaign}} is about {{view_rate}}: {{views}} views from {{impressions}} impressions."
+          ]
+        },
+        "result_shape": "single_answer"
+      },
+      "context": {
+        "applicable_pages": [
+          "الحملات والعروض",
+          "*"
+        ],
+        "followup_keys": []
+      },
+      "priority": 95
+    },
+    {
+      "id": "campaigns_handoff_rate",
+      "category": "campaigns",
+      "purpose": "Return view-to-handoff rate.",
+      "examples": {
+        "ar": [
+          "كم معدل الانتقال للعرض",
+          "وش نسبة المشاهدة للانتقال",
+          "كم من المشاهدات وصلت للعرض",
+          "handoff rate كم",
+          "وش نسبة الانتقال من views"
+        ],
+        "en": [
+          "what is the handoff rate",
+          "what percentage of views became handoffs",
+          "how many views reached the offer",
+          "what is the view to handoff rate"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "معدل الانتقال",
+          "المشاهدة",
+          "العرض"
+        ],
+        "keywords_en": [
+          "handoff rate",
+          "views",
+          "offer"
+        ],
+        "entities": [
+          "campaign"
+        ]
+      },
+      "answer": {
+        "type": "dynamic",
+        "handler": "campaign_handoff_rate",
+        "responses": {
+          "ar": [
+            "معدل الانتقال للعرض في {{campaign}} هو تقريبًا {{handoff_rate}}: {{handoffs}} انتقال من {{views}} مشاهدة."
+          ],
+          "en": [
+            "The offer handoff rate for {{campaign}} is about {{handoff_rate}}: {{handoffs}} handoffs from {{views}} views."
+          ]
+        },
+        "result_shape": "single_answer"
+      },
+      "context": {
+        "applicable_pages": [
+          "الحملات والعروض",
+          "*"
+        ],
+        "followup_keys": []
+      },
+      "priority": 95
+    },
+    {
+      "id": "campaigns_funnel",
+      "category": "campaigns",
+      "purpose": "Summarize selected campaign funnel.",
+      "examples": {
+        "ar": [
+          "لخص قمع الحملة",
+          "وش funnel الحملة",
+          "من الظهور للعرض وش يصير",
+          "اعطني مراحل الحملة بالأرقام",
+          "وين أكبر نزول بالحملة"
+        ],
+        "en": [
+          "summarize the campaign funnel",
+          "show me the campaign funnel",
+          "what happens from impressions to offer",
+          "give me campaign stages with numbers",
+          "where is the biggest drop in the campaign"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "قمع",
+          "الحملة",
+          "مراحل",
+          "نزول"
+        ],
+        "keywords_en": [
+          "funnel",
+          "campaign",
+          "stages",
+          "drop"
+        ],
+        "entities": [
+          "campaign"
+        ]
+      },
+      "answer": {
+        "type": "dynamic",
+        "handler": "campaign_funnel",
+        "responses": {
+          "ar": [
+            "قمع {{campaign}}: ظهور {{impressions}} → مشاهدة {{views}} → تفاصيل {{details}} → حفظ {{saves}} → «خطتي» {{plans}} → انتقال للعرض {{handoffs}}. أكبر انخفاض يظهر عند {{largest_drop_stage}}."
+          ],
+          "en": [
+            "{{campaign}} funnel: {{impressions}} impressions → {{views}} views → {{details}} detail opens → {{saves}} saves → {{plans}} My Plan additions → {{handoffs}} offer handoffs. The largest drop appears at {{largest_drop_stage}}."
+          ]
+        },
+        "result_shape": "single_answer"
+      },
+      "context": {
+        "applicable_pages": [
+          "الحملات والعروض",
+          "*"
+        ],
+        "followup_keys": [
+          "why_campaign_drop"
+        ]
+      },
+      "priority": 98
+    },
+    {
+      "id": "campaigns_geographic_performance",
+      "category": "campaigns",
+      "purpose": "Return strongest geographic response for a campaign.",
+      "examples": {
+        "ar": [
+          "وين أداء الحملة أفضل",
+          "أي منطقة استجابتها أعلى للحملة",
+          "وين أعلى انتقال للحملة",
+          "وش أقوى منطقة للحملة",
+          "أي حي الحملة ماشية فيه أكثر"
+        ],
+        "en": [
+          "where does the campaign perform best",
+          "which area responds best to the campaign",
+          "where are campaign handoffs highest",
+          "what is the strongest area for this campaign",
+          "which neighborhood performs best"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "أداء جغرافي",
+          "منطقة",
+          "حملة",
+          "استجابة"
+        ],
+        "keywords_en": [
+          "geographic",
+          "area",
+          "campaign",
+          "response"
+        ],
+        "entities": [
+          "campaign",
+          "area"
+        ]
+      },
+      "answer": {
+        "type": "dynamic",
+        "handler": "campaign_geographic_performance",
+        "responses": {
+          "ar": [
+            "أقوى استجابة جغرافية لحملة {{campaign}} تظهر في {{area}} بعدد {{value}} انتقالًا/استجابة تجريبية."
+          ],
+          "en": [
+            "The strongest geographic response for {{campaign}} appears in {{area}} with {{value}} illustrative handoffs/responses."
+          ]
+        },
+        "result_shape": "single_answer"
+      },
+      "context": {
+        "applicable_pages": [
+          "الحملات والعروض",
+          "*"
+        ],
+        "followup_keys": [
+          "second_campaign_area",
+          "campaign_area_compare"
+        ]
+      },
+      "priority": 94
+    },
+    {
+      "id": "campaigns_compare_two",
+      "category": "campaigns",
+      "purpose": "Compare two campaigns under same active context.",
+      "examples": {
+        "ar": [
+          "قارن حملتين",
+          "قارن نكهات مكة وتجارب المساء",
+          "وش الفرق بين هالحملتين",
+          "مين أقوى بالمشاهدة بين حملتين",
+          "قارن أداء حملتين"
+        ],
+        "en": [
+          "compare two campaigns",
+          "compare Flavours of Makkah and Evening Experiences",
+          "what is the difference between these campaigns",
+          "which campaign has stronger views",
+          "compare campaign performance"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "قارن",
+          "حملتين",
+          "أداء"
+        ],
+        "keywords_en": [
+          "compare",
+          "two campaigns",
+          "performance"
+        ],
+        "entities": [
+          "campaign_a",
+          "campaign_b"
+        ]
+      },
+      "answer": {
+        "type": "dynamic",
+        "handler": "campaign_compare_two",
+        "responses": {
+          "ar": [
+            "مقارنة {{campaign_a}} و{{campaign_b}}: الظهور {{impressions_a}} مقابل {{impressions_b}}، المشاهدة {{views_a}} مقابل {{views_b}}، الحفظ {{saves_a}} مقابل {{saves_b}}، والانتقال {{handoffs_a}} مقابل {{handoffs_b}}."
+          ],
+          "en": [
+            "Comparing {{campaign_a}} and {{campaign_b}}: {{impressions_a}} vs {{impressions_b}} impressions, {{views_a}} vs {{views_b}} views, {{saves_a}} vs {{saves_b}} saves, and {{handoffs_a}} vs {{handoffs_b}} handoffs."
+          ]
+        },
+        "result_shape": "comparison"
+      },
+      "context": {
+        "applicable_pages": [
+          "الحملات والعروض",
+          "*"
+        ],
+        "followup_keys": []
+      },
+      "priority": 100
+    },
+    {
+      "id": "opportunities_top_signal",
+      "category": "opportunities",
+      "purpose": "Return highest composite signal under active filters.",
+      "examples": {
+        "ar": [
+          "وش أعلى إشارة",
+          "وين أقوى فرصة",
+          "أي إشارة أعلى",
+          "وش أعلى مؤشر إشارة",
+          "وين أقوى signal",
+          "وش أبرز فرصة تحتاج تحقق"
+        ],
+        "en": [
+          "what is the top signal",
+          "where is the strongest opportunity signal",
+          "which signal ranks highest",
+          "what is the highest signal index",
+          "what signal should be validated first"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "إشارة",
+          "فرصة",
+          "أعلى",
+          "تحقق"
+        ],
+        "keywords_en": [
+          "signal",
+          "opportunity",
+          "highest",
+          "validate"
+        ],
+        "entities": [
+          "area",
+          "category"
+        ]
+      },
+      "answer": {
+        "type": "dynamic",
+        "handler": "opportunity_top_signal",
+        "responses": {
+          "ar": [
+            "أعلى إشارة تظهر في {{area}} · {{category}} بمؤشر {{score}}/100. السبب: {{reason}}. هذه إشارة للتحقق وليست ضمانًا لجدوى تجارية."
+          ],
+          "en": [
+            "The highest signal appears in {{area}} · {{category}} with a {{score}}/100 signal index. Reason: {{reason}}. This is a validation signal, not a commercial feasibility guarantee."
+          ]
+        },
+        "result_shape": "single_answer"
+      },
+      "context": {
+        "applicable_pages": [
+          "الفرص والفجوات",
+          "لوحة المعلومات",
+          "*"
+        ],
+        "followup_keys": [
+          "opportunity_why_signal",
+          "opportunity_gap_detail"
+        ]
+      },
+      "priority": 100
+    },
+    {
+      "id": "opportunities_largest_gap",
+      "category": "opportunities",
+      "purpose": "Return largest demand-supply gap.",
+      "examples": {
+        "ar": [
+          "وين أكبر فجوة",
+          "وش أكبر فرق طلب وعرض",
+          "أي منطقة وفئة فيها أكبر gap",
+          "وين الطلب أعلى من العرض أكثر",
+          "وش أكبر فجوة حالية"
+        ],
+        "en": [
+          "where is the largest gap",
+          "what is the biggest demand supply difference",
+          "which area and category has the largest gap",
+          "where does demand exceed supply most"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "فجوة",
+          "طلب",
+          "عرض",
+          "فرق"
+        ],
+        "keywords_en": [
+          "gap",
+          "demand",
+          "supply",
+          "difference"
+        ],
+        "entities": [
+          "area",
+          "category"
+        ]
+      },
+      "answer": {
+        "type": "dynamic",
+        "handler": "opportunity_largest_gap",
+        "responses": {
+          "ar": [
+            "أكبر فجوة تظهر في {{area}} · {{category}}: الطلب {{demand_index}}/100 مقابل العرض {{supply_index}}/100، بفارق {{gap}} نقطة."
+          ],
+          "en": [
+            "The largest gap appears in {{area}} · {{category}}: {{demand_index}}/100 demand versus {{supply_index}}/100 supply, a {{gap}}-point difference."
+          ]
+        },
+        "result_shape": "single_answer"
+      },
+      "context": {
+        "applicable_pages": [
+          "الفرص والفجوات",
+          "*"
+        ],
+        "followup_keys": [
+          "opportunity_why_gap",
+          "opportunity_compare_signal"
+        ]
+      },
+      "priority": 100
+    },
+    {
+      "id": "opportunities_average_demand_supply",
+      "category": "opportunities",
+      "purpose": "Return average demand and supply indicators.",
+      "examples": {
+        "ar": [
+          "كم متوسط الطلب والعرض",
+          "وش متوسط مؤشر الطلب",
+          "كم متوسط العرض",
+          "اعطني متوسطات الفرص",
+          "كيف المتوسط بين الطلب والعرض"
+        ],
+        "en": [
+          "what are the average demand and supply",
+          "what is the average demand index",
+          "what is average supply",
+          "give me the opportunity averages",
+          "compare average demand and supply"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "متوسط",
+          "الطلب",
+          "العرض"
+        ],
+        "keywords_en": [
+          "average",
+          "demand",
+          "supply"
+        ],
+        "entities": []
+      },
+      "answer": {
+        "type": "dynamic",
+        "handler": "opportunity_average_demand_supply",
+        "responses": {
+          "ar": [
+            "ضمن الفلاتر الحالية، متوسط مؤشر الطلب {{avg_demand}}/100 ومتوسط مستوى العرض {{avg_supply}}/100، بفارق متوسط {{avg_gap}} نقطة."
+          ],
+          "en": [
+            "Under the active filters, average demand is {{avg_demand}}/100 and average supply is {{avg_supply}}/100, an average difference of {{avg_gap}} points."
+          ]
+        },
+        "result_shape": "single_answer"
+      },
+      "context": {
+        "applicable_pages": [
+          "الفرص والفجوات",
+          "*"
+        ],
+        "followup_keys": []
+      },
+      "priority": 92
+    },
+    {
+      "id": "opportunities_reason",
+      "category": "opportunities",
+      "purpose": "Explain why a selected/top signal appears.",
+      "examples": {
+        "ar": [
+          "ليش ظهرت هذي الفرصة",
+          "ليش الإشارة عالية",
+          "وش سبب ظهور الفرصة",
+          "ليش هذا الـ signal مهم",
+          "وش اللي رفع الإشارة"
+        ],
+        "en": [
+          "why did this opportunity appear",
+          "why is this signal high",
+          "what caused the signal",
+          "why does this signal matter",
+          "what raised the signal"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "ليش",
+          "سبب",
+          "الإشارة",
+          "الفرصة"
+        ],
+        "keywords_en": [
+          "why",
+          "reason",
+          "signal",
+          "opportunity"
+        ],
+        "entities": [
+          "area",
+          "category"
+        ]
+      },
+      "answer": {
+        "type": "dynamic",
+        "handler": "opportunity_reason",
+        "responses": {
+          "ar": [
+            "ظهرت الإشارة في {{area}} · {{category}} لأن {{reason}}، مع طلب {{demand_index}}/100 ونمو {{growth}} وعرض {{supply_index}}/100."
+          ],
+          "en": [
+            "The signal in {{area}} · {{category}} appears because {{reason}}, with {{demand_index}}/100 demand, {{growth}} growth, and {{supply_index}}/100 supply."
+          ]
+        },
+        "result_shape": "single_answer"
+      },
+      "context": {
+        "applicable_pages": [
+          "الفرص والفجوات",
+          "*"
+        ],
+        "followup_keys": [
+          "opportunity_validation_next"
+        ]
+      },
+      "priority": 98
+    },
+    {
+      "id": "opportunities_top_growth_signal",
+      "category": "opportunities",
+      "purpose": "Return opportunity row with highest growth.",
+      "examples": {
+        "ar": [
+          "وش أعلى فرصة بالنمو",
+          "أي إشارة نموها أعلى",
+          "وين أسرع نمو بين الفرص",
+          "وش الفئة والمنطقة الصاعدة أكثر",
+          "أعلى growth في الفرص وين"
+        ],
+        "en": [
+          "which opportunity has the highest growth",
+          "what signal is growing fastest",
+          "where is growth highest among opportunities",
+          "which area-category combination is rising fastest"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "نمو",
+          "فرصة",
+          "إشارة",
+          "أعلى"
+        ],
+        "keywords_en": [
+          "growth",
+          "opportunity",
+          "signal",
+          "highest"
+        ],
+        "entities": [
+          "area",
+          "category"
+        ]
+      },
+      "answer": {
+        "type": "dynamic",
+        "handler": "opportunity_top_growth",
+        "responses": {
+          "ar": [
+            "أعلى نمو بين الإشارات يظهر في {{area}} · {{category}} بنمو {{growth}}، مع طلب {{demand_index}}/100 وعرض {{supply_index}}/100."
+          ],
+          "en": [
+            "The highest growth among signals appears in {{area}} · {{category}} at {{growth}}, with {{demand_index}}/100 demand and {{supply_index}}/100 supply."
+          ]
+        },
+        "result_shape": "single_answer"
+      },
+      "context": {
+        "applicable_pages": [
+          "الفرص والفجوات",
+          "*"
+        ],
+        "followup_keys": []
+      },
+      "priority": 95
+    },
+    {
+      "id": "opportunities_lowest_supply_high_demand",
+      "category": "opportunities",
+      "purpose": "Identify low-supply/high-demand combination.",
+      "examples": {
+        "ar": [
+          "وين العرض قليل والطلب عالي",
+          "أي فئة طلبها عالي وعرضها قليل",
+          "وش أكثر مكان ناقص عرض",
+          "وين الخيارات قليلة مقارنة بالطلب",
+          "اعطني low supply high demand"
+        ],
+        "en": [
+          "where is supply low and demand high",
+          "which category has high demand and low supply",
+          "where are options limited relative to demand",
+          "show low supply high demand"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "عرض قليل",
+          "طلب عالي",
+          "خيارات قليلة"
+        ],
+        "keywords_en": [
+          "low supply",
+          "high demand",
+          "limited options"
+        ],
+        "entities": [
+          "area",
+          "category"
+        ]
+      },
+      "answer": {
+        "type": "dynamic",
+        "handler": "opportunity_low_supply_high_demand",
+        "responses": {
+          "ar": [
+            "أوضح حالة طلب مرتفع مع عرض أقل تظهر في {{area}} · {{category}}: طلب {{demand_index}}/100 مقابل عرض {{supply_index}}/100."
+          ],
+          "en": [
+            "The clearest high-demand, lower-supply case appears in {{area}} · {{category}}: {{demand_index}}/100 demand versus {{supply_index}}/100 supply."
+          ]
+        },
+        "result_shape": "single_answer"
+      },
+      "context": {
+        "applicable_pages": [
+          "الفرص والفجوات",
+          "*"
+        ],
+        "followup_keys": []
+      },
+      "priority": 98
+    },
+    {
+      "id": "opportunities_rank_top",
+      "category": "opportunities",
+      "purpose": "Return top N opportunity signals.",
+      "examples": {
+        "ar": [
+          "اعطني أعلى 3 إشارات",
+          "وش أفضل خمس إشارات للتحقق",
+          "رتب لي الفرص",
+          "اعطني التوب في الفرص",
+          "وش أعلى الإشارات بالترتيب"
+        ],
+        "en": [
+          "give me the top 3 signals",
+          "show the top five signals to validate",
+          "rank the opportunities",
+          "give me the top opportunity signals",
+          "list the highest signals"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "أعلى 3",
+          "رتب",
+          "التوب",
+          "الإشارات"
+        ],
+        "keywords_en": [
+          "top 3",
+          "rank",
+          "top signals",
+          "list"
+        ],
+        "entities": []
+      },
+      "answer": {
+        "type": "dynamic",
+        "handler": "opportunity_rank_top",
+        "responses": {
+          "ar": [
+            "أعلى الإشارات ضمن الفلاتر الحالية: {{ranked_signals}}. الترتيب مبني على مؤشر النموذج التجريبي للتحقق، وليس على جدوى مالية."
+          ],
+          "en": [
+            "Top signals under the active filters: {{ranked_signals}}. The ranking uses the prototype's validation signal index, not financial feasibility."
+          ]
+        },
+        "result_shape": "ranked_list"
+      },
+      "context": {
+        "applicable_pages": [
+          "الفرص والفجوات",
+          "*"
+        ],
+        "followup_keys": []
+      },
+      "priority": 97
+    },
+    {
+      "id": "opportunities_compare_two",
+      "category": "opportunities",
+      "purpose": "Compare two area-category signals.",
+      "examples": {
+        "ar": [
+          "قارن فرصتين",
+          "قارن إشارتين",
+          "وش الفرق بين هالإشارتين",
+          "قارن العزيزية مطاعم مع العوالي ثقافة",
+          "مين أعلى طلب وعرض بينهم"
+        ],
+        "en": [
+          "compare two opportunity signals",
+          "compare two signals",
+          "what is the difference between these opportunities",
+          "compare these area-category combinations",
+          "which has higher demand and supply"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "قارن",
+          "فرصتين",
+          "إشارتين"
+        ],
+        "keywords_en": [
+          "compare",
+          "two signals",
+          "opportunities"
+        ],
+        "entities": [
+          "signal_a",
+          "signal_b",
+          "area",
+          "category"
+        ]
+      },
+      "answer": {
+        "type": "dynamic",
+        "handler": "opportunity_compare_two",
+        "responses": {
+          "ar": [
+            "مقارنة {{signal_a}} و{{signal_b}}: الطلب {{demand_a}} مقابل {{demand_b}}، النمو {{growth_a}} مقابل {{growth_b}}، العرض {{supply_a}} مقابل {{supply_b}}، ومؤشر الإشارة {{score_a}} مقابل {{score_b}}."
+          ],
+          "en": [
+            "Comparing {{signal_a}} and {{signal_b}}: demand {{demand_a}} vs {{demand_b}}, growth {{growth_a}} vs {{growth_b}}, supply {{supply_a}} vs {{supply_b}}, and signal index {{score_a}} vs {{score_b}}."
+          ]
+        },
+        "result_shape": "comparison"
+      },
+      "context": {
+        "applicable_pages": [
+          "الفرص والفجوات",
+          "*"
+        ],
+        "followup_keys": []
+      },
+      "priority": 100
+    },
+    {
+      "id": "opportunities_validation_next",
+      "category": "opportunities",
+      "purpose": "Explain what an analytical signal should be used for next.",
+      "examples": {
+        "ar": [
+          "وش أسوي بعد ما أشوف الإشارة",
+          "كيف أستخدم الفرصة",
+          "وش الخطوة بعد هذي الإشارة",
+          "هل أقرر عليها مباشرة",
+          "وش يعني أتحقق منها"
+        ],
+        "en": [
+          "what should I do after seeing a signal",
+          "how should I use this opportunity signal",
+          "what is the next step after this signal",
+          "should I decide based on it directly",
+          "what does validation mean here"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "وش أسوي",
+          "الخطوة",
+          "تحقق",
+          "أقرر"
+        ],
+        "keywords_en": [
+          "next step",
+          "validate",
+          "decide",
+          "use signal"
+        ],
+        "entities": []
+      },
+      "answer": {
+        "type": "dynamic",
+        "handler": "opportunity_validation_guidance",
+        "responses": {
+          "ar": [
+            "استخدم الإشارة كنقطة بداية للتحقق: راجع الطلب والنمو والعرض في نفس المنطقة والفئة، ثم اربطها ببحث أو تحقق ميداني متخصص قبل أي قرار. EyeMakkah لا تعتبر الإشارة ضمانًا للجدوى."
+          ],
+          "en": [
+            "Use the signal as a starting point for validation: review demand, growth, and supply in the same area/category, then combine it with specialized market or field validation before any decision. EyeMakkah does not treat the signal as a feasibility guarantee."
+          ]
+        },
+        "result_shape": "single_answer"
+      },
+      "context": {
+        "applicable_pages": [
+          "الفرص والفجوات",
+          "*"
+        ],
+        "followup_keys": []
+      },
+      "priority": 100
+    },
+    {
+      "id": "opportunities_not_financial_feasibility",
+      "category": "opportunities",
+      "purpose": "Explain that opportunity signals are not financial feasibility outputs.",
+      "examples": {
+        "ar": [
+          "هل أعلى إشارة يعني أعلى ربح",
+          "هل الفرصة تعني مشروع مربح",
+          "هل المؤشر يقول لي استثمر",
+          "هل هذا تقييم جدوى",
+          "هل الترتيب حسب الأرباح"
+        ],
+        "en": [
+          "does the top signal mean highest profit",
+          "does an opportunity mean a profitable business",
+          "does the signal tell me to invest",
+          "is this a feasibility assessment",
+          "is the ranking based on profit"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "ربح",
+          "استثمر",
+          "جدوى",
+          "ROI",
+          "أرباح"
+        ],
+        "keywords_en": [
+          "profit",
+          "invest",
+          "feasibility",
+          "ROI"
+        ],
+        "entities": []
+      },
+      "answer": {
+        "type": "dynamic",
+        "handler": "opportunity_not_financial",
+        "responses": {
+          "ar": [
+            "لا. مؤشر الإشارة لا يقيس الربح أو ROI أو الجدوى المالية. هو يجمع إشارات الطلب والنمو والعرض داخل النموذج لدعم التحقق فقط."
+          ],
+          "en": [
+            "No. The signal index does not measure profit, ROI, or financial feasibility. It combines demand, growth, and supply signals in the prototype for validation support only."
+          ]
+        },
+        "result_shape": "single_answer"
+      },
+      "context": {
+        "applicable_pages": [
+          "الفرص والفجوات",
+          "*"
+        ],
+        "followup_keys": []
+      },
+      "priority": 100
+    },
+    {
+      "id": "reports_available",
+      "category": "reports",
+      "purpose": "List report types available in current prototype.",
+      "examples": {
+        "ar": [
+          "وش التقارير الموجودة",
+          "ايش أنواع التقارير",
+          "اعطني قائمة التقارير",
+          "وش أقدر أفتح بالتقارير",
+          "وش التقارير المتاحة"
+        ],
+        "en": [
+          "what reports are available",
+          "what types of reports are there",
+          "list the reports",
+          "what reports can I open",
+          "which reports are available"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "التقارير",
+          "أنواع",
+          "قائمة"
+        ],
+        "keywords_en": [
+          "reports",
+          "types",
+          "list"
+        ],
+        "entities": []
+      },
+      "answer": {
+        "type": "dynamic",
+        "handler": "reports_available",
+        "responses": {
+          "ar": [
+            "التقارير المتاحة: التقرير الشهري للطلب والاهتمام، تحليل مناطق مكة، تقرير المجتمعات والاهتمامات، أداء الحملات والعروض، وتقرير الفرص والفجوات."
+          ],
+          "en": [
+            "Available reports are: Monthly Demand & Interest Report, Makkah Area Analysis, Communities & Interests Report, Campaigns & Offers Performance, and Opportunities & Gaps Report."
+          ]
+        },
+        "result_shape": "list"
+      },
+      "context": {
+        "applicable_pages": [
+          "التقارير",
+          "*"
+        ],
+        "followup_keys": []
+      },
+      "priority": 95
+    },
+    {
+      "id": "reports_current_summary",
+      "category": "reports",
+      "purpose": "Summarize report KPIs under active filters.",
+      "examples": {
+        "ar": [
+          "لخص التقارير الحالية",
+          "وش أرقام التقرير",
+          "اعطني ملخص صفحة التقارير",
+          "وش أهم المؤشرات في التقارير",
+          "كيف الوضع بالتقارير"
+        ],
+        "en": [
+          "summarize the current reports",
+          "what are the report numbers",
+          "give me a reports page summary",
+          "what are the key report metrics",
+          "how do reports look right now"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "ملخص",
+          "التقارير",
+          "المؤشرات"
+        ],
+        "keywords_en": [
+          "summary",
+          "reports",
+          "metrics"
+        ],
+        "entities": []
+      },
+      "answer": {
+        "type": "dynamic",
+        "handler": "reports_current_summary",
+        "responses": {
+          "ar": [
+            "ملخص التقارير تحت الفلاتر الحالية: البحث {{searches}}، الإضافة إلى «خطتي» {{plans}}، والانتقال للإجراء {{actions}}. اتجاه البحث مقابل «خطتي»: {{trend_summary}}."
+          ],
+          "en": [
+            "Reports summary under the active filters: {{searches}} searches, {{plans}} My Plan additions, and {{actions}} action handoffs. Search-versus-My Plan trend: {{trend_summary}}."
+          ]
+        },
+        "result_shape": "single_answer"
+      },
+      "context": {
+        "applicable_pages": [
+          "التقارير",
+          "*"
+        ],
+        "followup_keys": []
+      },
+      "priority": 96
+    },
+    {
+      "id": "reports_filter_scope",
+      "category": "reports",
+      "purpose": "Explain current report filter scope.",
+      "examples": {
+        "ar": [
+          "التقرير الحالي على أي فلتر",
+          "وش سياق التقرير",
+          "ايش الفلاتر اللي على التقرير",
+          "وش الفترة والمنطقة بالتقرير",
+          "التقرير يشمل مين"
+        ],
+        "en": [
+          "what filters does the report use",
+          "what is the current report scope",
+          "which filters apply to the report",
+          "what period and area are in the report",
+          "who is included in the report"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "التقرير",
+          "فلتر",
+          "سياق",
+          "الفترة",
+          "المنطقة"
+        ],
+        "keywords_en": [
+          "report",
+          "filters",
+          "scope",
+          "period",
+          "area"
+        ],
+        "entities": []
+      },
+      "answer": {
+        "type": "dynamic",
+        "handler": "reports_filter_scope",
+        "responses": {
+          "ar": [
+            "سياق التقرير الحالي: الفترة {{period}}، المنطقة {{area}}، الفئة {{category}}، والجمهور {{audience}}."
+          ],
+          "en": [
+            "The current report scope is: {{period}}, {{area}}, {{category}}, and {{audience}}."
+          ]
+        },
+        "result_shape": "single_answer"
+      },
+      "context": {
+        "applicable_pages": [
+          "التقارير",
+          "*"
+        ],
+        "followup_keys": []
+      },
+      "priority": 94
+    },
+    {
+      "id": "reports_export_csv",
+      "category": "reports",
+      "purpose": "Recognize request to export CSV summary.",
+      "examples": {
+        "ar": [
+          "صدر لي CSV",
+          "ابغا ملف CSV",
+          "أبغا ملف CSV",
+          "نزل التقرير CSV",
+          "صدر البيانات",
+          "اعطني الملف",
+          "أبغا أصدر الملخص"
+        ],
+        "en": [
+          "export CSV",
+          "give me a CSV file",
+          "download the report CSV",
+          "export the data",
+          "download the summary",
+          "export current report"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "CSV",
+          "صدر",
+          "نزل",
+          "ملف"
+        ],
+        "keywords_en": [
+          "CSV",
+          "export",
+          "download"
+        ],
+        "entities": []
+      },
+      "answer": {
+        "type": "action",
+        "handler": "reports_export_csv",
+        "responses": {
+          "ar": [
+            "تمام، أجهّز تصدير CSV بالبيانات المجمعة وفق الفلاتر الحالية."
+          ],
+          "en": [
+            "Okay. I'll prepare the CSV export using the aggregated data under the active filters."
+          ]
+        },
+        "result_shape": "single_answer"
+      },
+      "context": {
+        "applicable_pages": [
+          "التقارير",
+          "*"
+        ],
+        "followup_keys": []
+      },
+      "priority": 100
+    },
+    {
+      "id": "reports_export_contents",
+      "category": "reports",
+      "purpose": "Explain CSV columns/content.",
+      "examples": {
+        "ar": [
+          "وش داخل ملف CSV",
+          "ايش يحتوي التصدير",
+          "وش الأعمدة اللي تطلع",
+          "وش بيانات الملف",
+          "وش ينزل في التقرير"
+        ],
+        "en": [
+          "what is inside the CSV",
+          "what does the export contain",
+          "which columns are exported",
+          "what data is in the file",
+          "what gets downloaded"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "CSV",
+          "يحتوي",
+          "الأعمدة",
+          "الملف"
+        ],
+        "keywords_en": [
+          "CSV",
+          "contain",
+          "columns",
+          "file"
+        ],
+        "entities": []
+      },
+      "answer": {
+        "type": "dynamic",
+        "handler": "reports_export_contents",
+        "responses": {
+          "ar": [
+            "ملف CSV المجمّع يتضمن: المنطقة، الفئة، الجمهور، التفاعلات، المستخدمين النشطين، البحث، العرض، الحفظ، «خطتي»، والانتقال للإجراء، وفق الفلاتر الحالية."
+          ],
+          "en": [
+            "The aggregated CSV includes area, category, audience, interactions, active users, searches, views, saves, My Plan additions, and action handoffs under the active filters."
+          ]
+        },
+        "result_shape": "single_answer"
+      },
+      "context": {
+        "applicable_pages": [
+          "التقارير",
+          "*"
+        ],
+        "followup_keys": []
+      },
+      "priority": 93
+    },
+    {
+      "id": "reports_row_breakdown",
+      "category": "reports",
+      "purpose": "Summarize or retrieve report row breakdown by area/category/audience.",
+      "examples": {
+        "ar": [
+          "اعطني تفصيل التقرير حسب المنطقة",
+          "فصل التقرير حسب الفئة",
+          "وش أرقام الزوار في التقرير",
+          "اعطني breakdown للتقرير",
+          "قسم البيانات حسب المنطقة والفئة"
+        ],
+        "en": [
+          "break down the report by area",
+          "show the report by category",
+          "show visitor numbers in the report",
+          "give me a report breakdown",
+          "split the report by area and category"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "تفصيل",
+          "حسب",
+          "المنطقة",
+          "الفئة",
+          "الجمهور"
+        ],
+        "keywords_en": [
+          "breakdown",
+          "by area",
+          "by category",
+          "audience"
+        ],
+        "entities": [
+          "dimension",
+          "area",
+          "category",
+          "audience"
+        ]
+      },
+      "answer": {
+        "type": "dynamic",
+        "handler": "reports_row_breakdown",
+        "responses": {
+          "ar": [
+            "التفصيل الحالي حسب {{dimension}}: {{breakdown}}."
+          ],
+          "en": [
+            "Current breakdown by {{dimension}}: {{breakdown}}."
+          ]
+        },
+        "result_shape": "ranked_list"
+      },
+      "context": {
+        "applicable_pages": [
+          "التقارير",
+          "*"
+        ],
+        "followup_keys": []
+      },
+      "priority": 96
+    },
+    {
+      "id": "reports_demo_data_disclosure",
+      "category": "reports",
+      "purpose": "Clarify reports are prototype/demo data.",
+      "examples": {
+        "ar": [
+          "هل التقرير رسمي",
+          "هل هذا تقرير تشغيلي",
+          "هل الأرقام حقيقية",
+          "هل أقدر أعتمد التقرير كبيانات فعلية",
+          "هل هذا live report"
+        ],
+        "en": [
+          "is this an official report",
+          "is this an operational report",
+          "are these real numbers",
+          "can I treat this as live data",
+          "is this a live report"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "رسمي",
+          "تشغيلي",
+          "حقيقية",
+          "live"
+        ],
+        "keywords_en": [
+          "official",
+          "operational",
+          "real",
+          "live"
+        ],
+        "entities": []
+      },
+      "answer": {
+        "type": "dynamic",
+        "handler": "reports_demo_disclosure",
+        "responses": {
+          "ar": [
+            "هذه تقارير نموذج أولي مبنية على بيانات اصطناعية/توضيحية لأغراض تجربة وتصميم المنصة. ليست تقارير تشغيلية حية ولا بيانات فعلية عن أفراد."
+          ],
+          "en": [
+            "These are prototype reports based on synthetic/illustrative data for product design and testing. They are not live operational reports or real individual-level data."
+          ]
+        },
+        "result_shape": "single_answer"
+      },
+      "context": {
+        "applicable_pages": [
+          "التقارير",
+          "*"
+        ],
+        "followup_keys": []
+      },
+      "priority": 100
+    },
+    {
+      "id": "cross_page_top_growth",
+      "category": "cross_page",
+      "purpose": "Find the strongest growth signal across supported analytics domains.",
+      "examples": {
+        "ar": [
+          "وش أعلى نمو بشكل عام",
+          "وين أسرع نمو بالمنصة",
+          "ايش أكثر شي قاعد ينمو",
+          "اعطني أقوى growth",
+          "وش أكثر مؤشر صاعد"
+        ],
+        "en": [
+          "what is growing fastest overall",
+          "where is the strongest growth in the platform",
+          "what is rising the most",
+          "show me the strongest growth signal",
+          "what is the biggest growth indicator"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "أعلى نمو",
+          "بشكل عام",
+          "المنصة",
+          "صاعد"
+        ],
+        "keywords_en": [
+          "fastest overall",
+          "platform",
+          "strongest growth"
+        ],
+        "entities": []
+      },
+      "answer": {
+        "type": "dynamic",
+        "handler": "cross_page_top_growth",
+        "responses": {
+          "ar": [
+            "أقوى نمو ظاهر ضمن السياق الحالي هو {{entity}} في {{domain}} بنمو {{growth}}."
+          ],
+          "en": [
+            "The strongest visible growth under the current context is {{entity}} in {{domain}} at {{growth}} growth."
+          ]
+        },
+        "result_shape": "single_answer"
+      },
+      "context": {
+        "applicable_pages": [
+          "*"
+        ],
+        "followup_keys": [
+          "cross_page_explain_growth"
+        ]
+      },
+      "priority": 94
+    },
+    {
+      "id": "cross_page_top_interest",
+      "category": "cross_page",
+      "purpose": "Return strongest overall interest indicator.",
+      "examples": {
+        "ar": [
+          "وش أكثر شي عليه اهتمام",
+          "وين أعلى اهتمام بشكل عام",
+          "ايش المتصدر في الاهتمام",
+          "وش أكثر شيء يجذب الناس",
+          "أعلى interest وين"
+        ],
+        "en": [
+          "what has the most interest overall",
+          "where is interest highest",
+          "what leads interest",
+          "what attracts the most attention",
+          "where is the highest interest"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "اهتمام",
+          "متصدر",
+          "يجذب"
+        ],
+        "keywords_en": [
+          "interest",
+          "leads",
+          "attention"
+        ],
+        "entities": []
+      },
+      "answer": {
+        "type": "dynamic",
+        "handler": "cross_page_top_interest",
+        "responses": {
+          "ar": [
+            "أقوى اهتمام ظاهر حاليًا هو {{entity}} ضمن {{domain}}، وفق المقياس {{metric}} بقيمة {{value}}."
+          ],
+          "en": [
+            "The strongest visible interest right now is {{entity}} in {{domain}}, using {{metric}} at {{value}}."
+          ]
+        },
+        "result_shape": "single_answer"
+      },
+      "context": {
+        "applicable_pages": [
+          "*"
+        ],
+        "followup_keys": []
+      },
+      "priority": 92
+    },
+    {
+      "id": "cross_page_top_action_intent",
+      "category": "cross_page",
+      "purpose": "Return strongest action-oriented signal across activities/campaigns/demand.",
+      "examples": {
+        "ar": [
+          "وش أكثر شي قريب للإجراء",
+          "وين نية الفعل أعلى",
+          "وش أقوى مؤشر action",
+          "ايش الشي اللي الناس تتحرك عليه أكثر",
+          "وين الانتقال للإجراء أعلى"
+        ],
+        "en": [
+          "what is closest to action",
+          "where is action intent strongest",
+          "what has the strongest action signal",
+          "what are users acting on most",
+          "where is action handoff highest"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "الإجراء",
+          "نية الفعل",
+          "action",
+          "انتقال"
+        ],
+        "keywords_en": [
+          "action",
+          "intent",
+          "handoff"
+        ],
+        "entities": []
+      },
+      "answer": {
+        "type": "dynamic",
+        "handler": "cross_page_top_action",
+        "responses": {
+          "ar": [
+            "أقوى إشارة مرتبطة بالفعل حاليًا هي {{entity}} في {{domain}} عند {{value}} وفق مقياس {{metric}}."
+          ],
+          "en": [
+            "The strongest action-oriented signal right now is {{entity}} in {{domain}} at {{value}} on the {{metric}} metric."
+          ]
+        },
+        "result_shape": "single_answer"
+      },
+      "context": {
+        "applicable_pages": [
+          "*"
+        ],
+        "followup_keys": []
+      },
+      "priority": 93
+    },
+    {
+      "id": "cross_page_compare_demand_activity",
+      "category": "cross_page",
+      "purpose": "Connect demand/search signal to related activity/category behavior.",
+      "examples": {
+        "ar": [
+          "اربط الطلب بالأنشطة",
+          "هل البحث ينعكس على الأنشطة",
+          "قارن أعلى بحث بأعلى نشاط",
+          "وش العلاقة بين الطلب والنشاط",
+          "هل الفئة المطلوبة لها نشاط قوي"
+        ],
+        "en": [
+          "connect demand with activities",
+          "does search demand show up in activities",
+          "compare top search with top activity",
+          "what is the relationship between demand and activity",
+          "does the top-demand category have strong activity"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "اربط",
+          "الطلب",
+          "الأنشطة",
+          "العلاقة"
+        ],
+        "keywords_en": [
+          "connect",
+          "demand",
+          "activities",
+          "relationship"
+        ],
+        "entities": []
+      },
+      "answer": {
+        "type": "dynamic",
+        "handler": "cross_page_demand_activity",
+        "responses": {
+          "ar": [
+            "في السياق الحالي، أعلى إشارة طلب هي {{demand_entity}} بينما أقوى سلوك نشاطي هو {{activity_entity}}. {{relationship_note}}."
+          ],
+          "en": [
+            "In the current context, the leading demand signal is {{demand_entity}}, while the strongest activity behavior is {{activity_entity}}. {{relationship_note}}."
+          ]
+        },
+        "result_shape": "comparison"
+      },
+      "context": {
+        "applicable_pages": [
+          "*"
+        ],
+        "followup_keys": [
+          "cross_page_explain_relationship"
+        ]
+      },
+      "priority": 94
+    },
+    {
+      "id": "cross_page_compare_area_opportunity",
+      "category": "cross_page",
+      "purpose": "Connect area profile with opportunity/gap signal.",
+      "examples": {
+        "ar": [
+          "اربط المنطقة بالفرص",
+          "وش أقوى فرصة في المنطقة الحالية",
+          "هل المنطقة فيها فجوة واضحة",
+          "قارن ملف المنطقة مع إشارات الفرص",
+          "وش الإشارة المرتبطة بالحي"
+        ],
+        "en": [
+          "connect the area with opportunities",
+          "what is the strongest opportunity in the current area",
+          "does this area have a clear gap",
+          "compare the area profile with opportunity signals",
+          "what signal is linked to this neighborhood"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "المنطقة",
+          "الفرص",
+          "الفجوة",
+          "الحي"
+        ],
+        "keywords_en": [
+          "area",
+          "opportunities",
+          "gap",
+          "neighborhood"
+        ],
+        "entities": [
+          "area"
+        ]
+      },
+      "answer": {
+        "type": "dynamic",
+        "handler": "cross_page_area_opportunity",
+        "responses": {
+          "ar": [
+            "في {{area}}، الفئة الأبرز في ملف المنطقة هي {{top_category}}، بينما أقوى إشارة فرصة هي {{signal_category}} بمؤشر {{score}}/100 وفجوة {{gap}} نقطة."
+          ],
+          "en": [
+            "In {{area}}, the leading category in the area profile is {{top_category}}, while the strongest opportunity signal is {{signal_category}} at {{score}}/100 with a {{gap}}-point gap."
+          ]
+        },
+        "result_shape": "comparison"
+      },
+      "context": {
+        "applicable_pages": [
+          "تحليل المناطق",
+          "الفرص والفجوات",
+          "*"
+        ],
+        "followup_keys": []
+      },
+      "priority": 96
+    },
+    {
+      "id": "cross_page_compare_audiences",
+      "category": "cross_page",
+      "purpose": "Summarize resident-vs-visitor differences across available domains.",
+      "examples": {
+        "ar": [
+          "قارن السكان والزوار بشكل عام",
+          "وش الفرق بين الجمهورين في المنصة",
+          "مين أقوى السكان ولا الزوار",
+          "كيف يختلف سلوك السكان عن الزوار عبر البيانات",
+          "اعطني مقارنة شاملة للجمهور"
+        ],
+        "en": [
+          "compare residents and visitors overall",
+          "what is the overall difference between the audiences",
+          "how do residents and visitors differ across the platform",
+          "give me a broad audience comparison",
+          "compare audience behavior"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "السكان",
+          "الزوار",
+          "قارن",
+          "الجمهور"
+        ],
+        "keywords_en": [
+          "residents",
+          "visitors",
+          "compare",
+          "audience"
+        ],
+        "entities": [
+          "audience"
+        ]
+      },
+      "answer": {
+        "type": "dynamic",
+        "handler": "cross_page_audience_compare",
+        "responses": {
+          "ar": [
+            "مقارنة عامة ضمن السياق الحالي: {{audience_summary}}. استخدم فلتر الجمهور لعزل كل شريحة عند الحاجة."
+          ],
+          "en": [
+            "Overall comparison under the current context: {{audience_summary}}. Use the audience filter to isolate each segment when needed."
+          ]
+        },
+        "result_shape": "comparison"
+      },
+      "context": {
+        "applicable_pages": [
+          "*"
+        ],
+        "followup_keys": []
+      },
+      "priority": 97
+    },
+    {
+      "id": "cross_page_explain_current_filters_effect",
+      "category": "cross_page",
+      "purpose": "Explain how active filters are shaping the current answer.",
+      "examples": {
+        "ar": [
+          "ليش جوابك كذا حسب الفلاتر",
+          "كيف الفلاتر أثرت على النتيجة",
+          "وش اللي تغير بسبب الفلتر",
+          "كيف المنطقة والفترة غيرت التحليل",
+          "هل جوابك يعتمد على الفلاتر الحالية"
+        ],
+        "en": [
+          "why is the answer different under these filters",
+          "how did the filters affect the result",
+          "what changed because of the filters",
+          "how did period and area change the analysis",
+          "does your answer use the current filters"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "الفلاتر",
+          "أثرت",
+          "النتيجة",
+          "يعتمد"
+        ],
+        "keywords_en": [
+          "filters",
+          "affected",
+          "result",
+          "depends"
+        ],
+        "entities": []
+      },
+      "answer": {
+        "type": "dynamic",
+        "handler": "cross_page_filter_effect",
+        "responses": {
+          "ar": [
+            "الإجابة الحالية محسوبة على: {{period}} · {{area}} · {{category}} · {{audience}}. هذه الفلاتر تغيّر حجم المؤشرات وترتيب النتائج المعروضة في النموذج."
+          ],
+          "en": [
+            "The current answer is calculated using: {{period}} · {{area}} · {{category}} · {{audience}}. These filters change metric scale and result ranking in the prototype."
+          ]
+        },
+        "result_shape": "single_answer"
+      },
+      "context": {
+        "applicable_pages": [
+          "*"
+        ],
+        "followup_keys": []
+      },
+      "priority": 98
+    },
+    {
+      "id": "cross_page_decision_brief",
+      "category": "cross_page",
+      "purpose": "Create a concise non-financial decision-support brief from current context.",
+      "examples": {
+        "ar": [
+          "اعطني brief سريع",
+          "لخص لي وش يحتاج قرار",
+          "وش أهم 3 أشياء أطلع فيها",
+          "اعطني نقاط لاتخاذ القرار",
+          "وش أركز عليه من كل البيانات"
+        ],
+        "en": [
+          "give me a quick brief",
+          "what should I take away for a decision",
+          "give me the top three takeaways",
+          "give me decision-support points",
+          "what should I focus on across the data"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "brief",
+          "قرار",
+          "أهم 3",
+          "أركز"
+        ],
+        "keywords_en": [
+          "brief",
+          "decision",
+          "top three",
+          "focus"
+        ],
+        "entities": []
+      },
+      "answer": {
+        "type": "dynamic",
+        "handler": "cross_page_decision_brief",
+        "responses": {
+          "ar": [
+            "ملخص دعم القرار الحالي: 1) {{point_1}} 2) {{point_2}} 3) {{point_3}}. هذه نقاط تحليلية للتحقق وليست توصية استثمارية أو مالية."
+          ],
+          "en": [
+            "Current decision-support brief: 1) {{point_1}} 2) {{point_2}} 3) {{point_3}}. These are analytical validation points, not investment or financial recommendations."
+          ]
+        },
+        "result_shape": "brief"
+      },
+      "context": {
+        "applicable_pages": [
+          "*"
+        ],
+        "followup_keys": []
+      },
+      "priority": 99
+    }
+  ]
+}
