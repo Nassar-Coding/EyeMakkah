@@ -1,11 +1,11 @@
 (() => {
   "use strict";
 
-  const C={green:"#17463A",deep:"#0E3129",gold:"#B8944A",clay:"#A65F45",sand:"#E8DDC9",muted:"#756E64",paper:"#FFFCF6",grid:"#DDD4C4"};
+  const C={green:"#17463A",deep:"#0E3129",gold:"#B8944A",clay:"#A65F45",sand:"#E8DDC9",sandDeep:"#DED2BE",muted:"#756E64",paper:"#FFFCF6",brassSoft:"#D8BE86",ok:"#3D725E",warn:"#A6522D",line:"rgba(33,30,25,.12)",lineSoft:"rgba(33,30,25,.07)"};
   const AREAS=["العزيزية","الشوقية","العوالي","النسيم","الزاهر","الشرائع","بطحاء قريش"];
   const CATS=["المطاعم والمقاهي","التجارب والأنشطة","التسوق","الترفيه","الثقافة","الخدمات","المجتمعات","الضيافة"];
   const AUD=["سكان مكة","الزوار"];
-  const PAGES=[["لوحة المعلومات","◫"],["تحليل الطلب","⌁"],["تحليل المناطق","⌖"],["الأنشطة والتجارب","◇"],["المجتمعات والاهتمامات","◎"],["الحملات والعروض","◌"],["الفرص والفجوات","△"],["التقارير","▤"]];
+  const PAGES=[["لوحة المعلومات","dashboard"],["تحليل الطلب","demand"],["تحليل المناطق","map"],["الأنشطة والتجارب","activities"],["المجتمعات والاهتمامات","community"],["الحملات والعروض","campaigns"],["الفرص والفجوات","opportunities"],["التقارير","reports"]];
   const AF={"العزيزية":1.23,"الشوقية":.92,"العوالي":1.06,"النسيم":.84,"الزاهر":.79,"الشرائع":.72,"بطحاء قريش":.68};
   const CF={"المطاعم والمقاهي":1.28,"التجارب والأنشطة":1.20,"التسوق":.98,"الترفيه":.91,"الثقافة":.83,"الخدمات":.77,"المجتمعات":.74,"الضيافة":.88};
   const CG={"المطاعم والمقاهي":.10,"التجارب والأنشطة":.16,"التسوق":.05,"الترفيه":.13,"الثقافة":.09,"الخدمات":.03,"المجتمعات":.14,"الضيافة":.07};
@@ -56,6 +56,26 @@
   const session={logged:sessionStorage.getItem("eyemakkah-ba-session")==="1",name:"مستخدم تجريبي",email:"demo@eyemakkah.sa"};
   let flow=session.logged?"app":(savedLang?"login":"welcome");
   const tr=(ar,en)=>state.lang==="ar"?ar:en;
+
+  const ICON_PATHS={
+    dashboard:'<rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/>',
+    demand:'<path d="M3 3v18h18"/><path d="m7 15 4-4 3 3 5-7"/>',
+    map:'<path d="M9 18 3.5 21V6L9 3l6 3 5.5-3v15L15 21l-6-3Z"/><path d="M9 3v15"/><path d="M15 6v15"/>',
+    activities:'<path d="M8 2v4"/><path d="M16 2v4"/><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18"/><path d="m8 15 2 2 4-4"/>',
+    community:'<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>',
+    campaigns:'<path d="m3 11 18-5v12L3 14v-3Z"/><path d="M11.6 16.1 13 21H8l-1.2-6"/><path d="M21 9v6"/>',
+    opportunities:'<circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/><path d="M8 11h6"/><path d="M11 8v6"/>',
+    reports:'<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6"/><path d="M8 13h8"/><path d="M8 17h8"/><path d="M8 9h2"/>',
+    languages:'<path d="m5 8 6 6"/><path d="m4 14 6-6 2-3"/><path d="M2 5h12"/><path d="M7 2h1"/><path d="m22 22-5-10-5 10"/><path d="M14 18h6"/>',
+    chevronDown:'<path d="m6 9 6 6 6-6"/>'
+  };
+  function iconSvg(name,size){
+    const p=ICON_PATHS[name]||ICON_PATHS.dashboard,s=size||18;
+    return '<svg class="ui-icon" aria-hidden="true" viewBox="0 0 24 24" width="'+s+'" height="'+s+'" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'+p+'</svg>'
+  }
+  function wordmark(size,light){
+    return '<div class="wordmark '+(light?"wordmark-light":"wordmark-dark")+'" style="--wm-size:'+(size||32)+'px" dir="ltr"><div class="wordmark-text"><span>Eye</span><strong>Makkah</strong></div><i></i></div>'
+  }
 
   const esc=s=>String(s==null?"":s).replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]));
   const fmt=v=>{v=Number(v)||0;return Math.abs(v)>=1e6?(v/1e6).toFixed(1)+"M":Math.abs(v)>=1e3?(v/1e3).toFixed(1)+"K":Math.round(v).toLocaleString("en-US")};
@@ -149,9 +169,9 @@
       '<div class="filter"><label>نوع الجمهور</label><select data-filter="audience">'+opts(["الكل"].concat(AUD),state.audience)+'</select></div></div>';
   }
   function userMenu(){
-    return '<details class="user-menu"><summary><span class="avatar">A</span><span class="user-summary"><b>'+esc(session.name)+'</b><small>'+esc(session.email)+'</small></span><span class="chev">⌄</span></summary><div class="user-pop"><div class="user-pop-name">'+esc(session.name)+'</div><button type="button" class="menu-row" data-menu-lang="ar">العربية</button><button type="button" class="menu-row" data-menu-lang="en">English</button><button type="button" class="menu-row" data-settings>الإعدادات</button><button type="button" class="menu-row danger" data-logout>تسجيل الخروج</button></div></details>'
+    return '<details class="user-menu"><summary class="user-trigger" aria-label="'+esc(tr("حساب المستخدم","User account"))+'"><span class="avatar">A</span><span class="user-trigger-chevron">'+iconSvg("chevronDown",14)+'</span></summary><div class="user-pop"><div class="user-pop-name">'+esc(session.name)+'</div><button type="button" class="menu-row" data-menu-lang="ar">العربية</button><button type="button" class="menu-row" data-menu-lang="en">English</button><button type="button" class="menu-row" data-settings>الإعدادات</button><button type="button" class="menu-row danger" data-logout>تسجيل الخروج</button></div></details>'
   }
-  function header(t,s){return '<div class="topbar"><div><div class="eyebrow">EYEMAKKAH BUSINESS ANALYTICS</div><h1 class="title">'+esc(t)+'</h1><div class="subtitle">'+esc(s)+'</div></div><div class="top-actions"><div class="welcome-copy"><b>مرحباً، مستخدم تجريبي</b><span>آخر تحديث للبيانات: 22 سبتمبر 2026</span></div>'+userMenu()+'</div></div><div class="hero-rule"></div>'}
+  function header(t,s){return '<header class="topbar"><div class="page-heading"><h1 class="title">'+esc(t)+'</h1><div class="subtitle">'+esc(s)+'</div></div><div class="top-actions"><div class="header-meta"><span>'+esc(tr("آخر تحديث للبيانات","Data updated"))+'</span><b>'+esc(tr("22 سبتمبر 2026","22 September 2026"))+'</b></div>'+userMenu()+'</div></header>'}
   function kpi(l,v,d,n,text){d=d==null?.08:d;return '<div class="kpi-card"><div class="kpi-label">'+esc(l)+'</div><div class="kpi-value'+(text?' text':'')+'">'+esc(v)+'</div><div class="delta '+(d>=0?'up':'down')+'">'+(d>=0?'↑ ':'↓ ')+Math.round(Math.abs(d)*100)+'%</div><div class="kpi-note">'+esc(n||"مقارنة بالفترة السابقة")+'</div></div>'}
   function panel(t,c,b){return '<section class="panel"><div class="panel-title">'+esc(t)+'</div>'+(c?'<div class="panel-copy">'+esc(c)+'</div>':'')+b+'</section>'}
   function insight(t,r){return '<div class="insight"><div class="insight-label">رؤية تحليلية · نموذج توضيحي</div><div class="insight-text">'+t+'</div>'+(r&&r.length?'<div class="insight-reasons"><b>لماذا ظهرت هذه الرؤية؟</b> · '+r.map(esc).join(" · ")+'</div>':'')+'</div>'}
@@ -166,7 +186,7 @@
   function line(series){
     const w=680,h=270,p=26,all=[].concat.apply([],series.map(s=>s.values)),mx=Math.max.apply(null,all.concat([1])),n=series[0].values.length;
     const x=i=>p+(n<=1?0:i/(n-1)*(w-p*2)),y=v=>18+(1-v/mx)*(h-56);
-    let g=""; for(let i=0;i<4;i++){let yy=20+i*(h-62)/3;g+='<line x1="'+p+'" y1="'+yy+'" x2="'+(w-p)+'" y2="'+yy+'" stroke="'+C.grid+'" stroke-opacity=".45"/>'}
+    let g=""; for(let i=0;i<4;i++){let yy=20+i*(h-62)/3;g+='<line x1="'+p+'" y1="'+yy+'" x2="'+(w-p)+'" y2="'+yy+'" stroke="'+C.line+'" stroke-opacity=".45"/>'}
     const paths=series.map(s=>'<path class="trend-path" d="'+s.values.map((v,i)=>(i?"L":"M")+x(i).toFixed(1)+","+y(v).toFixed(1)).join(" ")+'" fill="none" stroke="'+s.color+'" stroke-width="2.6" stroke-linecap="round"/>').join("");
     const dots=series.map(s=>s.values.map((v,i)=>i%Math.max(1,Math.floor(n/10))===0?'<circle class="trend-dot" cx="'+x(i).toFixed(1)+'" cy="'+y(v).toFixed(1)+'" r="3.6" fill="'+s.color+'"><title>'+esc(s.name)+' · '+fmt(v)+'</title></circle>':'').join("")).join("");
     const lg='<div class="legend">'+series.map(s=>'<span><i style="background:'+s.color+'"></i>'+esc(s.name)+'</span>').join("")+'</div>';
@@ -206,7 +226,7 @@
   function scatterOpp(rows){
     const shown=rows.slice(0,18),w=680,h=300,p=42;
     const x=v=>p+(v/100)*(w-p*2),y=v=>18+(1-v/100)*(h-62);
-    return '<div class="scatter-chart"><svg viewBox="0 0 '+w+' '+h+'"><rect x="'+p+'" y="18" width="'+(x(50)-p)+'" height="'+(y(65)-18)+'" fill="rgba(184,148,74,.055)"/><line x1="'+x(50)+'" y1="18" x2="'+x(50)+'" y2="'+(h-44)+'" stroke="'+C.grid+'" stroke-dasharray="5 5"/><line x1="'+p+'" y1="'+y(65)+'" x2="'+(w-p)+'" y2="'+y(65)+'" stroke="'+C.grid+'" stroke-dasharray="5 5"/><text x="'+(p+8)+'" y="36">'+esc("طلب مرتفع · عرض أقل")+'</text>'+shown.map(r=>'<circle class="scatter-dot" cx="'+x(r.supply_index).toFixed(1)+'" cy="'+y(r.demand_index).toFixed(1)+'" r="'+(5+Math.min(12,r.score/12)).toFixed(1)+'" fill="'+(r.demand_index>65&&r.supply_index<50?C.gold:C.green)+'" fill-opacity=".72"><title>'+esc(r.area)+' · '+esc(r.category)+' · '+esc("الطلب")+' '+r.demand_index+' · '+esc("العرض")+' '+r.supply_index+' · '+esc("الإشارة")+' '+r.score+'</title></circle>').join("")+'<text x="'+p+'" y="'+(h-9)+'">'+esc("مستوى العرض")+' →</text><text x="7" y="18">'+esc("مؤشر الطلب")+'</text></svg></div>'
+    return '<div class="scatter-chart"><svg viewBox="0 0 '+w+' '+h+'"><rect x="'+p+'" y="18" width="'+(x(50)-p)+'" height="'+(y(65)-18)+'" fill="rgba(184,148,74,.055)"/><line x1="'+x(50)+'" y1="18" x2="'+x(50)+'" y2="'+(h-44)+'" stroke="'+C.line+'" stroke-dasharray="5 5"/><line x1="'+p+'" y1="'+y(65)+'" x2="'+(w-p)+'" y2="'+y(65)+'" stroke="'+C.line+'" stroke-dasharray="5 5"/><text x="'+(p+8)+'" y="36">'+esc("طلب مرتفع · عرض أقل")+'</text>'+shown.map(r=>'<circle class="scatter-dot" cx="'+x(r.supply_index).toFixed(1)+'" cy="'+y(r.demand_index).toFixed(1)+'" r="'+(5+Math.min(12,r.score/12)).toFixed(1)+'" fill="'+(r.demand_index>65&&r.supply_index<50?C.gold:C.green)+'" fill-opacity=".72"><title>'+esc(r.area)+' · '+esc(r.category)+' · '+esc("الطلب")+' '+r.demand_index+' · '+esc("العرض")+' '+r.supply_index+' · '+esc("الإشارة")+' '+r.score+'</title></circle>').join("")+'<text x="'+p+'" y="'+(h-9)+'">'+esc("مستوى العرض")+' →</text><text x="7" y="18">'+esc("مؤشر الطلب")+'</text></svg></div>'
   }
 
 
@@ -497,11 +517,15 @@
   }
 
   function welcomeScreen(){
-    return '<div class="gate-shell welcome-gate"><div class="gate-visual"><div class="motion-orbit orbit-a"></div><div class="motion-orbit orbit-b"></div><div class="data-pulse p1"></div><div class="data-pulse p2"></div><div class="gate-mark">EyeMakkah</div></div><section class="gate-card"><div class="gate-eyebrow">EYEMAKKAH BUSINESS ANALYTICS</div><h1>منصة EyeMakkah لتحليلات الأعمال</h1><p>اختر لغة المنصة<br><span>Choose platform language</span></p><div class="welcome-actions"><button type="button" class="primary-btn" data-start-lang="ar">ابدأ بالعربية</button><button type="button" class="secondary-btn" data-start-lang="en">Continue in English</button></div><small>بيانات اصطناعية لأغراض العرض · Synthetic demo data</small></section></div>'
+    return '<div class="entry-screen welcome-gate"><div class="entry-content welcome-content">'+wordmark(52,true)+'<div class="entry-descriptor">'+esc(tr("منصة EyeMakkah لتحليلات الأعمال","EyeMakkah Business Analytics Platform"))+'</div><p class="entry-tagline">'+esc(tr("تحليلات عملية لفهم الطلب والاهتمامات والإشارات المكانية في مكة.","Practical analytics for understanding demand, interests, and geographic signals across Makkah."))+'</p><button type="button" class="entry-primary entry-start" data-enter-language>'+esc(tr("ابدأ","Enter EyeMakkah"))+'</button><small class="entry-disclosure">'+esc(tr("نموذج أولي — بيانات اصطناعية لأغراض العرض","Prototype — synthetic data for demonstration"))+'</small></div></div>'
+  }
+  function languageScreen(){
+    const ar=state.lang==="ar";
+    return '<div class="entry-screen language-gate"><div class="entry-content language-content">'+wordmark(30,true)+'<div class="language-heading"><b>اختر لغتك</b><span>—</span><span class="latin">Choose your language</span></div><div class="language-options"><button type="button" class="language-option '+(ar?"current":"")+'" data-start-lang="ar" dir="rtl"><span class="language-icon">'+iconSvg("languages",20)+'</span><span><strong>العربية</strong><small>التجربة الكاملة بالعربية</small></span><span class="language-arrow">‹</span></button><button type="button" class="language-option '+(!ar?"current":"")+'" data-start-lang="en" dir="ltr"><span class="language-icon">'+iconSvg("languages",20)+'</span><span><strong>English</strong><small>The same product, read in English</small></span><span class="language-arrow">›</span></button></div><small class="entry-disclosure">يمكنك تغيير اللغة لاحقًا من حسابك · You can change this later in your account</small></div></div>'
   }
   function loginScreen(){
     const ar=state.lang==="ar";
-    return '<div class="gate-shell login-gate"><div class="login-brand"><div class="gate-mark">EyeMakkah</div><b>'+tr("منصة EyeMakkah لتحليلات الأعمال","EyeMakkah Business Analytics Platform")+'</b></div><section class="gate-card login-card"><div class="gate-eyebrow">EYEMAKKAH BUSINESS ANALYTICS</div><h1>'+tr("تسجيل الدخول","Sign in")+'</h1><p>'+tr("استخدم بيانات الدخول المخصصة لك للوصول إلى لوحة التحليلات.","Use your assigned access to enter the analytics platform.")+'</p><form id="login-form"><label>'+tr("البريد الإلكتروني","Email")+'<input id="login-email" type="email" autocomplete="username" value="demo@eyemakkah.sa" required></label><label>'+tr("كلمة المرور","Password")+'<input id="login-pass" type="password" autocomplete="current-password" value="demo1234" required></label><div class="login-row"><button type="button" class="text-btn" data-forgot>'+tr("نسيت كلمة المرور؟","Forgot password?")+'</button></div><button class="primary-btn wide" type="submit">'+tr("تسجيل الدخول","Sign in")+'</button><button class="secondary-btn wide" type="button" data-demo-login>'+tr("الدخول إلى النسخة التجريبية","Enter demo")+'</button></form><div class="gate-lang"><button data-auth-lang="ar" class="'+(ar?"active":"")+'">العربية</button><button data-auth-lang="en" class="'+(!ar?"active":"")+'">English</button></div><small>'+tr("تسجيل دخول تجريبي فقط — لا يوجد نظام مصادقة فعلي في هذه النسخة.","Prototype sign-in only — no live authentication backend in this version.")+'</small></section></div>'
+    return '<div class="entry-screen login-gate"><section class="login-card">'+wordmark(30,false)+'<div class="login-descriptor">'+esc(tr("منصة EyeMakkah لتحليلات الأعمال","EyeMakkah Business Analytics Platform"))+'</div><h1>'+esc(tr("تسجيل الدخول","Sign in"))+'</h1><p>'+esc(tr("استخدم بيانات الدخول المخصصة لك للوصول إلى لوحة التحليلات.","Use your assigned access to enter the analytics platform."))+'</p><form id="login-form"><label>'+esc(tr("البريد الإلكتروني","Email"))+'<input id="login-email" class="login-input login-input-ltr" type="email" dir="ltr" autocomplete="username" value="demo@eyemakkah.sa" required></label><label>'+esc(tr("كلمة المرور","Password"))+'<input id="login-pass" class="login-input login-input-ltr" type="password" dir="ltr" autocomplete="current-password" value="demo1234" required></label><div class="login-row"><button type="button" class="text-btn" data-forgot>'+esc(tr("نسيت كلمة المرور؟","Forgot password?"))+'</button></div><button class="entry-primary wide" type="submit">'+esc(tr("تسجيل الدخول","Sign in"))+'</button><button class="entry-secondary wide" type="button" data-demo-login>'+esc(tr("الدخول إلى النسخة التجريبية","Enter demo"))+'</button></form><div class="gate-lang"><button data-auth-lang="ar" class="'+(ar?"active":"")+'">العربية</button><button data-auth-lang="en" class="'+(!ar?"active":"")+'">English</button></div><small class="login-disclosure">'+esc(tr("تسجيل دخول تجريبي فقط — لا يوجد نظام مصادقة فعلي في هذه النسخة.","Prototype sign-in only — no live authentication backend in this version."))+'</small></section></div>'
   }
   function enterApp(){
     session.logged=true;sessionStorage.setItem("eyemakkah-ba-session","1");flow="app";render()
@@ -523,9 +547,9 @@
   function page(){switch(state.page){case"لوحة المعلومات":return dashboard();case"تحليل الطلب":return demand();case"تحليل المناطق":return areas();case"الأنشطة والتجارب":return activities();case"المجتمعات والاهتمامات":return communities();case"الحملات والعروض":return campaigns();case"الفرص والفجوات":return opportunities();case"التقارير":return reports();default:return dashboard();}}
   function shell(){
     const lang='<div class="lang-switch"><button data-lang="ar" class="'+(state.lang==="ar"?"active":"")+'">العربية</button><button data-lang="en" class="'+(state.lang==="en"?"active":"")+'">English</button></div>';
-    return '<div class="bi-shell"><aside class="sidebar"><div class="brand"><div class="brand-main">EyeMakkah</div><div class="brand-sub">منصة EyeMakkah لتحليلات الأعمال</div><span class="brand-badge">BUSINESS ANALYTICS</span>'+lang+'</div><nav class="nav">'+
-      PAGES.map(x=>'<button data-page="'+esc(x[0])+'" class="'+(state.page===x[0]?"active":"")+'"><span class="nav-icon">'+x[1]+'</span><span>'+esc(x[0])+'</span></button>').join("")+
-      '</nav><div class="sidebar-meta">آخر تحديث للنموذج: 22 سبتمبر 2026<br>بيانات اصطناعية لأغراض العرض<br>لا تتضمن معلومات شخصية.</div></aside><main class="main"><div class="mobile-tools"><select id="mobile-page">'+opts(PAGES.map(x=>x[0]),state.page)+'</select>'+lang+userMenu()+'</div><div class="loading-strip" aria-hidden="true"><span></span><span></span><span></span></div><div id="page" class="page-motion">'+page()+'</div><div class="data-note">البيانات المعروضة في هذا النموذج توضيحية لأغراض تصميم وتجربة المنصة، ولا تمثل بيانات تشغيلية حية أو معلومات عن أفراد.</div><div class="footer-links">EyeMakkah · نموذج تحليلات الأعمال</div></main></div>';
+    return '<div class="bi-shell"><aside class="sidebar"><div class="brand">'+wordmark(28,false)+'<div class="brand-sub">'+esc(tr("منصة EyeMakkah لتحليلات الأعمال","EyeMakkah Business Analytics Platform"))+'</div>'+lang+'</div><nav class="nav">'+
+      PAGES.map(x=>'<button data-page="'+esc(x[0])+'" class="'+(state.page===x[0]?"active":"")+'"><span class="nav-icon">'+iconSvg(x[1],19)+'</span><span>'+esc(x[0])+'</span></button>').join("")+
+      '</nav><div class="sidebar-meta">'+esc(tr("آخر تحديث للنموذج: 22 سبتمبر 2026","Prototype updated: 22 September 2026"))+'<br>'+esc(tr("بيانات اصطناعية لأغراض العرض","Synthetic data for demonstration"))+'<br>'+esc(tr("لا تتضمن معلومات شخصية.","No personal information is included."))+'</div></aside><main class="main"><div class="mobile-tools"><select id="mobile-page">'+opts(PAGES.map(x=>x[0]),state.page)+'</select>'+lang+userMenu()+'</div><div class="loading-strip" aria-hidden="true"><span></span><span></span><span></span></div><div id="page" class="page-motion">'+page()+'</div><div class="data-note">'+esc(tr("البيانات المعروضة في هذا النموذج توضيحية لأغراض تصميم وتجربة المنصة، ولا تمثل بيانات تشغيلية حية أو معلومات عن أفراد.","Data shown in this prototype is illustrative for product design and testing. It is not live operational data and contains no individual information."))+'</div><div class="footer-links">'+esc(tr("نموذج تحليلات الأعمال · بيانات توضيحية","Business Analytics prototype · illustrative data"))+'</div></main></div>';
   }
   function downloadCsv(){
     const e=document.getElementById("report-data");if(!e)return;
@@ -539,7 +563,15 @@
     document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),500);
   }
   function attach(){
-    document.querySelectorAll("[data-start-lang]").forEach(b=>b.onclick=()=>{state.lang=b.dataset.startLang;localStorage.setItem("eyemakkah-ba-lang",state.lang);flow="login";render()});
+    const enterLanguage=document.querySelector("[data-enter-language]");if(enterLanguage)enterLanguage.onclick=()=>{flow="language";render()};
+    document.querySelectorAll("[data-start-lang]").forEach(b=>b.onclick=()=>{
+      const next=b.dataset.startLang,screen=document.querySelector(".language-gate");
+      state.lang=next;localStorage.setItem("eyemakkah-ba-lang",state.lang);
+      document.documentElement.lang=state.lang;document.documentElement.dir=state.lang==="ar"?"rtl":"ltr";document.body.dir=document.documentElement.dir;
+      if(screen)screen.classList.add(next==="ar"?"picking-rtl":"picking-ltr");
+      document.querySelectorAll("[data-start-lang]").forEach(x=>x.classList.toggle("selected",x===b));
+      window.setTimeout(()=>{flow="login";render()},260)
+    });
     document.querySelectorAll("[data-auth-lang]").forEach(b=>b.onclick=()=>{state.lang=b.dataset.authLang;localStorage.setItem("eyemakkah-ba-lang",state.lang);render()});
     const form=document.getElementById("login-form");if(form)form.onsubmit=e=>{e.preventDefault();enterApp()};
     const demo=document.querySelector("[data-demo-login]");if(demo)demo.onclick=enterApp;
@@ -560,7 +592,7 @@
   function render(){
     document.documentElement.lang=state.lang;document.documentElement.dir=state.lang==="ar"?"rtl":"ltr";document.body.dir=document.documentElement.dir;
     const root=document.getElementById("app");
-    root.innerHTML=flow==="welcome"?welcomeScreen():flow==="login"?loginScreen():shell();
+    root.innerHTML=flow==="welcome"?welcomeScreen():flow==="language"?languageScreen():flow==="login"?loginScreen():shell();
     attach();
     if(flow==="app")localizeDom();requestAnimationFrame(()=>document.body.classList.remove("is-updating"))
   }
