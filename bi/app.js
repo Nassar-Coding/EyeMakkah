@@ -67,7 +67,11 @@
     opportunities:'<circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/><path d="M8 11h6"/><path d="M11 8v6"/>',
     reports:'<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6"/><path d="M8 13h8"/><path d="M8 17h8"/><path d="M8 9h2"/>',
     languages:'<path d="m5 8 6 6"/><path d="m4 14 6-6 2-3"/><path d="M2 5h12"/><path d="M7 2h1"/><path d="m22 22-5-10-5 10"/><path d="M14 18h6"/>',
-    chevronDown:'<path d="m6 9 6 6 6-6"/>'
+    chevronDown:'<path d="m6 9 6 6 6-6"/>',
+    settings:'<path d="M12 15.5A3.5 3.5 0 1 0 12 8a3.5 3.5 0 0 0 0 7.5Z"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.88l.06.06-2.83 2.83-.06-.06A1.7 1.7 0 0 0 15 19.4a1.7 1.7 0 0 0-1 .6 1.7 1.7 0 0 0-.4 1.1V21H9v-.1A1.7 1.7 0 0 0 8.6 20a1.7 1.7 0 0 0-1-.6 1.7 1.7 0 0 0-1.88.34l-.06.06-2.83-2.83.06-.06A1.7 1.7 0 0 0 3.23 15a1.7 1.7 0 0 0-.6-1 1.7 1.7 0 0 0-1.1-.4H1V9h.1A1.7 1.7 0 0 0 2 8.6a1.7 1.7 0 0 0 .6-1 1.7 1.7 0 0 0-.34-1.88l-.06-.06 2.83-2.83.06.06A1.7 1.7 0 0 0 7 3.23a1.7 1.7 0 0 0 1-.6 1.7 1.7 0 0 0 .4-1.1V1h4.6v.1a1.7 1.7 0 0 0 .4 1.1 1.7 1.7 0 0 0 1 .6 1.7 1.7 0 0 0 1.88-.34l.06-.06 2.83 2.83-.06.06A1.7 1.7 0 0 0 18.77 7a1.7 1.7 0 0 0 .6 1 1.7 1.7 0 0 0 1.1.4H21V13h-.1a1.7 1.7 0 0 0-1.1.4 1.7 1.7 0 0 0-.4 1Z"/>',
+    logOut:'<path d="M10 17l5-5-5-5"/><path d="M15 12H3"/><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/>',
+    sparkles:'<path d="m12 3-1.2 3.3L7.5 7.5l3.3 1.2L12 12l1.2-3.3 3.3-1.2-3.3-1.2L12 3Z"/><path d="m5 14-.8 2.2L2 17l2.2.8L5 20l.8-2.2L8 17l-2.2-.8L5 14Z"/><path d="m19 13-.8 2.2L16 16l2.2.8L19 19l.8-2.2L22 16l-2.2-.8L19 13Z"/>',
+    download:'<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/><path d="M12 15V3"/>'
   };
   function iconSvg(name,size){
     const p=ICON_PATHS[name]||ICON_PATHS.dashboard,s=size||18;
@@ -76,6 +80,9 @@
   function wordmark(size,light){
     return '<div class="wordmark '+(light?"wordmark-light":"wordmark-dark")+'" style="--wm-size:'+(size||32)+'px" dir="ltr"><div class="wordmark-text"><span>Eye</span><strong>Makkah</strong></div><i></i></div>'
   }
+
+  const CHART_COLORS=[C.green,"#8C6B4F","#5C6E4A","#9E6B52","#4A6B7C","#7A5B8C",C.gold,C.clay];
+  function tipText(value){const raw=String(value==null?"":value);return esc(state.lang==="en"?enText(raw):raw)}
 
   const esc=s=>String(s==null?"":s).replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]));
   const fmt=v=>{v=Number(v)||0;return Math.abs(v)>=1e6?(v/1e6).toFixed(1)+"M":Math.abs(v)>=1e3?(v/1e3).toFixed(1)+"K":Math.round(v).toLocaleString("en-US")};
@@ -162,71 +169,72 @@
 
   function opts(values,current){return values.map(v=>'<option'+(v===current?' selected':'')+'>'+esc(v)+'</option>').join("")}
   function filters(){
-    return '<div class="filters">'+
+    return '<div class="filters" aria-label="'+esc(tr("فلاتر التحليل","Analytics filters"))+'">'+
       '<div class="filter"><label>الفترة الزمنية</label><select data-filter="period">'+opts(["آخر 30 يومًا","آخر 7 أيام","آخر 3 أشهر","آخر 12 شهرًا"],state.period)+'</select></div>'+
       '<div class="filter"><label>المنطقة</label><select data-filter="area">'+opts(["مكة المكرمة"].concat(AREAS),state.area)+'</select></div>'+
       '<div class="filter"><label>القطاع / الفئة</label><select data-filter="category">'+opts(["الكل"].concat(CATS),state.category)+'</select></div>'+
       '<div class="filter"><label>نوع الجمهور</label><select data-filter="audience">'+opts(["الكل"].concat(AUD),state.audience)+'</select></div></div>';
   }
   function userMenu(){
-    return '<details class="user-menu"><summary class="user-trigger" aria-label="'+esc(tr("حساب المستخدم","User account"))+'"><span class="avatar">A</span><span class="user-trigger-chevron">'+iconSvg("chevronDown",14)+'</span></summary><div class="user-pop"><div class="user-pop-name">'+esc(session.name)+'</div><button type="button" class="menu-row" data-menu-lang="ar">العربية</button><button type="button" class="menu-row" data-menu-lang="en">English</button><button type="button" class="menu-row" data-settings>الإعدادات</button><button type="button" class="menu-row danger" data-logout>تسجيل الخروج</button></div></details>'
+    const langAr=state.lang==="ar",langEn=state.lang==="en";
+    return '<details class="user-menu"><summary class="user-trigger" aria-label="'+esc(tr("حساب المستخدم","User account"))+'"><span class="avatar">A</span><span class="user-trigger-chevron">'+iconSvg("chevronDown",14)+'</span></summary><div class="user-pop"><div class="user-pop-name"><strong>'+esc(session.name)+'</strong><small>'+esc(session.email)+'</small></div><button type="button" class="menu-row '+(langAr?"selected":"")+'" data-menu-lang="ar"><span class="menu-icon">'+iconSvg("languages",17)+'</span><span>العربية</span></button><button type="button" class="menu-row '+(langEn?"selected":"")+'" data-menu-lang="en"><span class="menu-icon">'+iconSvg("languages",17)+'</span><span>English</span></button><div class="menu-separator"></div><button type="button" class="menu-row" data-settings><span class="menu-icon">'+iconSvg("settings",17)+'</span><span>'+esc(tr("الإعدادات","Settings"))+'</span></button><button type="button" class="menu-row danger" data-logout><span class="menu-icon">'+iconSvg("logOut",17)+'</span><span>'+esc(tr("تسجيل الخروج","Sign out"))+'</span></button></div></details>'
   }
   function header(t,s){return '<header class="topbar"><div class="page-heading"><h1 class="title">'+esc(t)+'</h1><div class="subtitle">'+esc(s)+'</div></div><div class="top-actions"><div class="header-meta"><span>'+esc(tr("آخر تحديث للبيانات","Data updated"))+'</span><b>'+esc(tr("22 سبتمبر 2026","22 September 2026"))+'</b></div>'+userMenu()+'</div></header>'}
-  function kpi(l,v,d,n,text){d=d==null?.08:d;return '<div class="kpi-card"><div class="kpi-label">'+esc(l)+'</div><div class="kpi-value'+(text?' text':'')+'">'+esc(v)+'</div><div class="delta '+(d>=0?'up':'down')+'">'+(d>=0?'↑ ':'↓ ')+Math.round(Math.abs(d)*100)+'%</div><div class="kpi-note">'+esc(n||"مقارنة بالفترة السابقة")+'</div></div>'}
-  function panel(t,c,b){return '<section class="panel"><div class="panel-title">'+esc(t)+'</div>'+(c?'<div class="panel-copy">'+esc(c)+'</div>':'')+b+'</section>'}
-  function insight(t,r){return '<div class="insight"><div class="insight-label">رؤية تحليلية · نموذج توضيحي</div><div class="insight-text">'+t+'</div>'+(r&&r.length?'<div class="insight-reasons"><b>لماذا ظهرت هذه الرؤية؟</b> · '+r.map(esc).join(" · ")+'</div>':'')+'</div>'}
+  function kpi(l,v,d,n,text){d=d==null?.08:d;return '<div class="kpi-card"><div class="kpi-label">'+esc(l)+'</div><div class="kpi-value'+(text?' text':'')+'">'+esc(v)+'</div><div class="kpi-meta"><div class="delta '+(d>=0?'up':'down')+'">'+(d>=0?'↑ ':'↓ ')+Math.round(Math.abs(d)*100)+'%</div><div class="kpi-note">'+esc(n||"مقارنة بالفترة السابقة")+'</div></div></div>'}
+  function panel(t,c,b){return '<section class="panel"><header class="panel-head"><div class="panel-title">'+esc(t)+'</div>'+(c?'<div class="panel-copy">'+esc(c)+'</div>':'')+'</header><div class="panel-body">'+b+'</div></section>'}
+  function insight(t,r){return '<aside class="insight"><div class="insight-label">رؤية تحليلية · نموذج توضيحي</div><div class="insight-text">'+t+'</div>'+(r&&r.length?'<div class="insight-reasons"><b>لماذا ظهرت هذه الرؤية؟</b> · '+r.map(esc).join(" · ")+'</div>':'')+'</aside>'}
   function bar(rows,label,value,color,percent){
     const mx=Math.max.apply(null,rows.map(r=>Number(r[value])||0).concat([1]));
-    return '<div class="bar-list">'+rows.map(r=>{const shown=percent?Math.round(r[value]*100)+"%":fmt(r[value]);return '<div class="bar-row" title="'+esc(r[label])+' · '+esc(shown)+'"><div class="bar-label">'+esc(r[label])+'</div><div class="bar-track"><div class="bar-fill" style="background:'+(color||C.green)+';width:'+Math.max(2,(Number(r[value])||0)/mx*100)+'%"></div></div><div class="bar-value">'+shown+'</div></div>'}).join("")+'</div>';
+    return '<div class="bar-list">'+rows.map(r=>{const shown=percent?Math.round(r[value]*100)+"%":fmt(r[value]),tip=r[label]+" · "+shown;return '<div class="bar-row" data-tip="'+tipText(tip)+'"><div class="bar-label">'+esc(r[label])+'</div><div class="bar-track"><div class="bar-fill" style="background:'+(color||C.green)+';width:'+Math.max(2,(Number(r[value])||0)/mx*100)+'%"></div></div><div class="bar-value">'+shown+'</div></div>'}).join("")+'</div>';
   }
   function funnel(names,vals){
-    const mx=Math.max.apply(null,vals.concat([1])),cols=[C.green,"#37695D",C.gold,"#C6AA72",C.clay,"#7B6C5B"];
-    return '<div class="funnel">'+names.map((n,i)=>'<div class="funnel-step" title="'+esc(n)+' · '+fmt(vals[i])+'" style="width:'+(35+65*vals[i]/mx)+'%;background:'+cols[i%cols.length]+'"><span>'+esc(n)+'</span><b>'+fmt(vals[i])+'</b></div>').join("")+'</div><div class="funnel-caption">كل مرحلة إشارة مستقلة ولا تعني إتمام المرحلة التالية.</div>';
+    const mx=Math.max.apply(null,vals.concat([1])),cols=[C.green,"#5E7E6B",C.gold,"#A8763F",C.clay,"#7C5A3A"];
+    return '<div class="funnel">'+names.map((n,i)=>'<div class="funnel-step" data-tip="'+tipText(n+" · "+fmt(vals[i]))+'" style="width:'+(35+65*vals[i]/mx)+'%;background:'+cols[i%cols.length]+'"><span>'+esc(n)+'</span><b>'+fmt(vals[i])+'</b></div>').join("")+'</div><div class="funnel-caption">كل مرحلة إشارة مستقلة ولا تعني إتمام المرحلة التالية.</div>';
   }
   function line(series){
     const w=680,h=270,p=26,all=[].concat.apply([],series.map(s=>s.values)),mx=Math.max.apply(null,all.concat([1])),n=series[0].values.length;
     const x=i=>p+(n<=1?0:i/(n-1)*(w-p*2)),y=v=>18+(1-v/mx)*(h-56);
-    let g=""; for(let i=0;i<4;i++){let yy=20+i*(h-62)/3;g+='<line x1="'+p+'" y1="'+yy+'" x2="'+(w-p)+'" y2="'+yy+'" stroke="'+C.line+'" stroke-opacity=".45"/>'}
-    const paths=series.map(s=>'<path class="trend-path" d="'+s.values.map((v,i)=>(i?"L":"M")+x(i).toFixed(1)+","+y(v).toFixed(1)).join(" ")+'" fill="none" stroke="'+s.color+'" stroke-width="2.6" stroke-linecap="round"/>').join("");
-    const dots=series.map(s=>s.values.map((v,i)=>i%Math.max(1,Math.floor(n/10))===0?'<circle class="trend-dot" cx="'+x(i).toFixed(1)+'" cy="'+y(v).toFixed(1)+'" r="3.6" fill="'+s.color+'"><title>'+esc(s.name)+' · '+fmt(v)+'</title></circle>':'').join("")).join("");
+    let g=""; for(let i=0;i<4;i++){let yy=20+i*(h-62)/3;g+='<line x1="'+p+'" y1="'+yy+'" x2="'+(w-p)+'" y2="'+yy+'" stroke="'+C.lineSoft+'"/>'}
+    const paths=series.map(s=>'<path class="trend-path" d="'+s.values.map((v,i)=>(i?"L":"M")+x(i).toFixed(1)+","+y(v).toFixed(1)).join(" ")+'" fill="none" stroke="'+s.color+'" stroke-width="2.3" stroke-linecap="round"/>').join("");
+    const dots=series.map(s=>s.values.map((v,i)=>i%Math.max(1,Math.floor(n/10))===0?'<circle class="trend-dot" data-tip="'+tipText(s.name+" · "+fmt(v))+'" cx="'+x(i).toFixed(1)+'" cy="'+y(v).toFixed(1)+'" r="3.2" fill="'+s.color+'"></circle>':'').join("")).join("");
     const lg='<div class="legend">'+series.map(s=>'<span><i style="background:'+s.color+'"></i>'+esc(s.name)+'</span>').join("")+'</div>';
-    return '<div class="chart">'+lg+'<svg viewBox="0 0 '+w+' '+h+'">'+g+paths+dots+'<text x="'+p+'" y="'+(h-7)+'" font-size="10">بداية الفترة</text><text x="'+(w-p)+'" y="'+(h-7)+'" font-size="10" text-anchor="end">آخر تحديث</text></svg></div>';
+    return '<div class="chart">'+lg+'<svg viewBox="0 0 '+w+' '+h+'">'+g+paths+dots+'<text x="'+p+'" y="'+(h-7)+'" font-size="11">بداية الفترة</text><text x="'+(w-p)+'" y="'+(h-7)+'" font-size="11" text-anchor="end">آخر تحديث</text></svg></div>';
   }
   function table(rows,cols){
     return '<div class="table-wrap"><table class="data-table"><thead><tr>'+cols.map(c=>'<th>'+esc(c[1])+'</th>').join("")+'</tr></thead><tbody>'+
-      rows.map(r=>'<tr>'+cols.map(c=>'<td>'+(c[2]==="pct"?'<div style="direction:ltr">'+Math.round((Number(r[c[0]])||0)*100)+'%</div>':esc(c[2]==="num"?fmt(r[c[0]]):r[c[0]]))+'</td>').join("")+'</tr>').join("")+
+      rows.map(r=>'<tr>'+cols.map(c=>'<td'+(c[2]==="pct"||c[2]==="num"?' class="num-cell" dir="ltr"':'')+'>'+(c[2]==="pct"?Math.round((Number(r[c[0]])||0)*100)+'%':esc(c[2]==="num"?fmt(r[c[0]]):r[c[0]]))+'</td>').join("")+'</tr>').join("")+
       '</tbody></table></div>';
   }
   function donut(source){
     source=source||communityRows();
     const by={};source.forEach(r=>by[r.type]=(by[r.type]||0)+r.engagement);
-    const items=Object.keys(by).map(k=>({name:k,value:by[k]})),tot=sum(items,"value"),cols=[C.green,C.gold,C.clay,"#7A8F83","#B7A98F"];let deg=0,st=[];
+    const items=Object.keys(by).map(k=>({name:k,value:by[k]})),tot=sum(items,"value"),cols=CHART_COLORS;let deg=0,st=[];
     items.forEach((r,i)=>{const d=r.value/tot*360;st.push(cols[i%cols.length]+" "+deg+"deg "+(deg+d)+"deg");deg+=d});
-    return '<div class="donut-wrap"><div class="donut" style="background:conic-gradient('+st.join(",")+')"><div class="donut-center">'+fmt(tot)+'</div></div><div class="donut-legend">'+items.map((r,i)=>'<div><i style="background:'+cols[i%cols.length]+'"></i>'+esc(r.name)+' · '+Math.round(r.value/tot*100)+'%</div>').join("")+'</div></div>';
+    return '<div class="donut-wrap"><div class="donut" data-tip="'+tipText("إجمالي · "+fmt(tot))+'" style="background:conic-gradient('+st.join(",")+')"><div class="donut-center">'+fmt(tot)+'</div></div><div class="donut-legend">'+items.map((r,i)=>'<div data-tip="'+tipText(r.name+" · "+fmt(r.value))+'"><i style="background:'+cols[i%cols.length]+'"></i>'+esc(r.name)+' · '+Math.round(r.value/tot*100)+'%</div>').join("")+'</div></div>';
   }
 
 
   function donutData(rows,label,value){
-    const vals=rows.map(r=>Number(r[value])||0),tot=vals.reduce((a,b)=>a+b,0)||1,cols=[C.green,C.gold,C.clay,"#718C82","#B8A98D","#927A58","#6D7A73","#C1B69E"];let deg=0,st=[];
+    const vals=rows.map(r=>Number(r[value])||0),tot=vals.reduce((a,b)=>a+b,0)||1,cols=CHART_COLORS;let deg=0,st=[];
     rows.forEach((r,i)=>{const d=(Number(r[value])||0)/tot*360;st.push(cols[i%cols.length]+" "+deg+"deg "+(deg+d)+"deg");deg+=d});
-    return '<div class="donut-wrap data-donut"><div class="donut" title="'+esc("إجمالي")+" · "+fmt(tot)+'" style="background:conic-gradient('+st.join(",")+')"><div class="donut-center">'+fmt(tot)+'</div></div><div class="donut-legend">'+rows.map((r,i)=>'<div title="'+esc(r[label])+' · '+fmt(r[value])+'"><i style="background:'+cols[i%cols.length]+'"></i>'+esc(r[label])+' · '+Math.round((Number(r[value])||0)/tot*100)+'%</div>').join("")+'</div></div>'
+    return '<div class="donut-wrap data-donut"><div class="donut" data-tip="'+tipText("إجمالي · "+fmt(tot))+'" style="background:conic-gradient('+st.join(",")+')"><div class="donut-center">'+fmt(tot)+'</div></div><div class="donut-legend">'+rows.map((r,i)=>'<div data-tip="'+tipText(r[label]+" · "+fmt(r[value]))+'"><i style="background:'+cols[i%cols.length]+'"></i>'+esc(r[label])+' · '+Math.round((Number(r[value])||0)/tot*100)+'%</div>').join("")+'</div></div>'
   }
   function stackedAudience(rows){
     const total=sum(rows,"searches")||1,cols=[C.green,C.gold];
-    return '<div class="stacked-audience"><div class="stack-track">'+rows.map((r,i)=>'<div class="stack-seg" title="'+esc(r.aud)+' · '+fmt(r.searches)+'" style="width:'+(r.searches/total*100)+'%;background:'+cols[i%cols.length]+'">'+Math.round(r.searches/total*100)+'%</div>').join("")+'</div><div class="stack-legend">'+rows.map((r,i)=>'<span><i style="background:'+cols[i%cols.length]+'"></i>'+esc(r.aud)+' · '+fmt(r.searches)+'</span>').join("")+'</div></div>'
+    return '<div class="stacked-audience"><div class="stack-track">'+rows.map((r,i)=>'<div class="stack-seg" data-tip="'+tipText(r.aud+" · "+fmt(r.searches))+'" style="width:'+(r.searches/total*100)+'%;background:'+cols[i%cols.length]+'">'+Math.round(r.searches/total*100)+'%</div>').join("")+'</div><div class="stack-legend">'+rows.map((r,i)=>'<span><i style="background:'+cols[i%cols.length]+'"></i>'+esc(r.aud)+' · '+fmt(r.searches)+'</span>').join("")+'</div></div>'
   }
   function groupedDemandSupply(rows){
     const shown=rows.slice(0,8);
-    return '<div class="grouped-bars">'+shown.map(r=>'<div class="grouped-item" title="'+esc(r.category)+' · '+esc("الطلب")+' '+r.demand_index+' · '+esc("العرض")+' '+r.supply_index+'"><div class="grouped-pair"><i class="demand-bar" style="height:'+r.demand_index+'%"></i><i class="supply-bar" style="height:'+r.supply_index+'%"></i></div><span>'+esc(r.category)+'</span></div>').join("")+'<div class="group-key"><span><i class="demand-key"></i>'+esc("الطلب")+'</span><span><i class="supply-key"></i>'+esc("العرض")+'</span></div></div>'
+    return '<div class="grouped-bars">'+shown.map(r=>'<div class="grouped-item" data-tip="'+tipText(r.category+" · الطلب "+r.demand_index+" · العرض "+r.supply_index)+'"><div class="grouped-pair"><i class="demand-bar" style="height:'+r.demand_index+'%"></i><i class="supply-bar" style="height:'+r.supply_index+'%"></i></div><span>'+esc(r.category)+'</span></div>').join("")+'<div class="group-key"><span><i class="demand-key"></i>'+esc("الطلب")+'</span><span><i class="supply-key"></i>'+esc("العرض")+'</span></div></div>'
   }
   function bubbleActivities(rows){
     const shown=rows.slice().sort((a,b)=>b.views-a.views).slice(0,8),maxV=Math.max(...shown.map(r=>r.views),1),maxS=Math.max(...shown.map(r=>r.saves),1);
-    return '<div class="bubble-chart"><svg viewBox="0 0 680 280">'+shown.map((r,i)=>{const x=55+(r.views/maxV)*560,y=235-(r.saves/maxS)*190,rad=8+Math.min(18,r.growth*45);return '<circle class="bubble-dot" cx="'+x.toFixed(1)+'" cy="'+y.toFixed(1)+'" r="'+rad.toFixed(1)+'" fill="'+(i%2?C.gold:C.green)+'" fill-opacity=".72"><title>'+esc(r.activity)+' · '+esc("عرض")+' '+fmt(r.views)+' · '+esc("الحفظ")+' '+fmt(r.saves)+'</title></circle>'}).join("")+'<text x="55" y="270">'+esc("المشاهدات")+' →</text><text x="8" y="24">'+esc("الحفظ")+'</text></svg></div>'
+    return '<div class="bubble-chart"><svg viewBox="0 0 680 280">'+shown.map((r,i)=>{const x=55+(r.views/maxV)*560,y=235-(r.saves/maxS)*190,rad=8+Math.min(18,r.growth*45),c=CHART_COLORS[i%CHART_COLORS.length];return '<circle class="bubble-dot" data-tip="'+tipText(r.activity+" · عرض "+fmt(r.views)+" · الحفظ "+fmt(r.saves))+'" cx="'+x.toFixed(1)+'" cy="'+y.toFixed(1)+'" r="'+rad.toFixed(1)+'" fill="'+c+'" fill-opacity=".72"></circle>'}).join("")+'<text x="55" y="270">'+esc("المشاهدات")+' →</text><text x="8" y="24">'+esc("الحفظ")+'</text></svg></div>'
   }
   function scatterOpp(rows){
     const shown=rows.slice(0,18),w=680,h=300,p=42;
     const x=v=>p+(v/100)*(w-p*2),y=v=>18+(1-v/100)*(h-62);
-    return '<div class="scatter-chart"><svg viewBox="0 0 '+w+' '+h+'"><rect x="'+p+'" y="18" width="'+(x(50)-p)+'" height="'+(y(65)-18)+'" fill="rgba(184,148,74,.055)"/><line x1="'+x(50)+'" y1="18" x2="'+x(50)+'" y2="'+(h-44)+'" stroke="'+C.line+'" stroke-dasharray="5 5"/><line x1="'+p+'" y1="'+y(65)+'" x2="'+(w-p)+'" y2="'+y(65)+'" stroke="'+C.line+'" stroke-dasharray="5 5"/><text x="'+(p+8)+'" y="36">'+esc("طلب مرتفع · عرض أقل")+'</text>'+shown.map(r=>'<circle class="scatter-dot" cx="'+x(r.supply_index).toFixed(1)+'" cy="'+y(r.demand_index).toFixed(1)+'" r="'+(5+Math.min(12,r.score/12)).toFixed(1)+'" fill="'+(r.demand_index>65&&r.supply_index<50?C.gold:C.green)+'" fill-opacity=".72"><title>'+esc(r.area)+' · '+esc(r.category)+' · '+esc("الطلب")+' '+r.demand_index+' · '+esc("العرض")+' '+r.supply_index+' · '+esc("الإشارة")+' '+r.score+'</title></circle>').join("")+'<text x="'+p+'" y="'+(h-9)+'">'+esc("مستوى العرض")+' →</text><text x="7" y="18">'+esc("مؤشر الطلب")+'</text></svg></div>'
+    return '<div class="scatter-chart"><svg viewBox="0 0 '+w+' '+h+'"><rect x="'+p+'" y="18" width="'+(x(50)-p)+'" height="'+(y(65)-18)+'" fill="rgba(184,148,74,.045)"/><line x1="'+x(50)+'" y1="18" x2="'+x(50)+'" y2="'+(h-44)+'" stroke="'+C.lineSoft+'" stroke-dasharray="4 5"/><line x1="'+p+'" y1="'+y(65)+'" x2="'+(w-p)+'" y2="'+y(65)+'" stroke="'+C.lineSoft+'" stroke-dasharray="4 5"/><text x="'+(p+8)+'" y="36">'+esc("طلب مرتفع · عرض أقل")+'</text>'+shown.map(r=>'<circle class="scatter-dot" data-tip="'+tipText(r.area+" · "+r.category+" · الطلب "+r.demand_index+" · العرض "+r.supply_index+" · الإشارة "+r.score)+'" cx="'+x(r.supply_index).toFixed(1)+'" cy="'+y(r.demand_index).toFixed(1)+'" r="'+(5+Math.min(12,r.score/12)).toFixed(1)+'" fill="'+(r.demand_index>65&&r.supply_index<50?C.gold:C.green)+'" fill-opacity=".72"></circle>').join("")+'<text x="'+p+'" y="'+(h-9)+'">'+esc("مستوى العرض")+' →</text><text x="7" y="18">'+esc("مؤشر الطلب")+'</text></svg></div>'
   }
 
 
@@ -250,7 +258,7 @@
   }
   function aiAssistant(){
     const q=AI_QUESTIONS.find(x=>x[0]===aiQuestion)||AI_QUESTIONS[0];
-    return '<section class="ai-agent"><div class="ai-head"><div><span class="ai-badge">AI AGENT</span><h2>'+tr("مساعد EyeMakkah التحليلي","EyeMakkah Analytics Assistant")+'</h2><p>'+tr("اختر سؤالًا من البنك الثابت، وسأجيب وفق الفلاتر والبيانات التجريبية الحالية.","Choose a question from the fixed bank and the answer will use the current filters and synthetic data.")+'</p></div><div class="ai-orb"><i></i><i></i><i></i></div></div><div class="ai-grid"><div class="ai-questions">'+AI_QUESTIONS.map(x=>'<button type="button" data-ai-question="'+x[0]+'" class="'+(x[0]===aiQuestion?"active":"")+'">'+esc(state.lang==="ar"?x[1]:x[2])+'</button>').join("")+'</div><div class="ai-answer"><div class="ai-answer-label">'+tr("الإجابة التحليلية","Analytical answer")+'</div><div class="ai-answer-text">'+aiAnswer(q[0])+'</div><div class="ai-foot">'+tr("إجابة نموذجية مبنية على بيانات اصطناعية وليست مخرجات من نموذج ذكاء اصطناعي حي.","Prototype answer based on synthetic data; not generated by a live AI model.")+'</div></div></div></section>'
+    return '<section class="ai-agent"><div class="ai-accent" aria-hidden="true"></div><div class="ai-head"><div class="ai-symbol">'+iconSvg("sparkles",19)+'</div><div class="ai-copy"><h2>'+tr("مساعد EyeMakkah التحليلي","EyeMakkah Analytics Assistant")+'</h2><p>'+tr("اختر سؤالًا من البنك الثابت، وسأجيب وفق الفلاتر والبيانات التجريبية الحالية.","Choose a question from the fixed bank and the answer will use the current filters and synthetic data.")+'</p></div></div><div class="ai-grid"><div class="ai-questions">'+AI_QUESTIONS.map(x=>'<button type="button" data-ai-question="'+x[0]+'" class="'+(x[0]===aiQuestion?"active":"")+'">'+esc(state.lang==="ar"?x[1]:x[2])+'</button>').join("")+'</div><div class="ai-answer"><div class="ai-answer-label">'+tr("الإجابة التحليلية","Analytical answer")+'</div><div class="ai-answer-text">'+aiAnswer(q[0])+'</div><div class="ai-foot">'+tr("إجابة نموذجية مبنية على بيانات اصطناعية وليست مخرجات من نموذج ذكاء اصطناعي حي.","Prototype answer based on synthetic data; not generated by a live AI model.")+'</div></div></div></section>'
   }
 
   function dashboard(){
@@ -347,9 +355,9 @@
   function reports(){
     const rr=[["التقرير الشهري للطلب والاهتمام","ملخص البحث والحفظ والتخطيط واتجاهات الطلب."],["تحليل مناطق مكة","مقارنة المناطق والفئات ومؤشرات النمو."],["تقرير المجتمعات والاهتمامات","أنماط النقاش والمساهمة والموضوعات الصاعدة."],["أداء الحملات والعروض","قمع الحملات والأداء حسب الجمهور والمنطقة."],["تقرير الفرص والفجوات","إشارات الطلب مقابل العرض لدعم التحقق والدراسة."]],rows=reportRows(),m=metrics(),trn=trend(["searches","plans"]);
     return header("التقارير","مركز مبسط لعرض التقارير الدورية وتصدير ملخصات البيانات التجريبية.")+filters()+
-      '<div class="report-summary"><div>'+kpi("عمليات البحث",fmt(m.searches),delta(21))+kpi("الإضافات إلى «خطتي»",fmt(m.plans),delta(22))+kpi("الانتقال إلى الإجراء",fmt(m.actions),delta(23))+'</div>'+panel("اتجاه مختصر","ملخص بصري للفترة الحالية.",line([{name:"بحث",color:C.green,values:trn.searches},{name:"خطتي",color:C.gold,values:trn.plans}]))+'</div>'+
-      rr.map(x=>'<details class="report"><summary>'+esc(x[0])+'</summary><div class="report-body">'+esc(x[1])+'<br><small>الفترة: '+esc(state.period)+' · المنطقة: '+esc(state.area)+' · الفئة: '+esc(state.category)+' · الجمهور: '+esc(state.audience)+'</small><br>يعرض النموذج بنية التقرير وتجربة التفاعل. البيانات توضيحية وليست بيانات تشغيلية حية.</div></details>').join("")+
-      panel("تصدير ملخص CSV","يحتوي الملف على مؤشرات مجمعة وفق الفلاتر الحالية.",'<button class="download-btn" id="download-csv">تصدير CSV</button><div style="height:10px"></div>'+table(rows.slice(0,30),[["area","المنطقة"],["category","الفئة"],["audience","الجمهور"],["interactions","التفاعلات","num"],["active_users","المستخدمون النشطون","num"],["searches","البحث","num"],["views","العرض","num"],["saves","الحفظ","num"],["plans","الإضافة إلى خطتي","num"],["actions","الانتقال للإجراء","num"]]))+
+      '<div class="report-summary"><div class="report-kpis">'+kpi("عمليات البحث",fmt(m.searches),delta(21))+kpi("الإضافات إلى «خطتي»",fmt(m.plans),delta(22))+kpi("الانتقال إلى الإجراء",fmt(m.actions),delta(23))+'</div>'+panel("اتجاه مختصر","ملخص بصري للفترة الحالية.",line([{name:"بحث",color:C.green,values:trn.searches},{name:"خطتي",color:C.gold,values:trn.plans}]))+'</div>'+
+      '<div class="reports-list">'+rr.map(x=>'<details class="report"><summary><span>'+esc(x[0])+'</span><span class="report-chevron">'+iconSvg("chevronDown",16)+'</span></summary><div class="report-body">'+esc(x[1])+'<br><small>الفترة: '+esc(state.period)+' · المنطقة: '+esc(state.area)+' · الفئة: '+esc(state.category)+' · الجمهور: '+esc(state.audience)+'</small><br>يعرض النموذج بنية التقرير وتجربة التفاعل. البيانات توضيحية وليست بيانات تشغيلية حية.</div></details>').join("")+'</div>'+
+      '<section class="report-export"><div class="report-export-head"><div><div class="panel-title">تصدير ملخص CSV</div><div class="panel-copy">يحتوي الملف على مؤشرات مجمعة وفق الفلاتر الحالية.</div></div><button class="download-btn" id="download-csv">'+iconSvg("download",16)+'<span>تصدير CSV</span></button></div>'+table(rows.slice(0,30),[["area","المنطقة"],["category","الفئة"],["audience","الجمهور"],["interactions","التفاعلات","num"],["active_users","المستخدمون النشطون","num"],["searches","البحث","num"],["views","العرض","num"],["saves","الحفظ","num"],["plans","الإضافة إلى خطتي","num"],["actions","الانتقال للإجراء","num"]])+'</section>'+
       '<script id="report-data" type="application/json">'+JSON.stringify(rows).replace(/</g,"\\u003c")+'</script>';
   }
 
@@ -549,7 +557,7 @@
     const lang='<div class="lang-switch"><button data-lang="ar" class="'+(state.lang==="ar"?"active":"")+'">العربية</button><button data-lang="en" class="'+(state.lang==="en"?"active":"")+'">English</button></div>';
     return '<div class="bi-shell"><aside class="sidebar"><div class="brand">'+wordmark(28,false)+'<div class="brand-sub">'+esc(tr("منصة EyeMakkah لتحليلات الأعمال","EyeMakkah Business Analytics Platform"))+'</div>'+lang+'</div><nav class="nav">'+
       PAGES.map(x=>'<button data-page="'+esc(x[0])+'" class="'+(state.page===x[0]?"active":"")+'"><span class="nav-icon">'+iconSvg(x[1],19)+'</span><span>'+esc(x[0])+'</span></button>').join("")+
-      '</nav><div class="sidebar-meta">'+esc(tr("آخر تحديث للنموذج: 22 سبتمبر 2026","Prototype updated: 22 September 2026"))+'<br>'+esc(tr("بيانات اصطناعية لأغراض العرض","Synthetic data for demonstration"))+'<br>'+esc(tr("لا تتضمن معلومات شخصية.","No personal information is included."))+'</div></aside><main class="main"><div class="mobile-tools"><select id="mobile-page">'+opts(PAGES.map(x=>x[0]),state.page)+'</select>'+lang+userMenu()+'</div><div class="loading-strip" aria-hidden="true"><span></span><span></span><span></span></div><div id="page" class="page-motion">'+page()+'</div><div class="data-note">'+esc(tr("البيانات المعروضة في هذا النموذج توضيحية لأغراض تصميم وتجربة المنصة، ولا تمثل بيانات تشغيلية حية أو معلومات عن أفراد.","Data shown in this prototype is illustrative for product design and testing. It is not live operational data and contains no individual information."))+'</div><div class="footer-links">'+esc(tr("نموذج تحليلات الأعمال · بيانات توضيحية","Business Analytics prototype · illustrative data"))+'</div></main></div>';
+      '</nav><div class="sidebar-meta">'+esc(tr("آخر تحديث للنموذج: 22 سبتمبر 2026","Prototype updated: 22 September 2026"))+'<br>'+esc(tr("بيانات اصطناعية لأغراض العرض","Synthetic data for demonstration"))+'<br>'+esc(tr("لا تتضمن معلومات شخصية.","No personal information is included."))+'</div></aside><main class="main"><div class="mobile-tools"><select id="mobile-page">'+opts(PAGES.map(x=>x[0]),state.page)+'</select>'+lang+userMenu()+'</div><div class="loading-strip" aria-hidden="true"><span></span><span></span><span></span></div><div id="page" class="page-motion">'+page()+'</div><div class="data-note">'+esc(tr("البيانات المعروضة في هذا النموذج توضيحية لأغراض تصميم وتجربة المنصة، ولا تمثل بيانات تشغيلية حية أو معلومات عن أفراد.","Data shown in this prototype is illustrative for product design and testing. It is not live operational data and contains no individual information."))+'</div><div class="footer-links">'+esc(tr("نموذج تحليلات الأعمال · بيانات توضيحية","Business Analytics prototype · illustrative data"))+'</div><div id="chart-tooltip" class="chart-tooltip" role="tooltip" aria-hidden="true"></div></main></div>';
   }
   function downloadCsv(){
     const e=document.getElementById("report-data");if(!e)return;
@@ -586,6 +594,15 @@
     document.querySelectorAll("[data-lang],[data-menu-lang]").forEach(b=>b.onclick=()=>{state.lang=b.dataset.lang||b.dataset.menuLang;localStorage.setItem("eyemakkah-ba-lang",state.lang);render()});
     document.querySelectorAll("[data-reset-filters]").forEach(b=>b.onclick=()=>transitionUpdate(resetFilters));
     document.querySelectorAll("[data-ai-question]").forEach(b=>b.onclick=()=>{aiQuestion=b.dataset.aiQuestion;const box=document.querySelector(".ai-answer");if(box)box.classList.add("refreshing");window.setTimeout(render,130)});
+    const chartTip=document.getElementById("chart-tooltip");
+    if(chartTip){
+      const moveTip=e=>{chartTip.style.left=(e.clientX+14)+"px";chartTip.style.top=(e.clientY+14)+"px"};
+      document.querySelectorAll("[data-tip]").forEach(el=>{
+        el.addEventListener("pointerenter",e=>{chartTip.textContent=el.dataset.tip||"";chartTip.classList.add("show");chartTip.setAttribute("aria-hidden","false");moveTip(e)});
+        el.addEventListener("pointermove",moveTip);
+        el.addEventListener("pointerleave",()=>{chartTip.classList.remove("show");chartTip.setAttribute("aria-hidden","true")});
+      });
+    }
     document.querySelectorAll("[data-logout]").forEach(b=>b.onclick=signOut);
     document.querySelectorAll("[data-settings]").forEach(b=>b.onclick=()=>{b.textContent=tr("الإعدادات — قريبًا","Settings — coming soon")});
   }
