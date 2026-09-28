@@ -361,3 +361,11 @@ html[dir="ltr"] .filter select,html[dir="ltr"] .area-selector select,html[dir="l
 html[dir="rtl"] .filter select,html[dir="rtl"] .area-selector select,html[dir="rtl"] .campaign-selector select{text-align:right}
 html[dir="ltr"] .menu-row,html[dir="ltr"] .ai-questions button{text-align:left}
 html[dir="rtl"] .menu-row,html[dir="rtl"] .ai-questions button{text-align:right}
+
+
+/* PATCH 02 QA fix — at tablet/narrow widths the Patch 01 grid shell must collapse
+   fully after the sidebar is hidden, otherwise the main BI stays in one grid column. */
+@media (max-width:860px){
+  .bi-shell{display:block!important;grid-template-columns:none!important}
+  .main{width:100%;max-width:none;margin:0}
+}
