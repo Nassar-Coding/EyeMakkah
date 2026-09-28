@@ -1,0 +1,2687 @@
+{
+  "file": "eyemakkah_platform_agent_bank_04_context.json",
+  "version": "1.0.0",
+  "phase": 1,
+  "part": "04_context",
+  "source_alignment": {
+    "bi_branch": "BI-Platform",
+    "bi_head_reviewed": "99ff97f58debe8c3ffff7769d0be111ca964c6a2",
+    "note": "Page names, areas, categories, campaigns, activities, communities, and metric aliases were aligned to the current BI prototype. No BI code or UI was modified."
+  },
+  "purpose": "Conversation context, follow-up routing, contextual suggestions, entity aliases, and state rules for the free-text EyeMakkah analytics assistant.",
+  "integration_contract": {
+    "free_text_first": true,
+    "suggestions_are_optional": true,
+    "max_contextual_suggestions": 2,
+    "context_inputs": [
+      "current_page",
+      "active_filters",
+      "last_intent",
+      "last_result",
+      "last_entities"
+    ],
+    "truthfulness": [
+      "Do not claim live LLM/API connectivity.",
+      "Do not invent unresolved entities or metrics.",
+      "Do not expose personal data.",
+      "Do not produce pricing, revenue forecasts, ROI, break-even, or financial feasibility assumptions.",
+      "Do not treat analytical signals as guarantees."
+    ]
+  },
+  "stats": {
+    "intent_count": 20,
+    "utterances_ar": 320,
+    "utterances_en": 280,
+    "utterances_total": 600,
+    "by_category": {
+      "conversation_context": 20
+    },
+    "by_answer_type": {
+      "contextual_dynamic": 20
+    },
+    "contextual_suggestion_pages": 8,
+    "alias_groups": 9,
+    "alias_entries_total": 244
+  },
+  "cumulative_bank_stats": {
+    "part_01_intents": 50,
+    "part_02_intents": 45,
+    "part_03_intents": 35,
+    "part_04_intents": 20,
+    "total_intents": 150,
+    "part_01_to_03_utterances": 1333,
+    "part_04_utterances": 600,
+    "total_example_utterances": 1933
+  },
+  "routing": {
+    "context_state_schema": {
+      "current_page": "string",
+      "active_filters": {
+        "period": "string",
+        "area": "string",
+        "category": "string",
+        "audience": "string"
+      },
+      "last_intent": "string|null",
+      "last_result": "object|null",
+      "last_ranked_results": "array|null",
+      "last_entities": "array",
+      "last_metric": "string|null",
+      "last_source_page": "string|null",
+      "turn_count": "integer"
+    },
+    "resolution_order": [
+      "normalize language and text",
+      "resolve explicit entities using aliases",
+      "detect explicit filter-change requests",
+      "match high-confidence standalone intents from Parts 01–03",
+      "for short/referential text, match Part 04 follow-up intents",
+      "use prior context only when the matched follow-up requires it",
+      "ask one concise clarification if multiple referents remain plausible",
+      "never invent a missing entity, ranking, metric, or value"
+    ],
+    "confidence": {
+      "exact_or_alias": 0.92,
+      "strong_example_similarity": 0.82,
+      "keyword_plus_context": 0.72,
+      "followup_with_valid_context": 0.76,
+      "clarify_below": 0.62
+    },
+    "guardrails": [
+      "Do not resolve 'it/that/this' when multiple plausible entities remain.",
+      "An explicit new entity overrides an old conversational entity.",
+      "A filter-only follow-up may reuse the previous intent only when the wording clearly indicates the same question.",
+      "Reset conversation context does not reset BI filters.",
+      "Contextual suggestions are optional UI aids and are not treated as user intent until selected.",
+      "Never turn opportunity signals into pricing, revenue, ROI, break-even, or financial feasibility conclusions."
+    ]
+  },
+  "contextual_suggestions": {
+    "rules": {
+      "max_visible": 2,
+      "min_visible": 0,
+      "free_text_input_is_primary": true,
+      "do_not_render_as_fixed_question_bank": true,
+      "selection_inputs": [
+        "current_page",
+        "active_filters",
+        "last_intent",
+        "last_result",
+        "last_entities"
+      ],
+      "priority_order": [
+        "followup_to_last_answer",
+        "page_specific",
+        "filter_specific",
+        "general_page"
+      ],
+      "hide_when": [
+        "clarification_required",
+        "error_or_recovery_state",
+        "no_relevant_suggestion"
+      ],
+      "avoid_repeat_for_turns": 2
+    },
+    "by_page": {
+      "لوحة المعلومات": {
+        "ar": [
+          "وش أهم تغير يحتاج انتباه؟",
+          "وين أكبر فجوة حاليًا؟",
+          "وش أعلى فئة طلبًا؟",
+          "أي منطقة تنمو أسرع؟"
+        ],
+        "en": [
+          "What change needs attention?",
+          "Where is the largest gap right now?",
+          "What is the top-demand category?",
+          "Which area is growing fastest?"
+        ]
+      },
+      "تحليل الطلب": {
+        "ar": [
+          "وش أكثر شي الناس تبحث عنه؟",
+          "قارن السكان والزوار",
+          "وين أكبر نزول في رحلة الطلب؟",
+          "وش أسرع بحث نموًا؟"
+        ],
+        "en": [
+          "What are people searching for most?",
+          "Compare residents and visitors",
+          "Where is the biggest drop in the demand journey?",
+          "Which search term is growing fastest?"
+        ]
+      },
+      "تحليل المناطق": {
+        "ar": [
+          "وش أكثر فئة مطلوبة هنا؟",
+          "وين أكبر فجوة في المنطقة؟",
+          "قارن المنطقة بمنطقة ثانية",
+          "وش وقت الذروة؟"
+        ],
+        "en": [
+          "What category is most in demand here?",
+          "Where is the largest gap in this area?",
+          "Compare this area with another area",
+          "What is the peak time?"
+        ]
+      },
+      "الأنشطة والتجارب": {
+        "ar": [
+          "وش أكثر نشاط ينضاف لخطتي؟",
+          "أي نشاط ينمو أسرع؟",
+          "وين أكبر نزول في قمع الأنشطة؟",
+          "قارن نشاطين"
+        ],
+        "en": [
+          "Which activity is added to My Plan most?",
+          "Which activity is growing fastest?",
+          "Where is the biggest drop in the activity funnel?",
+          "Compare two activities"
+        ]
+      },
+      "المجتمعات والاهتمامات": {
+        "ar": [
+          "وش أكثر مجتمع نشاطًا؟",
+          "وش الموضوع الصاعد؟",
+          "قارن مجتمعين",
+          "وش أكثر نمط مساهمة؟"
+        ],
+        "en": [
+          "Which community is most active?",
+          "What topic is gaining momentum?",
+          "Compare two communities",
+          "What contribution pattern leads?"
+        ]
+      },
+      "الحملات والعروض": {
+        "ar": [
+          "وين أداء الحملة أفضل؟",
+          "وش معدل الانتقال للعرض؟",
+          "وين أكبر نزول في القمع؟",
+          "قارن حملتين"
+        ],
+        "en": [
+          "Where does the campaign perform best?",
+          "What is the offer handoff rate?",
+          "Where is the biggest funnel drop?",
+          "Compare two campaigns"
+        ]
+      },
+      "الفرص والفجوات": {
+        "ar": [
+          "وين أكبر فجوة طلب وعرض؟",
+          "ليش ظهرت الإشارة الأعلى؟",
+          "اعطني أعلى 3 إشارات",
+          "وش الخطوة التالية للتحقق؟"
+        ],
+        "en": [
+          "Where is the largest demand-supply gap?",
+          "Why did the top signal appear?",
+          "Show the top three signals",
+          "What is the next validation step?"
+        ]
+      },
+      "التقارير": {
+        "ar": [
+          "لخص لي التقرير الحالي",
+          "وش داخل ملف CSV؟",
+          "فصل التقرير حسب المنطقة",
+          "وش الفلاتر الحالية للتقرير؟"
+        ],
+        "en": [
+          "Summarize the current report",
+          "What is inside the CSV?",
+          "Break the report down by area",
+          "What filters apply to this report?"
+        ]
+      }
+    },
+    "after_answer_type": {
+      "ranking": {
+        "ar": [
+          "والثاني؟",
+          "ليش هو الأعلى؟"
+        ],
+        "en": [
+          "What about the second one?",
+          "Why is it the highest?"
+        ]
+      },
+      "comparison": {
+        "ar": [
+          "وش أهم فرق بينهم؟",
+          "طيب على الزوار؟"
+        ],
+        "en": [
+          "What is the biggest difference?",
+          "What about visitors?"
+        ]
+      },
+      "single_entity": {
+        "ar": [
+          "اعطني تفاصيل أكثر",
+          "قارنها بالثاني"
+        ],
+        "en": [
+          "Give me more detail",
+          "Compare it with the second result"
+        ]
+      },
+      "opportunity_signal": {
+        "ar": [
+          "ليش ظهرت هذي الإشارة؟",
+          "وش الخطوة التالية للتحقق؟"
+        ],
+        "en": [
+          "Why did this signal appear?",
+          "What is the next validation step?"
+        ]
+      },
+      "funnel": {
+        "ar": [
+          "وين أكبر نزول؟",
+          "كيف تغيرت عن الفترة السابقة؟"
+        ],
+        "en": [
+          "Where is the biggest drop?",
+          "How did it change versus the previous period?"
+        ]
+      }
+    }
+  },
+  "aliases": {
+    "pages": {
+      "لوحة المعلومات": [
+        "الداشبورد",
+        "dashboard",
+        "الرئيسية",
+        "الصفحة الرئيسية",
+        "لوحة البيانات"
+      ],
+      "تحليل الطلب": [
+        "الطلب",
+        "demand",
+        "صفحة الطلب",
+        "تحليل البحث"
+      ],
+      "تحليل المناطق": [
+        "المناطق",
+        "areas",
+        "الأحياء",
+        "تحليل الأحياء",
+        "الخريطة"
+      ],
+      "الأنشطة والتجارب": [
+        "الأنشطة",
+        "التجارب",
+        "activities",
+        "experiences",
+        "صفحة الأنشطة"
+      ],
+      "المجتمعات والاهتمامات": [
+        "المجتمعات",
+        "الاهتمامات",
+        "communities",
+        "community",
+        "صفحة المجتمعات"
+      ],
+      "الحملات والعروض": [
+        "الحملات",
+        "العروض",
+        "campaigns",
+        "offers",
+        "صفحة الحملات"
+      ],
+      "الفرص والفجوات": [
+        "الفرص",
+        "الفجوات",
+        "opportunities",
+        "gaps",
+        "الإشارات"
+      ],
+      "التقارير": [
+        "reports",
+        "التقرير",
+        "صفحة التقارير",
+        "التصدير"
+      ]
+    },
+    "periods": {
+      "آخر 7 أيام": [
+        "7 أيام",
+        "سبعة أيام",
+        "أسبوع",
+        "آخر أسبوع",
+        "last 7 days",
+        "week",
+        "last week"
+      ],
+      "آخر 30 يومًا": [
+        "30 يوم",
+        "ثلاثين يوم",
+        "شهر",
+        "آخر شهر",
+        "last 30 days",
+        "month",
+        "last month"
+      ],
+      "آخر 3 أشهر": [
+        "3 أشهر",
+        "ثلاث شهور",
+        "ربع سنة",
+        "last 3 months",
+        "three months",
+        "quarter"
+      ],
+      "آخر 12 شهرًا": [
+        "12 شهر",
+        "سنة",
+        "آخر سنة",
+        "last 12 months",
+        "year",
+        "last year"
+      ]
+    },
+    "areas": {
+      "العزيزية": [
+        "عزيزيه",
+        "العزيزيه",
+        "Aziziyah",
+        "Al Aziziyah",
+        "aziziya"
+      ],
+      "الشوقية": [
+        "الشوقيه",
+        "شوقية",
+        "Shawqiyah",
+        "Ash Shawqiyah",
+        "shawqiya"
+      ],
+      "العوالي": [
+        "عوالي",
+        "Al Awali",
+        "Awali",
+        "alawali"
+      ],
+      "النسيم": [
+        "نسيم",
+        "An Naseem",
+        "Naseem",
+        "nasim"
+      ],
+      "الزاهر": [
+        "زاهر",
+        "Az Zahir",
+        "Zahir",
+        "zaher"
+      ],
+      "الشرائع": [
+        "شرائع",
+        "Ash Shara'i",
+        "Shara'i",
+        "sharai"
+      ],
+      "بطحاء قريش": [
+        "بطحا قريش",
+        "بطحاء",
+        "Batha Quraysh",
+        "Batha Quraish"
+      ],
+      "مكة المكرمة": [
+        "مكة",
+        "مكه",
+        "Makkah",
+        "Mecca",
+        "all Makkah"
+      ]
+    },
+    "categories": {
+      "المطاعم والمقاهي": [
+        "مطاعم",
+        "مقاهي",
+        "أكل",
+        "قهوة",
+        "restaurants",
+        "cafes",
+        "food"
+      ],
+      "التجارب والأنشطة": [
+        "أنشطة",
+        "تجارب",
+        "activities",
+        "experiences"
+      ],
+      "التسوق": [
+        "تسوق",
+        "أسواق",
+        "shopping",
+        "retail"
+      ],
+      "الترفيه": [
+        "ترفيه",
+        "entertainment",
+        "leisure"
+      ],
+      "الثقافة": [
+        "ثقافة",
+        "ثقافي",
+        "culture",
+        "cultural"
+      ],
+      "الخدمات": [
+        "خدمات",
+        "services",
+        "service"
+      ],
+      "المجتمعات": [
+        "مجتمعات",
+        "community",
+        "communities"
+      ],
+      "الضيافة": [
+        "ضيافة",
+        "فنادق",
+        "hospitality",
+        "hotels"
+      ]
+    },
+    "audiences": {
+      "سكان مكة": [
+        "السكان",
+        "سكان",
+        "resident",
+        "residents",
+        "locals",
+        "Makkah residents"
+      ],
+      "الزوار": [
+        "زوار",
+        "visitor",
+        "visitors",
+        "guests"
+      ],
+      "الكل": [
+        "الجميع",
+        "كل الجمهور",
+        "all",
+        "everyone",
+        "all audiences"
+      ]
+    },
+    "campaigns": {
+      "عطلة نهاية الأسبوع": [
+        "عطلة الويكند",
+        "الويكند",
+        "Weekend"
+      ],
+      "تجارب المساء": [
+        "تجربة المساء",
+        "المساء",
+        "Evening Experiences"
+      ],
+      "نكهات مكة": [
+        "نكهات",
+        "Flavours of Makkah",
+        "Flavors of Makkah"
+      ],
+      "اكتشف الثقافة": [
+        "اكتشف ثقافة",
+        "Discover Culture"
+      ],
+      "قريب منك": [
+        "قريب",
+        "Near You"
+      ]
+    },
+    "activities": {
+      "جولة ذاكرة مكة": [
+        "ذاكرة مكة",
+        "Makkah Memory Walk"
+      ],
+      "مساء الخط العربي": [
+        "الخط العربي",
+        "Arabic Calligraphy Evening"
+      ],
+      "تجربة القهوة السعودية": [
+        "القهوة السعودية",
+        "Saudi Coffee Experience"
+      ],
+      "مسار الأسواق القديمة": [
+        "الأسواق القديمة",
+        "Old Markets Trail"
+      ],
+      "مختبر الصغار الإبداعي": [
+        "مختبر الصغار",
+        "Kids Creative Lab"
+      ],
+      "جلسة تصوير معالم مكة": [
+        "تصوير معالم مكة",
+        "Makkah Landmarks Photo Session"
+      ],
+      "ورشة الحرف المحلية": [
+        "الحرف المحلية",
+        "Local Crafts Workshop"
+      ],
+      "ليلة القصص المكية": [
+        "القصص المكية",
+        "Makkah Stories Night"
+      ],
+      "مشي العوالي المسائي": [
+        "مشي العوالي",
+        "Al Awali Evening Walk"
+      ],
+      "تجربة المذاقات الحجازية": [
+        "المذاقات الحجازية",
+        "Hijazi Tasting Experience"
+      ]
+    },
+    "communities": {
+      "الأحياء": [
+        "مجتمع الأحياء",
+        "neighborhoods"
+      ],
+      "زوار مكة": [
+        "مجتمع الزوار",
+        "Makkah Visitors"
+      ],
+      "الحج والعمرة": [
+        "حج وعمرة",
+        "Hajj and Umrah"
+      ],
+      "المطاعم والتجارب": [
+        "مجتمع المطاعم",
+        "Restaurants and Experiences"
+      ],
+      "الثقافة والتاريخ": [
+        "الثقافة",
+        "التاريخ",
+        "Culture and History"
+      ],
+      "التطوع والمبادرات": [
+        "التطوع",
+        "المبادرات",
+        "Volunteering and Initiatives"
+      ],
+      "التعليم والهوايات": [
+        "التعليم",
+        "الهوايات",
+        "Education and Hobbies"
+      ],
+      "الحياة في مكة": [
+        "حياة مكة",
+        "Life in Makkah"
+      ]
+    },
+    "metrics": {
+      "interactions": [
+        "التفاعلات",
+        "تفاعل",
+        "interactions"
+      ],
+      "active_users": [
+        "المستخدمون النشطون",
+        "نشطين",
+        "active users"
+      ],
+      "searches": [
+        "البحث",
+        "عمليات البحث",
+        "searches",
+        "search volume"
+      ],
+      "views": [
+        "المشاهدة",
+        "المشاهدات",
+        "views"
+      ],
+      "saves": [
+        "الحفظ",
+        "محفوظات",
+        "saves"
+      ],
+      "plans": [
+        "خطتي",
+        "الإضافة إلى خطتي",
+        "My Plan",
+        "plans"
+      ],
+      "joins": [
+        "الانضمام",
+        "نية الحضور",
+        "joins",
+        "attendance intent"
+      ],
+      "actions": [
+        "الإجراء",
+        "الانتقال للإجراء",
+        "action",
+        "handoff"
+      ],
+      "completes": [
+        "الإكمال",
+        "مكتمل",
+        "completion",
+        "completions"
+      ],
+      "growth": [
+        "النمو",
+        "growth",
+        "ارتفاع",
+        "زيادة"
+      ],
+      "demand_index": [
+        "مؤشر الطلب",
+        "الطلب",
+        "demand index"
+      ],
+      "supply_index": [
+        "مؤشر العرض",
+        "العرض",
+        "supply index"
+      ],
+      "score": [
+        "مؤشر الإشارة",
+        "الإشارة",
+        "signal index",
+        "signal score"
+      ]
+    }
+  },
+  "intents": [
+    {
+      "id": "followup_why",
+      "category": "conversation_context",
+      "purpose": "Explain why the previous analytical result appeared.",
+      "examples": {
+        "ar": [
+          "ليش",
+          "طيب ليش",
+          "ليه",
+          "طيب ليه",
+          "ليش كذا",
+          "طيب ليش كذا",
+          "وش السبب",
+          "طيب وش السبب",
+          "وش اللي خلاها كذا",
+          "طيب وش اللي خلاها كذا",
+          "ليش هي الأعلى",
+          "طيب ليش هي الأعلى",
+          "ليش هو الأعلى",
+          "طيب ليش هو الأعلى",
+          "اشرح السبب",
+          "طيب اشرح السبب"
+        ],
+        "en": [
+          "why",
+          "okay, why",
+          "why is that",
+          "okay, why is that",
+          "what caused that",
+          "okay, what caused that",
+          "why is it the highest",
+          "okay, why is it the highest",
+          "what is the reason",
+          "okay, what is the reason",
+          "explain why",
+          "okay, explain why",
+          "why this result",
+          "okay, why this result"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "ليش",
+          "ليه",
+          "كذا",
+          "السبب",
+          "اللي",
+          "خلاها",
+          "الأعلى",
+          "اشرح"
+        ],
+        "keywords_en": [
+          "why",
+          "that",
+          "what",
+          "caused",
+          "the",
+          "highest",
+          "reason",
+          "explain",
+          "this",
+          "result"
+        ],
+        "entities": []
+      },
+      "answer": {
+        "type": "contextual_dynamic",
+        "handler": "followup_explain_previous",
+        "responses": {
+          "ar": [
+            "السبب يعتمد على النتيجة السابقة وسياق الفلاتر الحالي. أهم العوامل الظاهرة: {{reason_summary}}."
+          ],
+          "en": [
+            "The explanation depends on the previous result and active filters. The main visible factors are: {{reason_summary}}."
+          ]
+        },
+        "result_shape": "single_answer"
+      },
+      "context": {
+        "required_context": [
+          "last_intent",
+          "last_result"
+        ],
+        "updates_context": false,
+        "applicable_pages": [
+          "*"
+        ]
+      },
+      "priority": 100
+    },
+    {
+      "id": "followup_second_result",
+      "category": "conversation_context",
+      "purpose": "Return the second-ranked result from the previous ranking.",
+      "examples": {
+        "ar": [
+          "والثاني",
+          "طيب والثاني",
+          "وش الثاني",
+          "طيب وش الثاني",
+          "مين الثاني",
+          "طيب مين الثاني",
+          "ايش المرتبة الثانية",
+          "طيب ايش المرتبة الثانية",
+          "وش اللي بعده",
+          "طيب وش اللي بعده",
+          "اعطني الثاني",
+          "طيب اعطني الثاني",
+          "والنتيجة الثانية",
+          "طيب والنتيجة الثانية",
+          "ثاني واحد مين",
+          "طيب ثاني واحد مين"
+        ],
+        "en": [
+          "what about the second one",
+          "okay, what about the second one",
+          "what is second",
+          "okay, what is second",
+          "who is second",
+          "okay, who is second",
+          "show me the second result",
+          "okay, show me the second result",
+          "what comes next",
+          "okay, what comes next",
+          "give me number two",
+          "okay, give me number two",
+          "what is in second place",
+          "okay, what is in second place"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "والثاني",
+          "الثاني",
+          "مين",
+          "ايش",
+          "المرتبة",
+          "الثانية",
+          "اللي",
+          "بعده",
+          "اعطني",
+          "والنتيجة",
+          "ثاني",
+          "واحد"
+        ],
+        "keywords_en": [
+          "what",
+          "about",
+          "the",
+          "second",
+          "one",
+          "who",
+          "show",
+          "result",
+          "comes",
+          "next",
+          "give",
+          "number",
+          "two",
+          "place"
+        ],
+        "entities": []
+      },
+      "answer": {
+        "type": "contextual_dynamic",
+        "handler": "followup_second_ranked",
+        "responses": {
+          "ar": [
+            "النتيجة الثانية هي {{entity}} عند {{value}} وفق نفس المقياس والفلاتر."
+          ],
+          "en": [
+            "The second result is {{entity}} at {{value}} using the same metric and filters."
+          ]
+        },
+        "result_shape": "single_answer"
+      },
+      "context": {
+        "required_context": [
+          "last_ranked_results"
+        ],
+        "updates_context": false,
+        "applicable_pages": [
+          "*"
+        ]
+      },
+      "priority": 100
+    },
+    {
+      "id": "followup_third_result",
+      "category": "conversation_context",
+      "purpose": "Return the third-ranked result from the previous ranking.",
+      "examples": {
+        "ar": [
+          "والثالث",
+          "طيب والثالث",
+          "وش الثالث",
+          "طيب وش الثالث",
+          "مين الثالث",
+          "طيب مين الثالث",
+          "ايش المرتبة الثالثة",
+          "طيب ايش المرتبة الثالثة",
+          "اعطني الثالث",
+          "طيب اعطني الثالث",
+          "ثالث واحد مين",
+          "طيب ثالث واحد مين",
+          "وش اللي بعد الثاني",
+          "طيب وش اللي بعد الثاني",
+          "النتيجة الثالثة",
+          "طيب النتيجة الثالثة"
+        ],
+        "en": [
+          "what about the third one",
+          "okay, what about the third one",
+          "what is third",
+          "okay, what is third",
+          "who is third",
+          "okay, who is third",
+          "show me the third result",
+          "okay, show me the third result",
+          "give me number three",
+          "okay, give me number three",
+          "what is in third place",
+          "okay, what is in third place",
+          "what comes after second",
+          "okay, what comes after second"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "والثالث",
+          "الثالث",
+          "مين",
+          "ايش",
+          "المرتبة",
+          "الثالثة",
+          "اعطني",
+          "ثالث",
+          "واحد",
+          "اللي",
+          "بعد",
+          "الثاني",
+          "النتيجة"
+        ],
+        "keywords_en": [
+          "what",
+          "about",
+          "the",
+          "third",
+          "one",
+          "who",
+          "show",
+          "result",
+          "give",
+          "number",
+          "three",
+          "place",
+          "comes",
+          "after",
+          "second"
+        ],
+        "entities": []
+      },
+      "answer": {
+        "type": "contextual_dynamic",
+        "handler": "followup_third_ranked",
+        "responses": {
+          "ar": [
+            "النتيجة الثالثة هي {{entity}} عند {{value}} وفق نفس المقياس والفلاتر."
+          ],
+          "en": [
+            "The third result is {{entity}} at {{value}} using the same metric and filters."
+          ]
+        },
+        "result_shape": "single_answer"
+      },
+      "context": {
+        "required_context": [
+          "last_ranked_results"
+        ],
+        "updates_context": false,
+        "applicable_pages": [
+          "*"
+        ]
+      },
+      "priority": 99
+    },
+    {
+      "id": "followup_compare_top_two",
+      "category": "conversation_context",
+      "purpose": "Compare the top two previous results.",
+      "examples": {
+        "ar": [
+          "قارنهم",
+          "طيب قارنهم",
+          "قارن الاثنين",
+          "طيب قارن الاثنين",
+          "وش الفرق بينهم",
+          "طيب وش الفرق بينهم",
+          "مين أقوى بينهم",
+          "طيب مين أقوى بينهم",
+          "قارن الأول والثاني",
+          "طيب قارن الأول والثاني",
+          "وش الفروقات",
+          "طيب وش الفروقات",
+          "اعطني مقارنة بينهم",
+          "طيب اعطني مقارنة بينهم",
+          "وش يميز كل واحد",
+          "طيب وش يميز كل واحد"
+        ],
+        "en": [
+          "compare them",
+          "okay, compare them",
+          "compare the two",
+          "okay, compare the two",
+          "what is the difference between them",
+          "okay, what is the difference between them",
+          "which is stronger",
+          "okay, which is stronger",
+          "compare first and second",
+          "okay, compare first and second",
+          "show me the differences",
+          "okay, show me the differences",
+          "how do they differ",
+          "okay, how do they differ"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "قارنهم",
+          "قارن",
+          "الاثنين",
+          "الفرق",
+          "بينهم",
+          "مين",
+          "أقوى",
+          "الأول",
+          "والثاني",
+          "الفروقات",
+          "اعطني",
+          "مقارنة",
+          "يميز",
+          "واحد"
+        ],
+        "keywords_en": [
+          "compare",
+          "them",
+          "the",
+          "two",
+          "what",
+          "difference",
+          "between",
+          "which",
+          "stronger",
+          "first",
+          "and",
+          "second",
+          "show",
+          "differences",
+          "how",
+          "they",
+          "differ"
+        ],
+        "entities": []
+      },
+      "answer": {
+        "type": "contextual_dynamic",
+        "handler": "followup_compare_top_two",
+        "responses": {
+          "ar": [
+            "مقارنة الأول والثاني ضمن نفس السياق: {{comparison_summary}}."
+          ],
+          "en": [
+            "Comparing the top two under the same context: {{comparison_summary}}."
+          ]
+        },
+        "result_shape": "comparison"
+      },
+      "context": {
+        "required_context": [
+          "last_ranked_results"
+        ],
+        "updates_context": false,
+        "applicable_pages": [
+          "*"
+        ]
+      },
+      "priority": 100
+    },
+    {
+      "id": "followup_more_detail",
+      "category": "conversation_context",
+      "purpose": "Expand the previous answer.",
+      "examples": {
+        "ar": [
+          "فصل أكثر",
+          "طيب فصل أكثر",
+          "اعطني تفاصيل أكثر",
+          "طيب اعطني تفاصيل أكثر",
+          "وضح أكثر",
+          "طيب وضح أكثر",
+          "وسع الإجابة",
+          "طيب وسع الإجابة",
+          "اشرح أكثر",
+          "طيب اشرح أكثر",
+          "ادخل بالتفاصيل",
+          "طيب ادخل بالتفاصيل",
+          "أبغا تفاصيل",
+          "طيب أبغا تفاصيل",
+          "زيدني معلومات",
+          "طيب زيدني معلومات"
+        ],
+        "en": [
+          "give me more detail",
+          "okay, give me more detail",
+          "explain more",
+          "okay, explain more",
+          "expand on that",
+          "okay, expand on that",
+          "go into more detail",
+          "okay, go into more detail",
+          "show me the details",
+          "okay, show me the details",
+          "tell me more",
+          "okay, tell me more",
+          "break it down",
+          "okay, break it down"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "فصل",
+          "أكثر",
+          "اعطني",
+          "تفاصيل",
+          "وضح",
+          "وسع",
+          "الإجابة",
+          "اشرح",
+          "ادخل",
+          "بالتفاصيل",
+          "أبغا",
+          "زيدني",
+          "معلومات"
+        ],
+        "keywords_en": [
+          "give",
+          "more",
+          "detail",
+          "explain",
+          "expand",
+          "that",
+          "into",
+          "show",
+          "the",
+          "details",
+          "tell",
+          "break",
+          "down"
+        ],
+        "entities": []
+      },
+      "answer": {
+        "type": "contextual_dynamic",
+        "handler": "followup_expand_previous",
+        "responses": {
+          "ar": [
+            "تفصيل إضافي على نفس النتيجة: {{expanded_detail}}."
+          ],
+          "en": [
+            "More detail on the same result: {{expanded_detail}}."
+          ]
+        },
+        "result_shape": "single_answer"
+      },
+      "context": {
+        "required_context": [
+          "last_intent",
+          "last_result"
+        ],
+        "updates_context": false,
+        "applicable_pages": [
+          "*"
+        ]
+      },
+      "priority": 96
+    },
+    {
+      "id": "followup_make_shorter",
+      "category": "conversation_context",
+      "purpose": "Compress the previous answer.",
+      "examples": {
+        "ar": [
+          "اختصر",
+          "طيب اختصر",
+          "اختصرها",
+          "طيب اختصرها",
+          "اعطني الزبدة",
+          "طيب اعطني الزبدة",
+          "باختصار",
+          "طيب باختصار",
+          "قولها بسرعة",
+          "طيب قولها بسرعة",
+          "اختصر الجواب",
+          "طيب اختصر الجواب",
+          "خلاصة",
+          "طيب خلاصة",
+          "سطر واحد",
+          "طيب سطر واحد"
+        ],
+        "en": [
+          "make it shorter",
+          "okay, make it shorter",
+          "summarize that",
+          "okay, summarize that",
+          "give me the short version",
+          "okay, give me the short version",
+          "in brief",
+          "okay, in brief",
+          "just the takeaway",
+          "okay, just the takeaway",
+          "one line",
+          "okay, one line",
+          "keep it concise",
+          "okay, keep it concise"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "اختصر",
+          "اختصرها",
+          "اعطني",
+          "الزبدة",
+          "باختصار",
+          "قولها",
+          "بسرعة",
+          "الجواب",
+          "خلاصة",
+          "سطر",
+          "واحد"
+        ],
+        "keywords_en": [
+          "make",
+          "shorter",
+          "summarize",
+          "that",
+          "give",
+          "the",
+          "short",
+          "version",
+          "brief",
+          "just",
+          "takeaway",
+          "one",
+          "line",
+          "keep",
+          "concise"
+        ],
+        "entities": []
+      },
+      "answer": {
+        "type": "contextual_dynamic",
+        "handler": "followup_shorten_previous",
+        "responses": {
+          "ar": [
+            "الخلاصة: {{short_summary}}."
+          ],
+          "en": [
+            "In short: {{short_summary}}."
+          ]
+        },
+        "result_shape": "single_answer"
+      },
+      "context": {
+        "required_context": [
+          "last_result"
+        ],
+        "updates_context": false,
+        "applicable_pages": [
+          "*"
+        ]
+      },
+      "priority": 92
+    },
+    {
+      "id": "followup_show_more_ranked",
+      "category": "conversation_context",
+      "purpose": "Show more ranked results.",
+      "examples": {
+        "ar": [
+          "اعطني أكثر",
+          "طيب اعطني أكثر",
+          "وريني باقي النتائج",
+          "طيب وريني باقي النتائج",
+          "كمل القائمة",
+          "طيب كمل القائمة",
+          "وش بعد",
+          "طيب وش بعد",
+          "اعطني top 5",
+          "طيب اعطني top 5",
+          "اعطني أكثر من نتيجة",
+          "طيب اعطني أكثر من نتيجة",
+          "كمل الترتيب",
+          "طيب كمل الترتيب",
+          "وريني الباقي",
+          "طيب وريني الباقي"
+        ],
+        "en": [
+          "show me more",
+          "okay, show me more",
+          "show the rest",
+          "okay, show the rest",
+          "continue the list",
+          "okay, continue the list",
+          "what comes next",
+          "okay, what comes next",
+          "give me the top five",
+          "okay, give me the top five",
+          "show more results",
+          "okay, show more results",
+          "continue the ranking",
+          "okay, continue the ranking"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "اعطني",
+          "أكثر",
+          "وريني",
+          "باقي",
+          "النتائج",
+          "كمل",
+          "القائمة",
+          "بعد",
+          "top",
+          "نتيجة",
+          "الترتيب",
+          "الباقي"
+        ],
+        "keywords_en": [
+          "show",
+          "more",
+          "the",
+          "rest",
+          "continue",
+          "list",
+          "what",
+          "comes",
+          "next",
+          "give",
+          "top",
+          "five",
+          "results",
+          "ranking"
+        ],
+        "entities": []
+      },
+      "answer": {
+        "type": "contextual_dynamic",
+        "handler": "followup_expand_ranking",
+        "responses": {
+          "ar": [
+            "تكملة الترتيب ضمن نفس السياق: {{ranked_results}}."
+          ],
+          "en": [
+            "Continuing the ranking under the same context: {{ranked_results}}."
+          ]
+        },
+        "result_shape": "ranked_list"
+      },
+      "context": {
+        "required_context": [
+          "last_ranked_results"
+        ],
+        "updates_context": false,
+        "applicable_pages": [
+          "*"
+        ]
+      },
+      "priority": 97
+    },
+    {
+      "id": "followup_same_question_current_context",
+      "category": "conversation_context",
+      "purpose": "Repeat previous question after context or filters change.",
+      "examples": {
+        "ar": [
+          "طيب الحين",
+          "طيب طيب الحين",
+          "والحين وش النتيجة",
+          "طيب والحين وش النتيجة",
+          "بعد التغيير وش صار",
+          "طيب بعد التغيير وش صار",
+          "الحين ايش صار",
+          "طيب الحين ايش صار",
+          "وش النتيجة الآن",
+          "طيب وش النتيجة الآن",
+          "جاوبني مرة ثانية",
+          "طيب جاوبني مرة ثانية",
+          "أعدها بعد الفلتر",
+          "طيب أعدها بعد الفلتر",
+          "بعد ما غيرنا الفلتر",
+          "طيب بعد ما غيرنا الفلتر"
+        ],
+        "en": [
+          "what about now",
+          "okay, what about now",
+          "what is the result now",
+          "okay, what is the result now",
+          "after the change what happened",
+          "okay, after the change what happened",
+          "run that again",
+          "okay, run that again",
+          "answer it again",
+          "okay, answer it again",
+          "what is it after the filter change",
+          "okay, what is it after the filter change",
+          "recalculate it now",
+          "okay, recalculate it now"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "طيب",
+          "الحين",
+          "والحين",
+          "النتيجة",
+          "بعد",
+          "التغيير",
+          "صار",
+          "ايش",
+          "الآن",
+          "جاوبني",
+          "مرة",
+          "ثانية",
+          "أعدها",
+          "الفلتر",
+          "غيرنا"
+        ],
+        "keywords_en": [
+          "what",
+          "about",
+          "now",
+          "the",
+          "result",
+          "after",
+          "change",
+          "happened",
+          "run",
+          "that",
+          "again",
+          "answer",
+          "filter",
+          "recalculate"
+        ],
+        "entities": []
+      },
+      "answer": {
+        "type": "contextual_dynamic",
+        "handler": "followup_repeat_previous_intent",
+        "responses": {
+          "ar": [
+            "بعد تحديث السياق، النتيجة الآن: {{updated_result}}."
+          ],
+          "en": [
+            "With the updated context, the result is now: {{updated_result}}."
+          ]
+        },
+        "result_shape": "single_answer"
+      },
+      "context": {
+        "required_context": [
+          "last_intent",
+          "active_filters"
+        ],
+        "updates_context": false,
+        "applicable_pages": [
+          "*"
+        ]
+      },
+      "priority": 100
+    },
+    {
+      "id": "followup_same_metric_visitors",
+      "category": "conversation_context",
+      "purpose": "Re-run previous analytical question for visitors.",
+      "examples": {
+        "ar": [
+          "والزوار",
+          "طيب والزوار",
+          "وش عن الزوار",
+          "طيب وش عن الزوار",
+          "خلها للزوار",
+          "طيب خلها للزوار",
+          "نفس السؤال للزوار",
+          "طيب نفس السؤال للزوار",
+          "طيب لو زوار",
+          "طيب طيب لو زوار",
+          "اعطني النتيجة للزوار",
+          "طيب اعطني النتيجة للزوار",
+          "بالنسبة للزوار",
+          "طيب بالنسبة للزوار",
+          "شوفها للزوار",
+          "طيب شوفها للزوار"
+        ],
+        "en": [
+          "what about visitors",
+          "okay, what about visitors",
+          "and visitors",
+          "okay, and visitors",
+          "same question for visitors",
+          "okay, same question for visitors",
+          "show it for visitors",
+          "okay, show it for visitors",
+          "what if the audience is visitors",
+          "okay, what if the audience is visitors",
+          "give me the visitor result",
+          "okay, give me the visitor result",
+          "for visitors",
+          "okay, for visitors"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "والزوار",
+          "الزوار",
+          "خلها",
+          "للزوار",
+          "نفس",
+          "السؤال",
+          "طيب",
+          "زوار",
+          "اعطني",
+          "النتيجة",
+          "بالنسبة",
+          "شوفها"
+        ],
+        "keywords_en": [
+          "what",
+          "about",
+          "visitors",
+          "and",
+          "same",
+          "question",
+          "for",
+          "show",
+          "the",
+          "audience",
+          "give",
+          "visitor",
+          "result"
+        ],
+        "entities": []
+      },
+      "answer": {
+        "type": "contextual_dynamic",
+        "handler": "followup_with_audience_visitors",
+        "responses": {
+          "ar": [
+            "للزوار، وعلى نفس باقي السياق: {{updated_result}}."
+          ],
+          "en": [
+            "For visitors, keeping the rest of the context the same: {{updated_result}}."
+          ]
+        },
+        "result_shape": "single_answer"
+      },
+      "context": {
+        "required_context": [
+          "last_intent"
+        ],
+        "updates_context": true,
+        "applicable_pages": [
+          "*"
+        ]
+      },
+      "priority": 100
+    },
+    {
+      "id": "followup_same_metric_residents",
+      "category": "conversation_context",
+      "purpose": "Re-run previous analytical question for Makkah residents.",
+      "examples": {
+        "ar": [
+          "وسكان مكة",
+          "طيب وسكان مكة",
+          "وش عن السكان",
+          "طيب وش عن السكان",
+          "خلها لسكان مكة",
+          "طيب خلها لسكان مكة",
+          "نفس السؤال للسكان",
+          "طيب نفس السؤال للسكان",
+          "طيب لو سكان",
+          "طيب طيب لو سكان",
+          "اعطني النتيجة للسكان",
+          "طيب اعطني النتيجة للسكان",
+          "بالنسبة لسكان مكة",
+          "طيب بالنسبة لسكان مكة",
+          "شوفها للسكان",
+          "طيب شوفها للسكان"
+        ],
+        "en": [
+          "what about residents",
+          "okay, what about residents",
+          "and residents",
+          "okay, and residents",
+          "same question for residents",
+          "okay, same question for residents",
+          "show it for Makkah residents",
+          "okay, show it for Makkah residents",
+          "what if the audience is residents",
+          "okay, what if the audience is residents",
+          "give me the resident result",
+          "okay, give me the resident result",
+          "for residents",
+          "okay, for residents"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "وسكان",
+          "مكة",
+          "السكان",
+          "خلها",
+          "لسكان",
+          "نفس",
+          "السؤال",
+          "للسكان",
+          "طيب",
+          "سكان",
+          "اعطني",
+          "النتيجة",
+          "بالنسبة",
+          "شوفها"
+        ],
+        "keywords_en": [
+          "what",
+          "about",
+          "residents",
+          "and",
+          "same",
+          "question",
+          "for",
+          "show",
+          "makkah",
+          "the",
+          "audience",
+          "give",
+          "resident",
+          "result"
+        ],
+        "entities": []
+      },
+      "answer": {
+        "type": "contextual_dynamic",
+        "handler": "followup_with_audience_residents",
+        "responses": {
+          "ar": [
+            "لسكان مكة، وعلى نفس باقي السياق: {{updated_result}}."
+          ],
+          "en": [
+            "For Makkah residents, keeping the rest of the context the same: {{updated_result}}."
+          ]
+        },
+        "result_shape": "single_answer"
+      },
+      "context": {
+        "required_context": [
+          "last_intent"
+        ],
+        "updates_context": true,
+        "applicable_pages": [
+          "*"
+        ]
+      },
+      "priority": 100
+    },
+    {
+      "id": "followup_same_metric_period",
+      "category": "conversation_context",
+      "purpose": "Re-run previous analytical question for another period.",
+      "examples": {
+        "ar": [
+          "آخر 7 أيام",
+          "طيب آخر 7 أيام",
+          "وش عن آخر 30 يوم",
+          "طيب وش عن آخر 30 يوم",
+          "خلها 3 أشهر",
+          "طيب خلها 3 أشهر",
+          "نفس السؤال آخر 12 شهر",
+          "طيب نفس السؤال آخر 12 شهر",
+          "طيب لو أسبوع",
+          "طيب طيب لو أسبوع",
+          "شوفها آخر شهر",
+          "طيب شوفها آخر شهر",
+          "اعطني نفس الشي لثلاث شهور",
+          "طيب اعطني نفس الشي لثلاث شهور",
+          "والسنة",
+          "طيب والسنة"
+        ],
+        "en": [
+          "what about the last 7 days",
+          "okay, what about the last 7 days",
+          "same question for 30 days",
+          "okay, same question for 30 days",
+          "show it for 3 months",
+          "okay, show it for 3 months",
+          "what about the last 12 months",
+          "okay, what about the last 12 months",
+          "same thing for a week",
+          "okay, same thing for a week",
+          "show it for the last month",
+          "okay, show it for the last month",
+          "run it for a year",
+          "okay, run it for a year"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "آخر",
+          "أيام",
+          "يوم",
+          "خلها",
+          "أشهر",
+          "نفس",
+          "السؤال",
+          "شهر",
+          "طيب",
+          "أسبوع",
+          "شوفها",
+          "اعطني",
+          "الشي",
+          "لثلاث",
+          "شهور",
+          "والسنة"
+        ],
+        "keywords_en": [
+          "what",
+          "about",
+          "the",
+          "last",
+          "days",
+          "same",
+          "question",
+          "for",
+          "show",
+          "months",
+          "thing",
+          "week",
+          "month",
+          "run",
+          "year"
+        ],
+        "entities": []
+      },
+      "answer": {
+        "type": "contextual_dynamic",
+        "handler": "followup_with_period",
+        "responses": {
+          "ar": [
+            "لنفس السؤال ولكن للفترة {{period}}: {{updated_result}}."
+          ],
+          "en": [
+            "For the same question using {{period}}: {{updated_result}}."
+          ]
+        },
+        "result_shape": "single_answer"
+      },
+      "context": {
+        "required_context": [
+          "last_intent"
+        ],
+        "updates_context": true,
+        "applicable_pages": [
+          "*"
+        ]
+      },
+      "priority": 100
+    },
+    {
+      "id": "followup_same_metric_area",
+      "category": "conversation_context",
+      "purpose": "Re-run previous analytical question for another area.",
+      "examples": {
+        "ar": [
+          "بالعزيزية",
+          "طيب بالعزيزية",
+          "وش عن العوالي",
+          "طيب وش عن العوالي",
+          "خلها الشوقية",
+          "طيب خلها الشوقية",
+          "نفس السؤال بالنسيم",
+          "طيب نفس السؤال بالنسيم",
+          "طيب الزاهر",
+          "طيب طيب الزاهر",
+          "شوفها بالشرائع",
+          "طيب شوفها بالشرائع",
+          "وبطحاء قريش",
+          "طيب وبطحاء قريش",
+          "بالمنطقة هذي",
+          "طيب بالمنطقة هذي"
+        ],
+        "en": [
+          "what about Al Aziziyah",
+          "okay, what about Al Aziziyah",
+          "same question for Al Awali",
+          "okay, same question for Al Awali",
+          "show it in Ash Shawqiyah",
+          "okay, show it in Ash Shawqiyah",
+          "what about An Naseem",
+          "okay, what about An Naseem",
+          "run it for Az Zahir",
+          "okay, run it for Az Zahir",
+          "show it in Ash Shara'i",
+          "okay, show it in Ash Shara'i",
+          "what about Batha Quraysh",
+          "okay, what about Batha Quraysh"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "بالعزيزية",
+          "العوالي",
+          "خلها",
+          "الشوقية",
+          "نفس",
+          "السؤال",
+          "بالنسيم",
+          "طيب",
+          "الزاهر",
+          "شوفها",
+          "بالشرائع",
+          "وبطحاء",
+          "قريش",
+          "بالمنطقة",
+          "هذي"
+        ],
+        "keywords_en": [
+          "what",
+          "about",
+          "aziziyah",
+          "same",
+          "question",
+          "for",
+          "awali",
+          "show",
+          "ash",
+          "shawqiyah",
+          "naseem",
+          "run",
+          "zahir",
+          "shara'i",
+          "batha",
+          "quraysh"
+        ],
+        "entities": []
+      },
+      "answer": {
+        "type": "contextual_dynamic",
+        "handler": "followup_with_area",
+        "responses": {
+          "ar": [
+            "لنفس السؤال ولكن في {{area}}: {{updated_result}}."
+          ],
+          "en": [
+            "For the same question in {{area}}: {{updated_result}}."
+          ]
+        },
+        "result_shape": "single_answer"
+      },
+      "context": {
+        "required_context": [
+          "last_intent"
+        ],
+        "updates_context": true,
+        "applicable_pages": [
+          "*"
+        ]
+      },
+      "priority": 100
+    },
+    {
+      "id": "followup_same_metric_category",
+      "category": "conversation_context",
+      "purpose": "Re-run previous analytical question for another category.",
+      "examples": {
+        "ar": [
+          "المطاعم",
+          "طيب المطاعم",
+          "وش عن الأنشطة",
+          "طيب وش عن الأنشطة",
+          "خلها ثقافة",
+          "طيب خلها ثقافة",
+          "نفس السؤال للخدمات",
+          "طيب نفس السؤال للخدمات",
+          "طيب الترفيه",
+          "طيب طيب الترفيه",
+          "شوفها بالتسوق",
+          "طيب شوفها بالتسوق",
+          "والضيافة",
+          "طيب والضيافة",
+          "وش عن المجتمعات",
+          "طيب وش عن المجتمعات"
+        ],
+        "en": [
+          "what about restaurants",
+          "okay, what about restaurants",
+          "same question for activities",
+          "okay, same question for activities",
+          "show it for culture",
+          "okay, show it for culture",
+          "what about services",
+          "okay, what about services",
+          "run it for entertainment",
+          "okay, run it for entertainment",
+          "show it for shopping",
+          "okay, show it for shopping",
+          "what about hospitality",
+          "okay, what about hospitality"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "المطاعم",
+          "الأنشطة",
+          "خلها",
+          "ثقافة",
+          "نفس",
+          "السؤال",
+          "للخدمات",
+          "طيب",
+          "الترفيه",
+          "شوفها",
+          "بالتسوق",
+          "والضيافة",
+          "المجتمعات"
+        ],
+        "keywords_en": [
+          "what",
+          "about",
+          "restaurants",
+          "same",
+          "question",
+          "for",
+          "activities",
+          "show",
+          "culture",
+          "services",
+          "run",
+          "entertainment",
+          "shopping",
+          "hospitality"
+        ],
+        "entities": []
+      },
+      "answer": {
+        "type": "contextual_dynamic",
+        "handler": "followup_with_category",
+        "responses": {
+          "ar": [
+            "لنفس السؤال ولكن لفئة {{category}}: {{updated_result}}."
+          ],
+          "en": [
+            "For the same question in {{category}}: {{updated_result}}."
+          ]
+        },
+        "result_shape": "single_answer"
+      },
+      "context": {
+        "required_context": [
+          "last_intent"
+        ],
+        "updates_context": true,
+        "applicable_pages": [
+          "*"
+        ]
+      },
+      "priority": 100
+    },
+    {
+      "id": "followup_how_calculated",
+      "category": "conversation_context",
+      "purpose": "Explain how previous number or ranking was calculated.",
+      "examples": {
+        "ar": [
+          "كيف حسبتها",
+          "طيب كيف حسبتها",
+          "من وين طلعت الرقم",
+          "طيب من وين طلعت الرقم",
+          "كيف طلعت النتيجة",
+          "طيب كيف طلعت النتيجة",
+          "وش طريقة الحساب",
+          "طيب وش طريقة الحساب",
+          "كيف حسبت المؤشر",
+          "طيب كيف حسبت المؤشر",
+          "على أي أساس رتبتهم",
+          "طيب على أي أساس رتبتهم",
+          "كيف طلعت النسبة",
+          "طيب كيف طلعت النسبة",
+          "وش المعادلة بشكل مبسط",
+          "طيب وش المعادلة بشكل مبسط"
+        ],
+        "en": [
+          "how did you calculate that",
+          "okay, how did you calculate that",
+          "where did that number come from",
+          "okay, where did that number come from",
+          "how was the result calculated",
+          "okay, how was the result calculated",
+          "what is the calculation",
+          "okay, what is the calculation",
+          "how did you calculate the index",
+          "okay, how did you calculate the index",
+          "how did you rank them",
+          "okay, how did you rank them",
+          "how did you get that percentage",
+          "okay, how did you get that percentage"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "كيف",
+          "حسبتها",
+          "وين",
+          "طلعت",
+          "الرقم",
+          "النتيجة",
+          "طريقة",
+          "الحساب",
+          "حسبت",
+          "المؤشر",
+          "على",
+          "أساس",
+          "رتبتهم",
+          "النسبة",
+          "المعادلة",
+          "بشكل",
+          "مبسط"
+        ],
+        "keywords_en": [
+          "how",
+          "did",
+          "you",
+          "calculate",
+          "that",
+          "where",
+          "number",
+          "come",
+          "from",
+          "was",
+          "the",
+          "result",
+          "calculated",
+          "what",
+          "calculation",
+          "index",
+          "rank",
+          "them"
+        ],
+        "entities": []
+      },
+      "answer": {
+        "type": "contextual_dynamic",
+        "handler": "followup_explain_calculation",
+        "responses": {
+          "ar": [
+            "الحساب يعتمد على المقياس المرتبط بالسؤال السابق داخل بيانات EyeMakkah الحالية. بشكل مبسط: {{calculation_explanation}}."
+          ],
+          "en": [
+            "The calculation uses the metric tied to your previous question in the current EyeMakkah data. In simple terms: {{calculation_explanation}}."
+          ]
+        },
+        "result_shape": "single_answer"
+      },
+      "context": {
+        "required_context": [
+          "last_intent",
+          "last_result"
+        ],
+        "updates_context": false,
+        "applicable_pages": [
+          "*"
+        ]
+      },
+      "priority": 99
+    },
+    {
+      "id": "followup_what_does_that_mean",
+      "category": "conversation_context",
+      "purpose": "Interpret previous result in plain language.",
+      "examples": {
+        "ar": [
+          "وش يعني هذا",
+          "طيب وش يعني هذا",
+          "ايش يعني الرقم",
+          "طيب ايش يعني الرقم",
+          "وش معنى النتيجة",
+          "طيب وش معنى النتيجة",
+          "فسرها لي",
+          "طيب فسرها لي",
+          "وش المقصود",
+          "طيب وش المقصود",
+          "يعني ايش عمليًا",
+          "طيب يعني ايش عمليًا",
+          "اشرحها بطريقة بسيطة",
+          "طيب اشرحها بطريقة بسيطة",
+          "وش أفهم من ذا",
+          "طيب وش أفهم من ذا"
+        ],
+        "en": [
+          "what does that mean",
+          "okay, what does that mean",
+          "what does the number mean",
+          "okay, what does the number mean",
+          "explain the result",
+          "okay, explain the result",
+          "what should I understand from that",
+          "okay, what should I understand from that",
+          "explain it simply",
+          "okay, explain it simply",
+          "what does this mean in practice",
+          "okay, what does this mean in practice",
+          "interpret that for me",
+          "okay, interpret that for me"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "يعني",
+          "هذا",
+          "ايش",
+          "الرقم",
+          "معنى",
+          "النتيجة",
+          "فسرها",
+          "المقصود",
+          "عمليًا",
+          "اشرحها",
+          "بطريقة",
+          "بسيطة",
+          "أفهم"
+        ],
+        "keywords_en": [
+          "what",
+          "does",
+          "that",
+          "mean",
+          "the",
+          "number",
+          "explain",
+          "result",
+          "should",
+          "understand",
+          "from",
+          "simply",
+          "this",
+          "practice",
+          "interpret",
+          "for"
+        ],
+        "entities": []
+      },
+      "answer": {
+        "type": "contextual_dynamic",
+        "handler": "followup_interpret_previous",
+        "responses": {
+          "ar": [
+            "بشكل مبسط: {{plain_language_interpretation}}."
+          ],
+          "en": [
+            "In plain language: {{plain_language_interpretation}}."
+          ]
+        },
+        "result_shape": "single_answer"
+      },
+      "context": {
+        "required_context": [
+          "last_intent",
+          "last_result"
+        ],
+        "updates_context": false,
+        "applicable_pages": [
+          "*"
+        ]
+      },
+      "priority": 99
+    },
+    {
+      "id": "followup_previous_entity_reference",
+      "category": "conversation_context",
+      "purpose": "Resolve references such as this area/activity/campaign/result.",
+      "examples": {
+        "ar": [
+          "وهذا",
+          "طيب وهذا",
+          "وهذي",
+          "طيب وهذي",
+          "هذا وش وضعه",
+          "طيب هذا وش وضعه",
+          "طيب ذا",
+          "طيب طيب ذا",
+          "وش عنه",
+          "طيب وش عنه",
+          "اعطني تفاصيله",
+          "طيب اعطني تفاصيله",
+          "وش وضعها",
+          "طيب وش وضعها",
+          "حلله لي",
+          "طيب حلله لي"
+        ],
+        "en": [
+          "what about this one",
+          "okay, what about this one",
+          "what about it",
+          "okay, what about it",
+          "tell me more about that",
+          "okay, tell me more about that",
+          "analyze it",
+          "okay, analyze it",
+          "give me its details",
+          "okay, give me its details",
+          "what about this",
+          "okay, what about this",
+          "and that one",
+          "okay, and that one"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "وهذا",
+          "وهذي",
+          "هذا",
+          "وضعه",
+          "طيب",
+          "عنه",
+          "اعطني",
+          "تفاصيله",
+          "وضعها",
+          "حلله"
+        ],
+        "keywords_en": [
+          "what",
+          "about",
+          "this",
+          "one",
+          "tell",
+          "more",
+          "that",
+          "analyze",
+          "give",
+          "its",
+          "details",
+          "and"
+        ],
+        "entities": []
+      },
+      "answer": {
+        "type": "contextual_dynamic",
+        "handler": "followup_resolve_previous_entity",
+        "responses": {
+          "ar": [
+            "بالنسبة إلى {{resolved_entity}}: {{entity_result}}."
+          ],
+          "en": [
+            "For {{resolved_entity}}: {{entity_result}}."
+          ]
+        },
+        "result_shape": "single_answer"
+      },
+      "context": {
+        "required_context": [
+          "last_entities"
+        ],
+        "updates_context": false,
+        "applicable_pages": [
+          "*"
+        ]
+      },
+      "priority": 98
+    },
+    {
+      "id": "followup_source_scope",
+      "category": "conversation_context",
+      "purpose": "Explain which EyeMakkah page supports the previous answer.",
+      "examples": {
+        "ar": [
+          "من أي صفحة جبتها",
+          "طيب من أي صفحة جبتها",
+          "وين أشوف هالمعلومة",
+          "طيب وين أشوف هالمعلومة",
+          "هذا موجود وين",
+          "طيب هذا موجود وين",
+          "وش مصدرها داخل المنصة",
+          "طيب وش مصدرها داخل المنصة",
+          "أي صفحة فيها النتيجة",
+          "طيب أي صفحة فيها النتيجة",
+          "وين ألقى الرقم",
+          "طيب وين ألقى الرقم",
+          "وين أقدر أشوفها بنفسي",
+          "طيب وين أقدر أشوفها بنفسي",
+          "المعلومة من وين",
+          "طيب المعلومة من وين"
+        ],
+        "en": [
+          "which page is this from",
+          "okay, which page is this from",
+          "where can I see this",
+          "okay, where can I see this",
+          "where is this information shown",
+          "okay, where is this information shown",
+          "what is the source inside the platform",
+          "okay, what is the source inside the platform",
+          "which page contains this result",
+          "okay, which page contains this result",
+          "where can I verify it",
+          "okay, where can I verify it",
+          "where is this number shown",
+          "okay, where is this number shown"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "صفحة",
+          "جبتها",
+          "وين",
+          "أشوف",
+          "هالمعلومة",
+          "هذا",
+          "موجود",
+          "مصدرها",
+          "داخل",
+          "المنصة",
+          "فيها",
+          "النتيجة",
+          "ألقى",
+          "الرقم",
+          "أقدر",
+          "أشوفها",
+          "بنفسي",
+          "المعلومة"
+        ],
+        "keywords_en": [
+          "which",
+          "page",
+          "this",
+          "from",
+          "where",
+          "can",
+          "see",
+          "information",
+          "shown",
+          "what",
+          "the",
+          "source",
+          "inside",
+          "platform",
+          "contains",
+          "result",
+          "verify",
+          "number"
+        ],
+        "entities": []
+      },
+      "answer": {
+        "type": "contextual_dynamic",
+        "handler": "followup_source_page",
+        "responses": {
+          "ar": [
+            "تقدر تتحقق منها في {{source_page}}، وتحت نفس الفلاتر المستخدمة في الإجابة."
+          ],
+          "en": [
+            "You can verify it on {{source_page}}, using the same filters as the answer."
+          ]
+        },
+        "result_shape": "single_answer"
+      },
+      "context": {
+        "required_context": [
+          "last_intent"
+        ],
+        "updates_context": false,
+        "applicable_pages": [
+          "*"
+        ]
+      },
+      "priority": 95
+    },
+    {
+      "id": "followup_next_best_question",
+      "category": "conversation_context",
+      "purpose": "Generate one or two contextual next-question suggestions.",
+      "examples": {
+        "ar": [
+          "وش أسأل بعد",
+          "طيب وش أسأل بعد",
+          "وش ممكن أسأل الحين",
+          "طيب وش ممكن أسأل الحين",
+          "اعطني سؤال مناسب بعد ذا",
+          "طيب اعطني سؤال مناسب بعد ذا",
+          "وش الخطوة الجاية بالسؤال",
+          "طيب وش الخطوة الجاية بالسؤال",
+          "وش أسأل عن ايش",
+          "طيب وش أسأل عن ايش",
+          "وش سؤال منطقي بعدها",
+          "طيب وش سؤال منطقي بعدها",
+          "طيب وش نحلل بعد",
+          "طيب طيب وش نحلل بعد",
+          "اعطني اقتراح سؤال",
+          "طيب اعطني اقتراح سؤال"
+        ],
+        "en": [
+          "what should I ask next",
+          "okay, what should I ask next",
+          "what can I ask now",
+          "okay, what can I ask now",
+          "give me a good follow-up question",
+          "okay, give me a good follow-up question",
+          "what is the next logical question",
+          "okay, what is the next logical question",
+          "what should we analyze next",
+          "okay, what should we analyze next",
+          "suggest the next question",
+          "okay, suggest the next question",
+          "what should I explore next",
+          "okay, what should I explore next"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "أسأل",
+          "بعد",
+          "ممكن",
+          "الحين",
+          "اعطني",
+          "سؤال",
+          "مناسب",
+          "الخطوة",
+          "الجاية",
+          "بالسؤال",
+          "ايش",
+          "منطقي",
+          "بعدها",
+          "طيب",
+          "نحلل",
+          "اقتراح"
+        ],
+        "keywords_en": [
+          "what",
+          "should",
+          "ask",
+          "next",
+          "can",
+          "now",
+          "give",
+          "good",
+          "follow-up",
+          "question",
+          "the",
+          "logical",
+          "analyze",
+          "suggest",
+          "explore"
+        ],
+        "entities": []
+      },
+      "answer": {
+        "type": "contextual_dynamic",
+        "handler": "followup_context_suggestions",
+        "responses": {
+          "ar": [
+            "بناءً على السياق الحالي، ممكن تسأل: {{suggestion_1}}{{suggestion_2_optional}}."
+          ],
+          "en": [
+            "Based on the current context, you could ask: {{suggestion_1}}{{suggestion_2_optional}}."
+          ]
+        },
+        "result_shape": "suggestions"
+      },
+      "context": {
+        "required_context": [
+          "current_page",
+          "active_filters"
+        ],
+        "updates_context": false,
+        "applicable_pages": [
+          "*"
+        ]
+      },
+      "priority": 90
+    },
+    {
+      "id": "followup_back_to_summary",
+      "category": "conversation_context",
+      "purpose": "Return to a concise current summary.",
+      "examples": {
+        "ar": [
+          "ارجع للملخص",
+          "طيب ارجع للملخص",
+          "اعطني الصورة العامة",
+          "طيب اعطني الصورة العامة",
+          "خلنا نرجع للزبدة",
+          "طيب خلنا نرجع للزبدة",
+          "لخص لي من جديد",
+          "طيب لخص لي من جديد",
+          "ارجع للبداية",
+          "طيب ارجع للبداية",
+          "وش الوضع بشكل عام بعد كل ذا",
+          "طيب وش الوضع بشكل عام بعد كل ذا",
+          "اعطني الخلاصة الحالية",
+          "طيب اعطني الخلاصة الحالية",
+          "رجعني للملخص",
+          "طيب رجعني للملخص"
+        ],
+        "en": [
+          "go back to the summary",
+          "okay, go back to the summary",
+          "give me the overall picture again",
+          "okay, give me the overall picture again",
+          "back to the big picture",
+          "okay, back to the big picture",
+          "summarize again",
+          "okay, summarize again",
+          "return to the overview",
+          "okay, return to the overview",
+          "what is the current overall picture",
+          "okay, what is the current overall picture",
+          "give me the current summary",
+          "okay, give me the current summary"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "ارجع",
+          "للملخص",
+          "اعطني",
+          "الصورة",
+          "العامة",
+          "خلنا",
+          "نرجع",
+          "للزبدة",
+          "لخص",
+          "جديد",
+          "للبداية",
+          "الوضع",
+          "بشكل",
+          "عام",
+          "بعد",
+          "الخلاصة",
+          "الحالية",
+          "رجعني"
+        ],
+        "keywords_en": [
+          "back",
+          "the",
+          "summary",
+          "give",
+          "overall",
+          "picture",
+          "again",
+          "big",
+          "summarize",
+          "return",
+          "overview",
+          "what",
+          "current"
+        ],
+        "entities": []
+      },
+      "answer": {
+        "type": "contextual_dynamic",
+        "handler": "followup_return_summary",
+        "responses": {
+          "ar": [
+            "الخلاصة الحالية: {{current_summary}}."
+          ],
+          "en": [
+            "Current summary: {{current_summary}}."
+          ]
+        },
+        "result_shape": "single_answer"
+      },
+      "context": {
+        "required_context": [
+          "active_filters"
+        ],
+        "updates_context": false,
+        "applicable_pages": [
+          "*"
+        ]
+      },
+      "priority": 94
+    },
+    {
+      "id": "followup_reset_conversation",
+      "category": "conversation_context",
+      "purpose": "Reset conversation memory while preserving BI filters.",
+      "examples": {
+        "ar": [
+          "ابدأ من جديد",
+          "طيب ابدأ من جديد",
+          "انس السياق السابق",
+          "طيب انس السياق السابق",
+          "خلنا نبدأ سؤال جديد",
+          "طيب خلنا نبدأ سؤال جديد",
+          "صفر المحادثة",
+          "طيب صفر المحادثة",
+          "امسح آخر سياق",
+          "طيب امسح آخر سياق",
+          "لا تعتمد على سؤالي السابق",
+          "طيب لا تعتمد على سؤالي السابق",
+          "ابدأ بدون السؤال السابق",
+          "طيب ابدأ بدون السؤال السابق",
+          "صفّر الكلام السابق",
+          "طيب صفّر الكلام السابق"
+        ],
+        "en": [
+          "start over",
+          "okay, start over",
+          "forget the previous context",
+          "okay, forget the previous context",
+          "start a new question",
+          "okay, start a new question",
+          "reset the conversation",
+          "okay, reset the conversation",
+          "clear the last context",
+          "okay, clear the last context",
+          "don't use my previous question",
+          "okay, don't use my previous question",
+          "start fresh",
+          "okay, start fresh"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "ابدأ",
+          "جديد",
+          "انس",
+          "السياق",
+          "السابق",
+          "خلنا",
+          "نبدأ",
+          "سؤال",
+          "صفر",
+          "المحادثة",
+          "امسح",
+          "آخر",
+          "سياق",
+          "تعتمد",
+          "على",
+          "سؤالي",
+          "بدون",
+          "السؤال"
+        ],
+        "keywords_en": [
+          "start",
+          "over",
+          "forget",
+          "the",
+          "previous",
+          "context",
+          "new",
+          "question",
+          "reset",
+          "conversation",
+          "clear",
+          "last",
+          "don't",
+          "use",
+          "fresh"
+        ],
+        "entities": []
+      },
+      "answer": {
+        "type": "contextual_dynamic",
+        "handler": "followup_reset_conversation_context",
+        "responses": {
+          "ar": [
+            "تمام، أبدأ سياق محادثة جديد مع الإبقاء على فلاتر الـBI الحالية كما هي."
+          ],
+          "en": [
+            "Okay. I'll start a fresh conversation context while keeping the current BI filters unchanged."
+          ]
+        },
+        "result_shape": "single_answer"
+      },
+      "context": {
+        "required_context": [
+          "last_intent"
+        ],
+        "updates_context": true,
+        "applicable_pages": [
+          "*"
+        ]
+      },
+      "priority": 100
+    }
+  ]
+}
