@@ -1,4 +1,4 @@
 EyeMakkah bundle
-built: 2026-09-28T19:01:42.709Z
+built: 2026-09-29T10:24:46.786Z
 consumer bundle bytes: 2682958
 BI: static /bi (no server runtime)

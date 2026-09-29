@@ -11,7 +11,8 @@
       "Demand Analysis",
       "Area Analysis",
       "Activities & Experiences",
-      "Communities & Interests"
+      "Communities & Interests",
+      "Engagement & Rewards"
     ],
     "note": "Intent semantics, metrics, funnel stages, areas/categories, and answer boundaries are aligned to the current EyeMakkah BI prototype. This file does not modify or integrate the BI."
   },
@@ -21,7 +22,7 @@
     "assistant_name_ar": "مساعد EyeMakkah التحليلي",
     "assistant_name_en": "EyeMakkah Analytics Assistant"
   },
-  "purpose": "Bilingual analytical intent bank for Dashboard, Demand, Areas, Activities, and Communities. All analytical answers are dynamic and must be resolved from the active BI filters and current synthetic/demo data.",
+  "purpose": "Bilingual analytical intent bank for Dashboard, Demand, Areas, Activities, Communities, and Engagement & Rewards. All analytical answers are dynamic and must be resolved from the active BI filters and current synthetic/demo data.",
   "integration_contract": {
     "languages": [
       "ar",
@@ -95,22 +96,31 @@
       "ليلة القصص المكية",
       "مشي العوالي المسائي",
       "تجربة المذاقات الحجازية"
+    ],
+    "reward_types_ar": [
+      "خصومات المطاعم",
+      "تجارب ثقافية خاصة",
+      "مزايا الأنشطة والتجارب",
+      "عروض التسوق",
+      "مكافآت المجتمعات",
+      "مزايا الضيافة"
     ]
   },
   "stats": {
-    "intent_count": 45,
-    "utterances_ar": 238,
-    "utterances_en": 200,
-    "utterances_total": 438,
+    "intent_count": 53,
+    "utterances_ar": 278,
+    "utterances_en": 240,
+    "utterances_total": 518,
     "by_category": {
       "dashboard": 8,
       "demand": 10,
       "areas": 9,
       "activities": 10,
-      "communities": 8
+      "communities": 8,
+      "rewards": 8
     },
     "by_answer_type": {
-      "dynamic": 45
+      "dynamic": 53
     }
   },
   "intents": [
@@ -2779,6 +2789,504 @@
         "followup_keys": []
       },
       "priority": 100
+    },
+    {
+      "id": "rewards_summary",
+      "category": "rewards",
+      "purpose": "Summarize aggregated engagement and rewards performance.",
+      "examples": {
+        "ar": [
+          "لخص التفاعل والمكافآت",
+          "وش وضع المكافآت",
+          "اعطني ملخص الستريك",
+          "كيف أداء نظام المكافآت",
+          "وش وضع جواز مكة"
+        ],
+        "en": [
+          "summarize engagement and rewards",
+          "how are rewards performing",
+          "give me the streak summary",
+          "how is the rewards program doing",
+          "summarize reward engagement"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "مكافآت",
+          "ستريك",
+          "جواز مكة",
+          "التفاعل"
+        ],
+        "keywords_en": [
+          "rewards",
+          "streak",
+          "reward engagement",
+          "passport"
+        ],
+        "entities": []
+      },
+      "answer": {
+        "type": "dynamic",
+        "handler": "rewards_summary",
+        "responses": {
+          "ar": [
+            "{{summary}}"
+          ],
+          "en": [
+            "{{summary}}"
+          ]
+        },
+        "result_shape": "single_answer"
+      },
+      "context": {
+        "applicable_pages": [
+          "التفاعل والمكافآت",
+          "*"
+        ],
+        "followup_keys": [
+          "explain_highlight",
+          "compare_previous_period"
+        ]
+      },
+      "priority": 98
+    },
+    {
+      "id": "rewards_streak_retention",
+      "category": "rewards",
+      "purpose": "Return aggregated streak retention.",
+      "examples": {
+        "ar": [
+          "كم نسبة اللي محافظين على الستريك 7 أيام",
+          "وش استمرارية 7 أيام",
+          "كم يكملون 30 يوم",
+          "اعطني retention للستريك",
+          "كم نسبة الاستمرار"
+        ],
+        "en": [
+          "what is 7 day streak retention",
+          "how many retain a streak for 30 days",
+          "show streak retention",
+          "what is the retention rate",
+          "how persistent are streaks"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "ستريك",
+          "استمرارية",
+          "استمرار",
+          "7 أيام",
+          "30 يوم"
+        ],
+        "keywords_en": [
+          "streak",
+          "retention",
+          "7 day",
+          "30 day"
+        ],
+        "entities": []
+      },
+      "answer": {
+        "type": "dynamic",
+        "handler": "rewards_streak_retention",
+        "responses": {
+          "ar": [
+            "{{summary}}"
+          ],
+          "en": [
+            "{{summary}}"
+          ]
+        },
+        "result_shape": "ranking"
+      },
+      "context": {
+        "applicable_pages": [
+          "التفاعل والمكافآت",
+          "*"
+        ],
+        "followup_keys": [
+          "followup_second",
+          "followup_why"
+        ]
+      },
+      "priority": 99
+    },
+    {
+      "id": "rewards_active_streaks",
+      "category": "rewards",
+      "purpose": "Return active reward participants and active streak counts.",
+      "examples": {
+        "ar": [
+          "كم شخص عنده ستريك نشط",
+          "كم شخص مشارك بالمكافآت",
+          "كم مشارك نشط",
+          "كم واحد ثابت على الستريك",
+          "عدد المشاركين بالبرنامج"
+        ],
+        "en": [
+          "how many active streaks are there",
+          "how many active reward participants",
+          "how many people are on an active streak",
+          "active rewards participants",
+          "active streak count"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "شخص",
+          "مشارك",
+          "نشط",
+          "ستريك"
+        ],
+        "keywords_en": [
+          "active",
+          "participants",
+          "streak count"
+        ],
+        "entities": []
+      },
+      "answer": {
+        "type": "dynamic",
+        "handler": "rewards_active_streaks",
+        "responses": {
+          "ar": [
+            "{{summary}}"
+          ],
+          "en": [
+            "{{summary}}"
+          ]
+        },
+        "result_shape": "single_answer"
+      },
+      "context": {
+        "applicable_pages": [
+          "التفاعل والمكافآت",
+          "لوحة المعلومات",
+          "*"
+        ],
+        "followup_keys": [
+          "followup_more_detail"
+        ]
+      },
+      "priority": 97
+    },
+    {
+      "id": "rewards_top_area",
+      "category": "rewards",
+      "purpose": "Rank areas by aggregated reward engagement.",
+      "examples": {
+        "ar": [
+          "أي منطقة أعلى في التفاعل مع المكافآت",
+          "وين أعلى engagement للمكافآت",
+          "وش أكثر منطقة محافظة على الستريك",
+          "رتب المناطق بالمكافآت",
+          "أي حي يتفاعل أكثر"
+        ],
+        "en": [
+          "which area has the highest reward engagement",
+          "rank areas by rewards engagement",
+          "which area has the best streak retention",
+          "top area for rewards",
+          "where is rewards engagement highest"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "منطقة",
+          "حي",
+          "أعلى",
+          "مكافآت",
+          "ستريك"
+        ],
+        "keywords_en": [
+          "area",
+          "top",
+          "highest",
+          "rewards",
+          "streak"
+        ],
+        "entities": [
+          "areas"
+        ]
+      },
+      "answer": {
+        "type": "dynamic",
+        "handler": "rewards_top_area",
+        "responses": {
+          "ar": [
+            "{{summary}}"
+          ],
+          "en": [
+            "{{summary}}"
+          ]
+        },
+        "result_shape": "ranking"
+      },
+      "context": {
+        "applicable_pages": [
+          "التفاعل والمكافآت",
+          "تحليل المناطق",
+          "*"
+        ],
+        "followup_keys": [
+          "followup_second",
+          "followup_compare"
+        ]
+      },
+      "priority": 96
+    },
+    {
+      "id": "rewards_audience_compare",
+      "category": "rewards",
+      "purpose": "Compare residents and visitors on aggregated reward engagement.",
+      "examples": {
+        "ar": [
+          "قارن السكان والزوار في المكافآت",
+          "مين يتفاعل أكثر السكان ولا الزوار",
+          "الزوار أفضل في الستريك ولا السكان",
+          "فرق التفاعل بين السكان والزوار",
+          "قارن retention للجمهور"
+        ],
+        "en": [
+          "compare residents and visitors on rewards",
+          "who engages more residents or visitors",
+          "compare streak retention by audience",
+          "visitors versus residents rewards",
+          "audience reward engagement"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "السكان",
+          "الزوار",
+          "قارن",
+          "مكافآت",
+          "ستريك"
+        ],
+        "keywords_en": [
+          "residents",
+          "visitors",
+          "compare",
+          "rewards",
+          "streak"
+        ],
+        "entities": [
+          "audiences"
+        ]
+      },
+      "answer": {
+        "type": "dynamic",
+        "handler": "rewards_audience_compare",
+        "responses": {
+          "ar": [
+            "{{summary}}"
+          ],
+          "en": [
+            "{{summary}}"
+          ]
+        },
+        "result_shape": "comparison"
+      },
+      "context": {
+        "applicable_pages": [
+          "التفاعل والمكافآت",
+          "*"
+        ],
+        "followup_keys": [
+          "followup_why"
+        ]
+      },
+      "priority": 96
+    },
+    {
+      "id": "rewards_top_category",
+      "category": "rewards",
+      "purpose": "Rank categories by aggregated reward engagement or retention.",
+      "examples": {
+        "ar": [
+          "أي فئة أعلى تفاعل مع المكافآت",
+          "وش الفئة الأعلى بالستريك",
+          "رتب الفئات في المكافآت",
+          "أي قطاع عنده استمرارية أعلى",
+          "وش أعلى category بالمكافآت"
+        ],
+        "en": [
+          "which category has the highest reward engagement",
+          "top category by streak retention",
+          "rank reward engagement by category",
+          "which sector retains best",
+          "top rewards category"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "فئة",
+          "قطاع",
+          "مكافآت",
+          "ستريك",
+          "استمرارية"
+        ],
+        "keywords_en": [
+          "category",
+          "sector",
+          "rewards",
+          "streak",
+          "retention"
+        ],
+        "entities": [
+          "categories"
+        ]
+      },
+      "answer": {
+        "type": "dynamic",
+        "handler": "rewards_top_category",
+        "responses": {
+          "ar": [
+            "{{summary}}"
+          ],
+          "en": [
+            "{{summary}}"
+          ]
+        },
+        "result_shape": "ranking"
+      },
+      "context": {
+        "applicable_pages": [
+          "التفاعل والمكافآت",
+          "*"
+        ],
+        "followup_keys": [
+          "followup_second",
+          "followup_compare"
+        ]
+      },
+      "priority": 95
+    },
+    {
+      "id": "rewards_redemption",
+      "category": "rewards",
+      "purpose": "Explain aggregate reward usage and journey.",
+      "examples": {
+        "ar": [
+          "كم نسبة استخدام المكافآت",
+          "كم واحد يستخدم الروارد",
+          "وين النزول في رحلة المكافآت",
+          "وش redemption rate",
+          "كيف الناس تتعامل مع المكافآت"
+        ],
+        "en": [
+          "what is the reward usage rate",
+          "what is reward redemption",
+          "where is the biggest drop in the reward journey",
+          "how are rewards used",
+          "reward redemption rate"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "استخدام",
+          "مكافآت",
+          "روارد",
+          "رحلة",
+          "نزول"
+        ],
+        "keywords_en": [
+          "usage",
+          "redemption",
+          "reward journey",
+          "drop"
+        ],
+        "entities": []
+      },
+      "answer": {
+        "type": "dynamic",
+        "handler": "rewards_redemption",
+        "responses": {
+          "ar": [
+            "{{summary}}"
+          ],
+          "en": [
+            "{{summary}}"
+          ]
+        },
+        "result_shape": "funnel"
+      },
+      "context": {
+        "applicable_pages": [
+          "التفاعل والمكافآت",
+          "الحملات والعروض",
+          "*"
+        ],
+        "followup_keys": [
+          "followup_why"
+        ]
+      },
+      "priority": 97
+    },
+    {
+      "id": "rewards_activity_impact",
+      "category": "rewards",
+      "purpose": "Rank activities by aggregate reward engagement and retention association.",
+      "examples": {
+        "ar": [
+          "أي نشاط مرتبط باستمرارية أعلى",
+          "وش النشاط اللي يرفع التفاعل مع المكافآت",
+          "رتب الأنشطة حسب الستريك",
+          "أي نشاط عنده reward engagement أعلى",
+          "وش الأنشطة المرتبطة بالعودة"
+        ],
+        "en": [
+          "which activity is associated with higher retention",
+          "which activity has the highest reward engagement",
+          "rank activities by streak retention",
+          "activities linked to return",
+          "top activity for rewards engagement"
+        ]
+      },
+      "matching": {
+        "keywords_ar": [
+          "نشاط",
+          "أنشطة",
+          "استمرارية",
+          "مكافآت",
+          "عودة"
+        ],
+        "keywords_en": [
+          "activity",
+          "retention",
+          "rewards",
+          "return",
+          "engagement"
+        ],
+        "entities": [
+          "activities"
+        ]
+      },
+      "answer": {
+        "type": "dynamic",
+        "handler": "rewards_activity_impact",
+        "responses": {
+          "ar": [
+            "{{summary}}"
+          ],
+          "en": [
+            "{{summary}}"
+          ]
+        },
+        "result_shape": "ranking"
+      },
+      "context": {
+        "applicable_pages": [
+          "التفاعل والمكافآت",
+          "الأنشطة والتجارب",
+          "*"
+        ],
+        "followup_keys": [
+          "followup_second",
+          "followup_why"
+        ]
+      },
+      "priority": 96
     }
   ]
 }

@@ -29,8 +29,8 @@
       intents=banks.flatMap(b=>b.intents||[]);
       const c=banks.find(b=>b.part==="04_context")||{};
       aliases=c.aliases||{}; suggestionBank=c.contextual_suggestions||{};
-      ready=intents.length===150;
-      if(!ready)throw new Error("Expected 150 intents, loaded "+intents.length);
+      ready=intents.length===158;
+      if(!ready)throw new Error("Expected 158 intents, loaded "+intents.length);
     }catch(e){console.error("EyeMakkah agent bank load error",e);failed=true}
     A.render();
   }
@@ -47,7 +47,7 @@
     return out;
   }
   function pageCategory(){
-    return {"لوحة المعلومات":"dashboard","تحليل الطلب":"demand","تحليل المناطق":"areas","الأنشطة والتجارب":"activities","المجتمعات والاهتمامات":"communities","الحملات والعروض":"campaigns","الفرص والفجوات":"opportunities","التقارير":"reports"}[A.getState().page]||"";
+    return {"لوحة المعلومات":"dashboard","تحليل الطلب":"demand","تحليل المناطق":"areas","الأنشطة والتجارب":"activities","المجتمعات والاهتمامات":"communities","الحملات والعروض":"campaigns","التفاعل والمكافآت":"rewards","الفرص والفجوات":"opportunities","التقارير":"reports"}[A.getState().page]||"";
   }
   function contextAvailable(it){
     const req=(it.context&&it.context.required_context)||[];
@@ -120,7 +120,7 @@
   function entityLabel(r,lang){if(!r)return "—";return name(r.activity||r.community||r.campaign||r.term||(r.area&&r.category?r.area+" · "+r.category:r.area||r.category),lang)}
   function rankRows(rows,metric,lang,n){return topN(rows,metric,n).map((r,i)=>({entity:entityLabel(r,lang),value:metric==="growth"?pct(r[metric]):(metric==="score"?(Number(r[metric])||0).toFixed(0)+"/100":num(r[metric])),raw:r}))}
   function sourceFor(it){
-    const m={dashboard:"لوحة المعلومات",demand:"تحليل الطلب",areas:"تحليل المناطق",activities:"الأنشطة والتجارب",communities:"المجتمعات والاهتمامات",campaigns:"الحملات والعروض",opportunities:"الفرص والفجوات",reports:"التقارير",cross_page:"لوحة المعلومات"};
+    const m={dashboard:"لوحة المعلومات",demand:"تحليل الطلب",areas:"تحليل المناطق",activities:"الأنشطة والتجارب",communities:"المجتمعات والاهتمامات",campaigns:"الحملات والعروض",rewards:"التفاعل والمكافآت",opportunities:"الفرص والفجوات",reports:"التقارير",cross_page:"لوحة المعلومات"};
     return m[it.category]||A.getState().page
   }
 
@@ -207,6 +207,17 @@
       else if(h==="campaign_geographic_performance"){const arw=s.areaGrowth[0];text=say("أقوى استجابة جغرافية تقديرية للحملة تظهر في ","The strongest illustrative geographic response appears in ",lang)+"<b>"+name(arw&&arw.area,lang)+"</b> "+say("ضمن نموذج الأداء الحالي.","under the current performance model.",lang);entitiesOut=arw?[arw.area]:[]}
       else if(h==="campaign_compare_two"){const ns=campNames.length>=2?campNames:[(top(camps,"handoffs")||{}).campaign,(camps.find(x=>x.campaign!==(top(camps,"handoffs")||{}).campaign)||{}).campaign],a=named(camps,"campaign",[ns[0]]),b=named(camps,"campaign",[ns[1]]);text=name(ns[0],lang)+" / "+name(ns[1],lang)+": "+num(a&&a.views)+" / "+num(b&&b.views)+" "+say("مشاهدة، ","views; ",lang)+num(a&&a.saves)+" / "+num(b&&b.saves)+" "+say("حفظ، ","saves; ",lang)+num(a&&a.handoffs)+" / "+num(b&&b.handoffs)+" "+say("انتقال.","handoffs.",lang);entitiesOut=ns.filter(Boolean)}
     }
+
+
+    // Engagement & Rewards — aggregate-only analytics.
+    else if(h==="rewards_summary"){const r=s.rewards,area=r.areas[0],cat=r.categories[0];text=say("ضمن الفلاتر الحالية: ","Under the active filters: ",lang)+"<b>"+num(r.activeParticipants)+"</b> "+say("مشارك نشط، استمرارية 7 أيام ","active reward participants, 7-day streak retention ",lang)+"<b>"+pct(r.streak7)+"</b>، "+say("تفاعل المكافآت ","reward engagement ",lang)+"<b>"+pct(r.engagementRate)+"</b>، "+say("واستخدام المكافآت ","and reward usage ",lang)+"<b>"+pct(r.redemptionRate)+"</b>. "+say("أعلى منطقة حاليًا: ","Top area right now: ",lang)+"<b>"+name(area&&area.area,lang)+"</b> · "+say("أعلى فئة: ","Top category: ",lang)+"<b>"+name(cat&&cat.category,lang)+"</b>.";ranked=rankRows(r.areas,"engagement",lang,5);metric="reward_engagement";}
+    else if(h==="rewards_streak_retention"){const r=s.rewards;text=say("استمرارية الـ Streak ضمن الفلاتر الحالية: ","Streak retention under the active filters: ",lang)+r.retention.map(x=>name(x.label,lang)+" <b>"+pct(x.rate)+"</b>").join(" · ")+".";ranked=r.retention.map(x=>({entity:name(x.label,lang),value:pct(x.rate),raw:x}));metric="streak_retention";}
+    else if(h==="rewards_active_streaks"){const r=s.rewards;text=say("يوجد حاليًا نحو ","There are currently about ",lang)+"<b>"+num(r.activeStreaks)+"</b> "+say("Streak نشط ضمن ","active streaks among ",lang)+"<b>"+num(r.activeParticipants)+"</b> "+say("مشارك نشط في برنامج المكافآت، وفق بيانات النموذج المجمعة.","active reward participants, based on aggregated prototype data.",lang);metric="active_streaks";}
+    else if(h==="rewards_top_area"){const r=s.rewards,x=r.areas[0];text=say("أعلى منطقة في تفاعل المكافآت حاليًا هي ","The area with the highest reward engagement is ",lang)+"<b>"+name(x&&x.area,lang)+"</b> "+say("بمعدل تفاعل ","with engagement of ",lang)+"<b>"+pct(x&&x.engagement)+"</b> "+say("واستمرارية 7 أيام ","and 7-day retention of ",lang)+"<b>"+pct(x&&x.retention7)+"</b>.";ranked=rankRows(r.areas,"engagement",lang,5);entitiesOut=x?[x.area]:[];metric="reward_engagement";}
+    else if(h==="rewards_audience_compare"){const r=s.rewards,rows=r.audiences;text=rows.map(x=>"<b>"+name(x.aud,lang)+"</b>: "+say("تفاعل ","engagement ",lang)+pct(x.engagement)+" · "+say("استمرارية 7 أيام ","7-day retention ",lang)+pct(x.retention7)).join(" | ")+".";ranked=rows.map(x=>({entity:name(x.aud,lang),value:pct(x.engagement),raw:x}));metric="reward_engagement";}
+    else if(h==="rewards_top_category"){const r=s.rewards,x=r.categories[0];text=say("أعلى فئة حاليًا في تفاعل المكافآت هي ","The leading category for reward engagement is ",lang)+"<b>"+name(x&&x.category,lang)+"</b>، "+say("بتفاعل ","with engagement of ",lang)+"<b>"+pct(x&&x.engagement)+"</b> "+say("واستمرارية 7 أيام ","and 7-day retention of ",lang)+"<b>"+pct(x&&x.retention7)+"</b>.";ranked=rankRows(r.categories,"engagement",lang,5);entitiesOut=x?[x.category]:[];metric="reward_engagement";}
+    else if(h==="rewards_redemption"){const r=s.rewards,vals=r.funnel.values,labs=r.funnel.labels,drop=stageDrop(labs,vals);text=say("معدل استخدام المكافآت حاليًا ","Current reward usage is ",lang)+"<b>"+pct(r.redemptionRate)+"</b>. "+say("أكبر نزول في الرحلة يظهر بين ","The largest drop in the journey appears at ",lang)+"<b>"+name(drop,lang)+"</b>.";ranked=labs.map((x,i)=>({entity:name(x,lang),value:num(vals[i]),raw:{label:x,value:vals[i]}}));metric="reward_redemption";}
+    else if(h==="rewards_activity_impact"){const r=s.rewards,x=r.activityImpact[0];text=say("النشاط المرتبط بأعلى تفاعل مكافآت حاليًا هو ","The activity associated with the highest reward engagement is ",lang)+"<b>"+name(x&&x.activity,lang)+"</b>، "+say("بتفاعل ","with engagement of ",lang)+"<b>"+pct(x&&x.rewardEngagement)+"</b> "+say("واستمرارية 7 أيام ","and 7-day retention of ",lang)+"<b>"+pct(x&&x.retention7)+"</b>.";ranked=rankRows(r.activityImpact,"rewardEngagement",lang,5);entitiesOut=x?[x.activity]:[];metric="reward_engagement";}
 
     // Opportunities.
     else if(/^opportunity_/.test(h)){
