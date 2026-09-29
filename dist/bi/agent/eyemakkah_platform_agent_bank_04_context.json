@@ -45,15 +45,13 @@
   },
   "cumulative_bank_stats": {
     "part_01_intents": 50,
-    "part_02_intents": 45,
+    "part_02_intents": 53,
     "part_03_intents": 35,
     "part_04_intents": 20,
-    "total_intents": 150,
-    "part_01_to_03_utterances": 1333,
+    "total_intents": 158,
+    "part_01_to_03_utterances": 1413,
     "part_04_utterances": 600,
-    "total_example_utterances": 1933,
-    "intent_count": 158,
-    "utterances_total": 2013
+    "total_example_utterances": 2013
   },
   "routing": {
     "context_state_schema": {
