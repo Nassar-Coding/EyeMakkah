@@ -5,7 +5,7 @@
   const AREAS=["العزيزية","الشوقية","العوالي","النسيم","الزاهر","الشرائع","بطحاء قريش"];
   const CATS=["المطاعم والمقاهي","التجارب والأنشطة","التسوق","الترفيه","الثقافة","الخدمات","المجتمعات","الضيافة"];
   const AUD=["سكان مكة","الزوار"];
-  const PAGES=[["لوحة المعلومات","dashboard"],["تحليل الطلب","demand"],["تحليل المناطق","map"],["الأنشطة والتجارب","activities"],["المجتمعات والاهتمامات","community"],["الحملات والعروض","campaigns"],["الفرص والفجوات","opportunities"],["التقارير","reports"]];
+  const PAGES=[["لوحة المعلومات","dashboard"],["تحليل الطلب","demand"],["تحليل المناطق","map"],["الأنشطة والتجارب","activities"],["المجتمعات والاهتمامات","community"],["الحملات والعروض","campaigns"],["التفاعل والمكافآت","rewards"],["الفرص والفجوات","opportunities"],["التقارير","reports"]];
   const AF={"العزيزية":1.23,"الشوقية":.92,"العوالي":1.06,"النسيم":.84,"الزاهر":.79,"الشرائع":.72,"بطحاء قريش":.68};
   const CF={"المطاعم والمقاهي":1.28,"التجارب والأنشطة":1.20,"التسوق":.98,"الترفيه":.91,"الثقافة":.83,"الخدمات":.77,"المجتمعات":.74,"الضيافة":.88};
   const CG={"المطاعم والمقاهي":.10,"التجارب والأنشطة":.16,"التسوق":.05,"الترفيه":.13,"الثقافة":.09,"الخدمات":.03,"المجتمعات":.14,"الضيافة":.07};
@@ -37,6 +37,16 @@
     ["مطاعم بإطلالة","المطاعم والمقاهي",61,.14],["أنشطة مسائية","الترفيه",59,.29],["تجارب للعائلة","التجارب والأنشطة",57,.24],["متاحف","الثقافة",49,.07]
   ].map(x=>({term:x[0],category:x[1],index:x[2],growth:x[3]}));
 
+
+  const REWARD_TYPES=[
+    ["خصومات المطاعم","المطاعم والمقاهي",14800,.42,.18],
+    ["تجارب ثقافية خاصة","الثقافة",11200,.37,.24],
+    ["مزايا الأنشطة والتجارب","التجارب والأنشطة",13600,.46,.27],
+    ["عروض التسوق","التسوق",9400,.31,.13],
+    ["مكافآت المجتمعات","المجتمعات",7200,.29,.22],
+    ["مزايا الضيافة","الضيافة",6800,.34,.16]
+  ].map(x=>({reward:x[0],category:x[1],base:x[2],engagement:x[3],returnLift:x[4]}));
+
   function opps(){
     const rows=[]; let n=0;
     AREAS.forEach(a=>CATS.forEach(c=>{
@@ -65,6 +75,7 @@
     community:'<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>',
     campaigns:'<path d="m3 11 18-5v12L3 14v-3Z"/><path d="M11.6 16.1 13 21H8l-1.2-6"/><path d="M21 9v6"/>',
     opportunities:'<circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/><path d="M8 11h6"/><path d="M11 8v6"/>',
+    rewards:'<path d="M20 12v8H4v-8"/><path d="M2 7h20v5H2Z"/><path d="M12 7v13"/><path d="M12 7H7.5a2.5 2.5 0 1 1 2.5-4c1.2 1.6 2 4 2 4Z"/><path d="M12 7h4.5A2.5 2.5 0 1 0 14 3c-1.2 1.6-2 4-2 4Z"/>',
     reports:'<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6"/><path d="M8 13h8"/><path d="M8 17h8"/><path d="M8 9h2"/>',
     languages:'<path d="m5 8 6 6"/><path d="m4 14 6-6 2-3"/><path d="M2 5h12"/><path d="M7 2h1"/><path d="m22 22-5-10-5 10"/><path d="M14 18h6"/>',
     chevronDown:'<path d="m6 9 6 6 6-6"/>',
@@ -162,6 +173,70 @@
       actions:Math.round(9650*f*t),completes:Math.round(5650*f*t),contributes:Math.round(14100*f*t)
     };
   }
+
+  function rewardAnalytics(){
+    const m=metrics(),d=days(),f=factor(),p=periodIntensity(),seed="reward|"+state.period+"|"+state.area+"|"+state.category+"|"+state.audience;
+    const participantRate=clamp(.39+(f-1)*.045+(p-1)*.12,.27,.58);
+    const activeParticipants=Math.round(m.active_users*participantRate);
+    const engagementRate=clamp(.48+(f-1)*.035+(p-1)*.08,.34,.68);
+    const streak7=clamp(.36+(f-1)*.028+(p-1)*.06,.24,.54);
+    const streak14=clamp(streak7*.67,.16,.42),streak30=clamp(streak7*.37,.08,.28);
+    const activeStreaks=Math.round(activeParticipants*(.46+(hash01(seed)-.5)*.05));
+    const redemptionRate=clamp(.31+(f-1)*.024+(p-1)*.06,.20,.46);
+    const challengeCompletion=clamp(.43+(f-1)*.03+(p-1)*.05,.29,.61);
+    const n=Math.min(d,90),activeTrend=[],streakTrend=[],redemptionTrend=[];
+    for(let i=0;i<n;i++){
+      const wave=1+.08*Math.sin(i/4.5)+.035*Math.cos(i/9),up=.89+.16*(i/Math.max(1,n-1));
+      activeTrend.push(Math.round(activeParticipants/Math.max(7,Math.min(n,30))*wave*up));
+      streakTrend.push(Math.round(activeStreaks/Math.max(7,Math.min(n,30))*wave*(.96+.06*i/Math.max(1,n-1))));
+      redemptionTrend.push(Math.round(activeParticipants*redemptionRate/Math.max(7,Math.min(n,30))*wave*(.92+.10*i/Math.max(1,n-1))));
+    }
+    const retention=[
+      {label:"3 أيام",days:3,rate:clamp(streak7*1.72,.45,.78)},
+      {label:"7 أيام",days:7,rate:streak7},
+      {label:"14 يومًا",days:14,rate:streak14},
+      {label:"30 يومًا",days:30,rate:streak30}
+    ];
+    const distRates=[.27,.25,.22,.16,.10],distLabels=["1–2 يوم","3–6 أيام","7–13 يوم","14–29 يوم","30+ يوم"];
+    const streakDistribution=distLabels.map((label,i)=>({label,count:Math.round(activeParticipants*distRates[i]*(.96+hash01(seed+label)*.08))}));
+    const areaSet=state.area==="مكة المكرمة"?AREAS:[state.area];
+    const areas=areaSet.map(a=>({
+      area:a,
+      engagement:clamp(engagementRate*(.88+AF[a]*.12)*(.96+hash01(seed+a+"eng")*.08),.22,.82),
+      retention7:clamp(streak7*(.9+AF[a]*.10)*(.96+hash01(seed+a+"ret")*.08),.16,.68),
+      participants:Math.round(activeParticipants*(AF[a]/areaSet.reduce((s,x)=>s+AF[x],0))*(.95+hash01(seed+a+"p")*.1))
+    })).sort((a,b)=>b.engagement-a.engagement);
+    const catSet=state.category==="الكل"?CATS:[state.category];
+    const categories=catSet.map(c=>({
+      category:c,
+      engagement:clamp(engagementRate*(.90+CF[c]*.10)*(.95+hash01(seed+c+"eng")*.1),.22,.82),
+      retention7:clamp(streak7*(.92+CG[c]*.35)*(.96+hash01(seed+c+"ret")*.08),.15,.68)
+    })).sort((a,b)=>b.engagement-a.engagement);
+    let audiences=[
+      {aud:"سكان مكة",engagement:clamp(engagementRate*1.04,.2,.85),retention7:clamp(streak7*1.08,.12,.72)},
+      {aud:"الزوار",engagement:clamp(engagementRate*.96,.2,.85),retention7:clamp(streak7*.91,.12,.72)}
+    ];
+    if(state.audience!=="الكل")audiences=audiences.filter(x=>x.aud===state.audience);
+    const rewards=REWARD_TYPES.filter(r=>state.category==="الكل"||r.category===state.category).map(r=>({
+      reward:r.reward,category:r.category,
+      interactions:scaledCount(r.base,r.reward+"rw",Math.max(.32,f*(d/30)*.72)),
+      engagement:clamp(r.engagement*(.93+f*.07)*p*(.96+hash01(seed+r.reward)*.08),.16,.78),
+      redemption:clamp(redemptionRate*(.84+r.engagement*.38),.14,.62),
+      return_lift:clamp(r.returnLift*(.93+p*.07),.05,.38)
+    })).sort((a,b)=>b.engagement-a.engagement);
+    const funnelVals=[activeParticipants,Math.round(activeParticipants*.74),Math.round(activeParticipants*.53),Math.round(activeParticipants*.45),Math.round(activeParticipants*redemptionRate)];
+    const activityImpact=activityRows().map(r=>({
+      activity:r.activity,category:r.category,area:r.area,
+      participants:Math.round(r.plans*(.86+hash01(seed+r.activity+"p")*.34)),
+      retention7:clamp(streak7*(.83+r.growth*.75),.12,.72),
+      rewardEngagement:clamp(engagementRate*(.84+r.growth*.62),.18,.82)
+    })).sort((a,b)=>b.rewardEngagement-a.rewardEngagement);
+    const cohorts=Array.from({length:6},(_,i)=>{const base=clamp(.69-i*.018+(hash01(seed+"cohort"+i)-.5)*.035,.52,.76);return {cohort:"أسبوع "+(i+1),values:[base,base*.79,base*.64,base*.53,base*.45].map(v=>clamp(v,.16,.82))}});
+    const segments=[{name:"تفاعل منخفض",value:Math.round(activeParticipants*.31)},{name:"تفاعل متوسط",value:Math.round(activeParticipants*.44)},{name:"تفاعل مرتفع",value:Math.round(activeParticipants*.25)}];
+    const impact=[{group:"مشاركو المكافآت",return_rate:clamp(.58+(f-1)*.025,.4,.74),plan_rate:clamp(.22+(f-1)*.018,.12,.34)},{group:"غير المشاركين",return_rate:clamp(.39+(f-1)*.015,.28,.55),plan_rate:clamp(.14+(f-1)*.012,.08,.24)}];
+    return {activeParticipants,activeStreaks,engagementRate,streak7,streak14,streak30,redemptionRate,challengeCompletion,activeTrend,streakTrend,redemptionTrend,retention,streakDistribution,areas,categories,audiences,rewards,funnel:{labels:["مشاركون نشطون","مؤهلون للمكافأة","تم فتح مكافأة","تمت مشاهدة المكافأة","تم استخدام المكافأة"],values:funnelVals},activityImpact,cohorts,segments,impact};
+  }
+
   function trend(keys){
     const d=Math.min(days(),90),f=factor()*periodIntensity(),out={}; keys.forEach(k=>out[k]=[]);
     for(let i=0;i<d;i++){
@@ -244,18 +319,42 @@
 
 
   let uiIssue=null;
+
+  function retentionCurve(rows){
+    const w=680,h=270,p=42,x=i=>p+(i/(Math.max(1,rows.length-1)))*(w-p*2),y=v=>20+(1-v)*(h-70);
+    const path=rows.map((r,i)=>(i?"L":"M")+x(i).toFixed(1)+","+y(r.rate).toFixed(1)).join(" ");
+    return '<div class="reward-retention"><svg viewBox="0 0 '+w+' '+h+'"><line x1="'+p+'" y1="'+(h-45)+'" x2="'+(w-p)+'" y2="'+(h-45)+'" stroke="'+C.line+'"/><path d="'+path+'" fill="none" stroke="'+C.green+'" stroke-width="3" stroke-linecap="round"/>'+rows.map((r,i)=>'<g data-tip="'+tipText(r.label+" · "+Math.round(r.rate*100)+"%")+'"><circle cx="'+x(i)+'" cy="'+y(r.rate)+'" r="5" fill="'+C.gold+'" stroke="'+C.paper+'" stroke-width="3"/><text x="'+x(i)+'" y="'+(h-20)+'" text-anchor="middle" font-size="11">'+esc(r.label)+'</text><text x="'+x(i)+'" y="'+(y(r.rate)-12)+'" text-anchor="middle" font-size="11" font-weight="800">'+Math.round(r.rate*100)+'%</text></g>').join("")+'</svg></div>'
+  }
+  function cohortHeatmap(rows){
+    const labels=["بداية","أسبوع 1","أسبوع 2","أسبوع 3","أسبوع 4"];
+    return '<div class="cohort-heat"><div class="cohort-row cohort-head"><span></span>'+labels.map(x=>'<b>'+esc(x)+'</b>').join("")+'</div>'+rows.map(r=>'<div class="cohort-row"><strong>'+esc(r.cohort)+'</strong>'+r.values.map(v=>'<i data-tip="'+tipText(r.cohort+" · "+Math.round(v*100)+"%")+'" style="--heat:'+v+'">'+Math.round(v*100)+'%</i>').join("")+'</div>').join("")+'</div>'
+  }
+  function streakHistogram(rows){
+    const mx=Math.max(...rows.map(r=>r.count),1);
+    return '<div class="reward-histogram">'+rows.map(r=>'<div class="reward-hist-col" data-tip="'+tipText(r.label+" · "+fmt(r.count))+'"><b>'+fmt(r.count)+'</b><i style="height:'+Math.max(8,r.count/mx*150)+'px"></i><span>'+esc(r.label)+'</span></div>').join("")+'</div>'
+  }
+  function rewardAudience(rows){
+    const total=rows.reduce((s,r)=>s+r.engagement,0)||1;
+    return '<div class="reward-audience"><div class="reward-audience-track">'+rows.map((r,i)=>'<i data-tip="'+tipText(r.aud+" · "+Math.round(r.engagement*100)+"%")+'" style="width:'+(r.engagement/total*100)+'%;background:'+CHART_COLORS[i%CHART_COLORS.length]+'">'+Math.round(r.engagement*100)+'%</i>').join("")+'</div><div class="stack-legend">'+rows.map((r,i)=>'<span><i style="background:'+CHART_COLORS[i%CHART_COLORS.length]+'"></i>'+esc(r.aud)+' · '+Math.round(r.retention7*100)+'% '+esc("استمرارية 7 أيام")+'</span>').join("")+'</div></div>'
+  }
+  function rewardScatter(rows){
+    const shown=rows.slice(0,10),w=680,h=285,p=44,maxP=Math.max(...shown.map(r=>r.participants),1),x=v=>p+v*(w-p*2),y=v=>20+(1-v)*(h-68);
+    return '<div class="reward-scatter"><svg viewBox="0 0 '+w+' '+h+'"><line x1="'+p+'" y1="'+(h-44)+'" x2="'+(w-p)+'" y2="'+(h-44)+'" stroke="'+C.lineSoft+'"/><line x1="'+p+'" y1="20" x2="'+p+'" y2="'+(h-44)+'" stroke="'+C.lineSoft+'"/>'+shown.map((r,i)=>{const rad=7+Math.sqrt(r.participants/maxP)*12;return '<circle data-tip="'+tipText(r.activity+" · "+Math.round(r.rewardEngagement*100)+"% · "+Math.round(r.retention7*100)+"%")+'" cx="'+x(r.rewardEngagement).toFixed(1)+'" cy="'+y(r.retention7).toFixed(1)+'" r="'+rad.toFixed(1)+'" fill="'+CHART_COLORS[i%CHART_COLORS.length]+'" fill-opacity=".72"></circle>'}).join("")+'<text x="'+(w-p)+'" y="'+(h-14)+'" text-anchor="end">'+esc("تفاعل المكافآت")+' →</text><text x="8" y="18">'+esc("استمرارية 7 أيام")+'</text></svg></div>'
+  }
+  function rewardMini(r){return '<div class="reward-mini"><div><b>'+fmt(r.activeParticipants)+'</b><span>'+esc("مشاركون نشطون")+'</span></div><div><b>'+Math.round(r.streak7*100)+'%</b><span>'+esc("استمرارية 7 أيام")+'</span></div><div><b>'+Math.round(r.redemptionRate*100)+'%</b><span>'+esc("استخدام المكافآت")+'</span></div><div><b>'+Math.round(r.challengeCompletion*100)+'%</b><span>'+esc("إكمال التحديات")+'</span></div></div>'}
+
   function aiAssistant(){
     if(window.EyeMakkahAgentRuntime&&typeof window.EyeMakkahAgentRuntime.render==="function")return window.EyeMakkahAgentRuntime.render();
     return '<section class="ai-agent agent-free"><div class="ai-accent" aria-hidden="true"></div><div class="ai-head"><div class="ai-symbol">'+iconSvg("sparkles",19)+'</div><div class="ai-copy"><h2>'+tr("مساعد EyeMakkah التحليلي","EyeMakkah Analytics Assistant")+'</h2><p>'+tr("اسأل بطريقتك عن الطلب والمناطق والأنشطة والمجتمعات والحملات والفرص.","Ask naturally about demand, areas, activities, communities, campaigns, and opportunity signals.")+'</p></div></div><div class="agent-bank-loading">'+tr("جارٍ تجهيز سياق المساعد…","Preparing assistant context…")+'</div></section>'
   }
 
   function dashboard(){
-    const m=metrics(),tr=trend(["searches","saves","plans"]),catSet=state.category==="الكل"?CATS:[state.category],areaSet=state.area==="مكة المكرمة"?AREAS:[state.area],cats=catSet.map(c=>({name:c,value:Math.round(m.interactions*CF[c]/catSet.reduce((s,x)=>s+CF[x],0)*rowNoise(c+"dash"))})).sort((a,b)=>b.value-a.value),ag=areaSet.map(a=>({area:a,growth:scaledRate(.04+(AF[a]-.68)*.18,a+"dash")})).sort((a,b)=>b.growth-a.growth),top=scaledOppRows(OPPS.filter(r=>(state.area==="مكة المكرمة"||r.area===state.area)&&(state.category==="الكل"||r.category===state.category))).sort((a,b)=>b.score-a.score)[0],comm=communityRows();
+    const m=metrics(),tr=trend(["searches","saves","plans"]),catSet=state.category==="الكل"?CATS:[state.category],areaSet=state.area==="مكة المكرمة"?AREAS:[state.area],cats=catSet.map(c=>({name:c,value:Math.round(m.interactions*CF[c]/catSet.reduce((s,x)=>s+CF[x],0)*rowNoise(c+"dash"))})).sort((a,b)=>b.value-a.value),ag=areaSet.map(a=>({area:a,growth:scaledRate(.04+(AF[a]-.68)*.18,a+"dash")})).sort((a,b)=>b.growth-a.growth),top=scaledOppRows(OPPS.filter(r=>(state.area==="مكة المكرمة"||r.area===state.area)&&(state.category==="الكل"||r.category===state.category))).sort((a,b)=>b.score-a.score)[0],comm=communityRows(),rew=rewardAnalytics();
     return header("لوحة المعلومات","لقطة تنفيذية لما يحدث عبر تجربة EyeMakkah، من الاهتمام والاكتشاف إلى التخطيط والانتقال للإجراء.")+filters()+
       '<div class="kpi-grid">'+kpi("إجمالي التفاعلات",fmt(m.interactions),delta(1))+kpi("المستخدمون النشطون",fmt(m.active_users),delta(2))+kpi("عمليات البحث",fmt(m.searches),delta(3))+kpi("الإضافات إلى «خطتي»",fmt(m.plans),delta(4))+kpi("الانتقال إلى الإجراء",fmt(m.actions),delta(5))+'</div>'+aiAssistant()+
       '<div class="grid-2">'+panel("اتجاهات الطلب عبر الزمن","البحث والحفظ والإضافة إلى خطتي.",line([{name:"بحث",color:C.green,values:tr.searches},{name:"حفظ",color:C.gold,values:tr.saves},{name:"إضافة إلى خطتي",color:C.clay,values:tr.plans}]))+panel("أكثر القطاعات جذبًا للاهتمام","حصة التفاعلات حسب الفئة.",donutData(cats,"name","value"))+'</div>'+
       insight("يتسارع الاهتمام في <b>"+esc(ag[0].area)+"</b> بالتزامن مع إشارات طلب مرتفعة في <b>"+esc(top.category)+"</b>. الإشارة مناسبة للاستكشاف واتخاذ القرار، وليست توقعًا تجاريًا مضمونًا.",["نمو متوسط "+Math.round(ag[0].growth*100)+"%","ارتفاع البحث والحفظ","مقارنة مستوى العرض بالطلب"])+
-      '<div class="grid-2 equal">'+panel("المناطق الأعلى نموًا في الاهتمام","اتجاه النمو التجريبي.",bar(ag,"area","growth",C.gold,true))+panel("مختصر المجتمعات","الموضوعات التي تجمع نمو النقاش مع نشاط مرتفع.",'<div class="community-list">'+comm.slice().sort((a,b)=>b.growth-a.growth).slice(0,5).map(r=>'<div class="community-row"><strong>'+esc(r.community)+'</strong><span class="growth">'+Math.round(r.growth*100)+'% ↑</span><p>'+esc(r.themes)+'</p></div>').join("")+'</div>')+'</div>';
+      '<div class="grid-2 equal">'+panel("المناطق الأعلى نموًا في الاهتمام","اتجاه النمو التجريبي.",bar(ag,"area","growth",C.gold,true))+panel("مختصر المجتمعات","الموضوعات التي تجمع نمو النقاش مع نشاط مرتفع.",'<div class="community-list">'+comm.slice().sort((a,b)=>b.growth-a.growth).slice(0,5).map(r=>'<div class="community-row"><strong>'+esc(r.community)+'</strong><span class="growth">'+Math.round(r.growth*100)+'% ↑</span><p>'+esc(r.themes)+'</p></div>').join("")+'</div>')+'</div>'+panel("نبض التفاعل والمكافآت","لقطة مجمعة عن المشاركة والاستمرارية واستخدام المكافآت.",rewardMini(rew));
   }
   function demand(){
     const m=metrics(),trn=trend(["searches","plans","actions"]),terms=termRows(),fast=terms.slice().sort((a,b)=>b.growth-a.growth).slice(0,7),audAll=[{aud:"سكان مكة",searches:m.searches*.58,plans:m.plans*.61,actions:m.actions*.57},{aud:"الزوار",searches:m.searches*.42,plans:m.plans*.39,actions:m.actions*.43}],aud=state.audience==="الكل"?audAll:audAll.filter(x=>x.aud===state.audience),topTerm=fast[0],saveToPlan=m.saves?Math.round(m.plans/m.saves*100):0;
@@ -271,7 +370,7 @@
       '<div class="area-selector"><label>المنطقة قيد التحليل</label><select id="area-detail">'+opts(AREAS,area)+'</select></div>'+
       '<div class="kpi-grid" style="grid-template-columns:repeat(4,1fr)">'+kpi("مستوى الاهتمام",d+"/100",g)+kpi("نمو الطلب",Math.round(g*100)+"%",g)+kpi("الفئة الأبرز",top.category,CG[top.category],"ضمن النموذج",true)+kpi("وقت الذروة",["العوالي","العزيزية","الشوقية"].includes(area)?"المساء 7–10 م":"العصر 4–7 م",.06,"ضمن النموذج",true)+'</div>'+
       '<div class="grid-2 equal">'+panel("الطلب مقابل العرض","مقارنة مباشرة بين مؤشر الطلب ومستوى العرض حسب الفئة.",groupedDemandSupply(rows))+panel("ملف المنطقة","مؤشرات الفجوة والطلب.",table(rows,[["category","الفئة"],["demand_index","الطلب"],["growth","النمو","pct"],["supply_index","العرض"],["score","الإشارة"]]))+'</div>'+
-      insight("شهدت <b>"+esc(area)+"</b> نموًا في الاهتمام بـ <b>"+esc(best.category)+"</b>، بينما يظل مؤشر العرض التجريبي أقل من مؤشر الطلب. هذه إشارة لدراسة الاحتياج، وليست ضمانًا لفرصة تجارية.",["مؤشر طلب "+best.demand_index+"/100","نمو "+Math.round(best.growth*100)+"%","مؤشر عرض "+best.supply_index+"/100"]);
+      insight("شهدت <b>"+esc(area)+"</b> نموًا في الاهتمام بـ <b>"+esc(best.category)+"</b>، بينما يظل مؤشر العرض التجريبي أقل من مؤشر الطلب. هذه إشارة لدراسة الاحتياج، وليست ضمانًا لفرصة تجارية.",["مؤشر طلب "+best.demand_index+"/100","نمو "+Math.round(best.growth*100)+"%","مؤشر عرض "+best.supply_index+"/100"])+panel("التفاعل والمكافآت في المنطقة","مؤشرات مجمعة مرتبطة بالمنطقة المحددة.",rewardMini(rewardAnalytics()));
   }
   function activities(){
     const a=activityRows();
@@ -281,7 +380,7 @@
       '<div class="kpi-grid">'+kpi("الأكثر مشاهدة",max("views").activity,.12,"ضمن بيانات النموذج",true)+kpi("الأكثر حفظًا",max("saves").activity,.16,"ضمن بيانات النموذج",true)+kpi("الأكثر إضافة إلى خطتي",lead.activity,lead.growth,"ضمن بيانات النموذج",true)+kpi("الأعلى في نية الحضور",max("joins").activity,.09,"ضمن بيانات النموذج",true)+kpi("الأعلى انتقالًا للإجراء",max("actions").activity,.11,"ضمن بيانات النموذج",true)+'</div>'+
       '<div class="grid-2 equal">'+panel("قمع التفاعل","المراحل منفصلة ولا يتم دمجها في «تحويل» واحد.",funnel(["عرض","حفظ","إضافة إلى خطتي","انضمام / نية حضور","انتقال للإجراء","إكمال"],["views","saves","plans","joins","actions","complete"].map(k=>sum(a,k))))+panel("المشاهدة مقابل الحفظ","كل نقطة تمثل نشاطًا؛ حجم النقطة يعكس اتجاه النمو.",bubbleActivities(a))+'</div>'+
       insight("يتصدر <b>"+esc(lead.activity)+"</b> الإضافة إلى «خطتي» ضمن الفلاتر الحالية، مع نمو تجريبي قدره <b>"+Math.round(lead.growth*100)+"%</b>.",["مشاهدة "+fmt(lead.views),"حفظ "+fmt(lead.saves),"خطتي "+fmt(lead.plans)])+
-      panel("أداء الأنشطة","ترتيب تفاعلي للأنشطة مع مؤشرات كل مرحلة.",table(a.slice().sort((x,y)=>y.plans-x.plans),[["activity","النشاط"],["category","الفئة"],["area","المنطقة"],["views","عرض","num"],["saves","حفظ","num"],["plans","خطتي","num"],["joins","انضمام","num"],["actions","إجراء","num"],["complete","إكمال","num"],["growth","النمو","pct"]]));
+      panel("أداء الأنشطة","ترتيب تفاعلي للأنشطة مع مؤشرات كل مرحلة.",table(a.slice().sort((x,y)=>y.plans-x.plans),[["activity","النشاط"],["category","الفئة"],["area","المنطقة"],["views","عرض","num"],["saves","حفظ","num"],["plans","خطتي","num"],["joins","انضمام","num"],["actions","إجراء","num"],["complete","إكمال","num"],["growth","النمو","pct"]]))+panel("أثر التفاعل والمكافآت","علاقة مجمعة بين تفاعل المكافآت واستمرارية المشاركين في الأنشطة.",rewardScatter(rewardAnalytics().activityImpact));
   }
   function communities(){
     const comm=communityRows(),topics=[
@@ -307,8 +406,23 @@
       '<div class="campaign-selector"><label>اختر حملة</label><select id="campaign-select">'+opts(rows.map(x=>x.campaign),state.campaign)+'</select></div>'+
       '<div class="kpi-grid">'+kpi("الظهور",fmt(r.impressions),r.growth)+kpi("المشاهدة",fmt(r.views),delta(11))+kpi("فتح التفاصيل",fmt(r.details),delta(12))+kpi("الحفظ",fmt(r.saves),delta(13))+kpi("الانتقال للعرض",fmt(r.handoffs),delta(14))+'</div>'+
       '<div class="grid-2">'+panel("قمع الحملة","أداء «"+r.campaign+"» عبر مراحل التفاعل.",funnel(["ظهور","مشاهدة","فتح التفاصيل","حفظ","إضافة إلى خطتي","انتقال إلى العرض"],[r.impressions,r.views,r.details,r.saves,Math.floor(r.saves*(.38+.08*periodIntensity())),r.handoffs]))+panel("الأداء الجغرافي","توزيع تجريبي للاستجابة حسب المنطقة.",bar(geo,"area","value"))+'</div>'+
-      insight("حققت حملة <b>"+esc(r.campaign)+"</b> معدل مشاهدة تقريبيًا <b>"+viewRate+"%</b> من الظهور، ومعدل انتقال للعرض <b>"+handoffRate+"%</b> من المشاهدات.",["المشاهدة "+fmt(r.views),"الحفظ "+fmt(r.saves),"الانتقال للعرض "+fmt(r.handoffs)]);
+      insight("حققت حملة <b>"+esc(r.campaign)+"</b> معدل مشاهدة تقريبيًا <b>"+viewRate+"%</b> من الظهور، ومعدل انتقال للعرض <b>"+handoffRate+"%</b> من المشاهدات.",["المشاهدة "+fmt(r.views),"الحفظ "+fmt(r.saves),"الانتقال للعرض "+fmt(r.handoffs)])+panel("المكافآت والتفاعل","قراءة مجمعة لأنواع المكافآت المرتبطة بالفلاتر الحالية.",bar(rewardAnalytics().rewards,"reward","engagement",C.gold,true));
   }
+
+  function rewards(){
+    const r=rewardAnalytics(),topArea=r.areas[0],topReward=r.rewards[0],topCat=r.categories[0];
+    const trendSeries=[{name:"المشاركون النشطون",color:C.green,values:r.activeTrend},{name:"Streak نشط",color:C.gold,values:r.streakTrend},{name:"استخدام المكافآت",color:C.clay,values:r.redemptionTrend}];
+    return header("التفاعل والمكافآت","تحليلات مجمعة لفهم الاستمرارية والتفاعل مع برنامج المكافآت وأثره على تجربة EyeMakkah، دون عرض بيانات فردية أو تشغيلية داخلية.")+filters()+
+      '<div class="kpi-grid reward-kpis">'+kpi("المشاركون النشطون",fmt(r.activeParticipants),delta(31))+kpi("Streak نشط",fmt(r.activeStreaks),delta(32))+kpi("استمرارية 7 أيام",Math.round(r.streak7*100)+"%",delta(33))+kpi("تفاعل المكافآت",Math.round(r.engagementRate*100)+"%",delta(34))+kpi("استخدام المكافآت",Math.round(r.redemptionRate*100)+"%",delta(35))+'</div>'+
+      '<div class="grid-2">'+panel("اتجاه التفاعل عبر الزمن","المشاركة النشطة والاستمرارية واستخدام المكافآت عبر الفترة الحالية.",line(trendSeries))+panel("منحنى الاستمرارية","نسبة الاستمرار بعد 3 و7 و14 و30 يومًا.",retentionCurve(r.retention))+'</div>'+
+      '<div class="grid-2 equal">'+panel("تحليل Cohort للاستمرارية","قراءة مجمعة لاستمرارية مجموعات البدء الأسبوعية.",cohortHeatmap(r.cohorts))+panel("رحلة المكافآت","مراحل مجمعة من المشاركة إلى استخدام المكافأة.",funnel(r.funnel.labels,r.funnel.values))+'</div>'+
+      '<div class="grid-2 equal">'+panel("السكان مقابل الزوار","مقارنة مجمعة لمستوى التفاعل والاستمرارية.",rewardAudience(r.audiences))+panel("توزيع أطوال الـ Streak","كيف تتوزع قاعدة المشاركين حسب مدة الاستمرارية.",streakHistogram(r.streakDistribution))+'</div>'+
+      '<div class="grid-2">'+panel("المناطق الأعلى في التفاعل","مؤشر تفاعل مجمع حسب المنطقة.",bar(r.areas,"area","engagement",C.gold,true))+panel("أنواع المكافآت الأعلى تفاعلًا","ترتيب أنواع المكافآت حسب التفاعل المجمع.",bar(r.rewards,"reward","engagement",C.green,true))+'</div>'+
+      '<div class="grid-2 equal">'+panel("الأنشطة المرتبطة باستمرارية أعلى","العلاقة بين تفاعل المكافآت واستمرارية 7 أيام؛ حجم النقطة يعكس حجم المشاركة.",rewardScatter(r.activityImpact))+panel("الفئات الأعلى في الاستمرارية","قراءة مجمعة للتفاعل حسب الفئة.",bar(r.categories,"category","retention7",C.clay,true))+'</div>'+
+      insight("أعلى تفاعل مجمع حاليًا يظهر في <b>"+esc(topArea?topArea.area:"—")+"</b>، بينما يتصدر <b>"+esc(topReward?topReward.reward:"—")+"</b> أنواع المكافآت، وتظهر <b>"+esc(topCat?topCat.category:"—")+"</b> كأبرز فئة من حيث التفاعل.",["استمرارية 7 أيام "+Math.round(r.streak7*100)+"%","إكمال التحديات "+Math.round(r.challengeCompletion*100)+"%","استخدام المكافآت "+Math.round(r.redemptionRate*100)+"%"])+
+      panel("ملخص المكافآت","مؤشرات مجمعة فقط؛ لا تعرض الصفحة سجل مستخدم أو حدثًا فرديًا.",table(r.rewards,[["reward","نوع المكافأة"],["category","الفئة"],["interactions","حجم التفاعل","num"],["engagement","معدل التفاعل","pct"],["redemption","معدل الاستخدام","pct"],["return_lift","ارتباط بالعودة","pct"]]));
+  }
+
   function opportunities(){
     const o=scaledOppRows(OPPS.filter(r=>(state.area==="مكة المكرمة"||r.area===state.area)&&(state.category==="الكل"||r.category===state.category))).sort((a,b)=>b.score-a.score),top=o[0],gaps=o.map(r=>Object.assign({},r,{gap:r.demand_index-r.supply_index})).sort((a,b)=>b.gap-a.gap),avgDemand=Math.round(sum(o,"demand_index")/Math.max(o.length,1)),avgSupply=Math.round(sum(o,"supply_index")/Math.max(o.length,1));
     return header("الفرص والفجوات","إشارات دعم قرار تجمع الطلب والنمو ومستوى العرض. لا تمثل هذه الإشارات ضمانًا لجدوى مشروع أو استثمار.")+filters()+
@@ -341,7 +455,7 @@
     return rows;
   }
   function reports(){
-    const rr=[["التقرير الشهري للطلب والاهتمام","ملخص البحث والحفظ والتخطيط واتجاهات الطلب."],["تحليل مناطق مكة","مقارنة المناطق والفئات ومؤشرات النمو."],["تقرير المجتمعات والاهتمامات","أنماط النقاش والمساهمة والموضوعات الصاعدة."],["أداء الحملات والعروض","قمع الحملات والأداء حسب الجمهور والمنطقة."],["تقرير الفرص والفجوات","إشارات الطلب مقابل العرض لدعم التحقق والدراسة."]],rows=reportRows(),m=metrics(),trn=trend(["searches","plans"]),
+    const rr=[["التقرير الشهري للطلب والاهتمام","ملخص البحث والحفظ والتخطيط واتجاهات الطلب."],["تحليل مناطق مكة","مقارنة المناطق والفئات ومؤشرات النمو."],["تقرير المجتمعات والاهتمامات","أنماط النقاش والمساهمة والموضوعات الصاعدة."],["أداء الحملات والعروض","قمع الحملات والأداء حسب الجمهور والمنطقة."],["تقرير التفاعل والمكافآت","مؤشرات مجمعة للاستمرارية والتفاعل واستخدام المكافآت."],["تقرير الفرص والفجوات","إشارات الطلب مقابل العرض لدعم التحقق والدراسة."]],rows=reportRows(),m=metrics(),trn=trend(["searches","plans"]),
     exportBlock=uiIssue&&uiIssue.scope==="export"
       ?errorState("export","تعذّر تجهيز ملف التصدير","The export could not be prepared","لم يتم تنزيل الملف. أعد المحاولة؛ بيانات التقرير والفلاتر الحالية لم تتأثر.","The file was not downloaded. Try again; the report data and active filters were not affected.","export")
       :'<section class="report-export"><div class="report-export-head"><div><div class="panel-title">تصدير ملخص CSV</div><div class="panel-copy">يحتوي الملف على مؤشرات مجمعة وفق الفلاتر الحالية.</div></div><button class="download-btn" id="download-csv">'+iconSvg("download",16)+'<span>تصدير CSV</span></button></div>'+table(rows.slice(0,30),[["area","المنطقة"],["category","الفئة"],["audience","الجمهور"],["interactions","التفاعلات","num"],["active_users","المستخدمون النشطون","num"],["searches","البحث","num"],["views","العرض","num"],["saves","الحفظ","num"],["plans","الإضافة إلى خطتي","num"],["actions","الانتقال إلى الإجراء","num"]])+'</section>';
@@ -490,6 +604,24 @@
     ["يتصدر",""],
     ["الإضافة إلى «خطتي» ضمن الفلاتر الحالية، مع نمو تجريبي قدره","leads additions to My Plan under the active filters, with illustrative growth of"]
   );
+
+  Object.assign(EN_MAP,{
+    "التفاعل والمكافآت":"Engagement & Rewards",
+    "تحليلات مجمعة لفهم الاستمرارية والتفاعل مع برنامج المكافآت وأثره على تجربة EyeMakkah، دون عرض بيانات فردية أو تشغيلية داخلية.":"Aggregated analytics for understanding retention, reward engagement, and its relationship with the EyeMakkah experience, without exposing individual or internal operational data.",
+    "المشاركون النشطون":"Active reward participants","Streak نشط":"Active streak","استمرارية 7 أيام":"7-day streak retention","استمرارية 30 يومًا":"30-day streak retention","تفاعل المكافآت":"Reward engagement","استخدام المكافآت":"Reward usage","إكمال التحديات":"Challenge completion",
+    "اتجاه التفاعل عبر الزمن":"Engagement trend over time","المشاركة النشطة والاستمرارية واستخدام المكافآت عبر الفترة الحالية.":"Active participation, streak activity, and reward usage across the current period.","منحنى الاستمرارية":"Retention curve","نسبة الاستمرار بعد 3 و7 و14 و30 يومًا.":"Retention after 3, 7, 14, and 30 days.",
+    "تحليل Cohort للاستمرارية":"Retention cohort analysis","قراءة مجمعة لاستمرارية مجموعات البدء الأسبوعية.":"Aggregated retention view for weekly starting cohorts.","رحلة المكافآت":"Reward journey","مراحل مجمعة من المشاركة إلى استخدام المكافأة.":"Aggregated stages from participation to reward usage.",
+    "السكان مقابل الزوار":"Residents vs Visitors","مقارنة مجمعة لمستوى التفاعل والاستمرارية.":"Aggregated comparison of engagement and retention.","توزيع أطوال الـ Streak":"Streak-length distribution","كيف تتوزع قاعدة المشاركين حسب مدة الاستمرارية.":"Distribution of participants by streak length.",
+    "المناطق الأعلى في التفاعل":"Top areas by engagement","مؤشر تفاعل مجمع حسب المنطقة.":"Aggregated engagement indicator by area.","أنواع المكافآت الأعلى تفاعلًا":"Top reward types by engagement","ترتيب أنواع المكافآت حسب التفاعل المجمع.":"Reward types ranked by aggregated engagement.",
+    "الأنشطة المرتبطة باستمرارية أعلى":"Activities associated with higher retention","العلاقة بين تفاعل المكافآت واستمرارية 7 أيام؛ حجم النقطة يعكس حجم المشاركة.":"Relationship between reward engagement and 7-day retention; bubble size reflects participation volume.","الفئات الأعلى في الاستمرارية":"Top categories by retention","قراءة مجمعة للتفاعل حسب الفئة.":"Aggregated engagement view by category.",
+    "ملخص المكافآت":"Rewards summary","مؤشرات مجمعة فقط؛ لا تعرض الصفحة سجل مستخدم أو حدثًا فرديًا.":"Aggregated indicators only; no individual user record or event is displayed.","نوع المكافأة":"Reward type","حجم التفاعل":"Engagement volume","معدل التفاعل":"Engagement rate","معدل الاستخدام":"Usage rate","ارتباط بالعودة":"Return association",
+    "نبض التفاعل والمكافآت":"Engagement & rewards pulse","لقطة مجمعة عن المشاركة والاستمرارية واستخدام المكافآت.":"Aggregated snapshot of participation, retention, and reward usage.","التفاعل والمكافآت في المنطقة":"Area engagement & rewards","مؤشرات مجمعة مرتبطة بالمنطقة المحددة.":"Aggregated indicators for the selected area.",
+    "أثر التفاعل والمكافآت":"Engagement & rewards impact","علاقة مجمعة بين تفاعل المكافآت واستمرارية المشاركين في الأنشطة.":"Aggregated relationship between reward engagement and activity-participant retention.","المكافآت والتفاعل":"Rewards & engagement","قراءة مجمعة لأنواع المكافآت المرتبطة بالفلاتر الحالية.":"Aggregated view of reward types under the active filters.",
+    "تقرير التفاعل والمكافآت":"Engagement & rewards report","مؤشرات مجمعة للاستمرارية والتفاعل واستخدام المكافآت.":"Aggregated retention, engagement, and reward-usage indicators.","مؤهلون للمكافأة":"Reward eligible","تم فتح مكافأة":"Reward unlocked","تمت مشاهدة المكافأة":"Reward viewed","تم استخدام المكافأة":"Reward used",
+    "3 أيام":"3 days","7 أيام":"7 days","14 يومًا":"14 days","30 يومًا":"30 days","1–2 يوم":"1–2 days","3–6 أيام":"3–6 days","7–13 يوم":"7–13 days","14–29 يوم":"14–29 days","30+ يوم":"30+ days",
+    "بداية":"Start","أسبوع 1":"Week 1","أسبوع 2":"Week 2","أسبوع 3":"Week 3","أسبوع 4":"Week 4","أسبوع 5":"Week 5","أسبوع 6":"Week 6",
+    "خصومات المطاعم":"Restaurant discounts","تجارب ثقافية خاصة":"Exclusive cultural experiences","مزايا الأنشطة والتجارب":"Activities & experiences benefits","عروض التسوق":"Shopping offers","مكافآت المجتمعات":"Community rewards","مزايا الضيافة":"Hospitality benefits","تفاعل منخفض":"Low engagement","تفاعل متوسط":"Medium engagement","تفاعل مرتفع":"High engagement","مشاركو المكافآت":"Reward participants","غير المشاركين":"Non-participants"
+  });
   function enText(s){
     let out=String(s);
     if(EN_MAP[out])return EN_MAP[out];
@@ -554,7 +686,7 @@
     const reports='<div class="skeleton-reports">'+Array.from({length:5},()=>'<div class="skeleton-report"><i class="shim" style="width:38%"></i><i class="shim" style="width:18%"></i></div>').join("")+'</div>';
     return '<div class="loading-state" aria-hidden="true">'+kpis+(state.page==="التقارير"?reports:charts+rows)+'</div>'
   }
-  function page(){switch(state.page){case"لوحة المعلومات":return dashboard();case"تحليل الطلب":return demand();case"تحليل المناطق":return areas();case"الأنشطة والتجارب":return activities();case"المجتمعات والاهتمامات":return communities();case"الحملات والعروض":return campaigns();case"الفرص والفجوات":return opportunities();case"التقارير":return reports();default:return errorState("unexpected","تعذّر عرض هذه الشاشة","This screen could not be displayed","حدثت حالة غير متوقعة. بياناتك التجريبية وإعدادات الفلاتر لم تتأثر.","An unexpected UI state occurred. Your demo data and filter settings were not affected.","page");}}
+  function page(){switch(state.page){case"لوحة المعلومات":return dashboard();case"تحليل الطلب":return demand();case"تحليل المناطق":return areas();case"الأنشطة والتجارب":return activities();case"المجتمعات والاهتمامات":return communities();case"الحملات والعروض":return campaigns();case"التفاعل والمكافآت":return rewards();case"الفرص والفجوات":return opportunities();case"التقارير":return reports();default:return errorState("unexpected","تعذّر عرض هذه الشاشة","This screen could not be displayed","حدثت حالة غير متوقعة. بياناتك التجريبية وإعدادات الفلاتر لم تتأثر.","An unexpected UI state occurred. Your demo data and filter settings were not affected.","page");}}
   function safePage(){
     try{return page()}catch(err){console.error("EyeMakkah BI render error",err);uiIssue={scope:"page"};return errorState("page","تعذّر عرض هذه الشاشة","This screen could not be displayed","حدث خطأ غير متوقع أثناء عرض التحليلات. جرّب العودة إلى لوحة المعلومات.","An unexpected error occurred while rendering analytics. Try returning to the Dashboard.","page")}
   }
@@ -632,7 +764,7 @@
         topics=[["أنشطة الأطفال",scaledRate(.34,"topic1"),"أسئلة وتوصيات نهاية الأسبوع"],["تجارب المساء",scaledRate(.29,"topic2"),"اقتراحات لأنشطة اجتماعية"],["الورش الإبداعية",scaledRate(.27,"topic3"),"بحث عن تجارب قصيرة"],["أماكن قريبة",scaledRate(.18,"topic4"),"طلب خيارات حسب الحي"]].map(x=>({topic:x[0],growth:x[1],theme:x[2]})).sort((a,b)=>b.growth-a.growth),
         contribution=comms.reduce((o,r)=>(o[r.type]=(o[r.type]||0)+r.engagement,o),{}),
         demandTrend=trend(["searches","saves","plans","actions"]);
-      return {state:Object.assign({},state),metrics:m,activities:acts,communities:comms,campaigns:camps,terms,opportunities:filteredOpp,allOpportunities:allOpp,areaGrowth,categoryRank:catRank,areaProfiles,topics,contribution,demandTrend,reportRows:reportRows(),raw:{areas:AREAS.slice(),categories:CATS.slice(),audiences:AUD.slice(),campaigns:CAMPS.map(x=>x.campaign),activities:ACTIVITIES.map(x=>x.activity),communities:COMM.map(x=>x.community)}};
+      return {state:Object.assign({},state),metrics:m,activities:acts,communities:comms,campaigns:camps,terms,opportunities:filteredOpp,allOpportunities:allOpp,areaGrowth,categoryRank:catRank,areaProfiles,topics,contribution,demandTrend,rewards:rewardAnalytics(),reportRows:reportRows(),raw:{areas:AREAS.slice(),categories:CATS.slice(),audiences:AUD.slice(),campaigns:CAMPS.map(x=>x.campaign),activities:ACTIVITIES.map(x=>x.activity),communities:COMM.map(x=>x.community),rewardTypes:REWARD_TYPES.map(x=>x.reward)}};
     }
   };
 
