@@ -39,9 +39,9 @@
     "by_answer_type": {
       "contextual_dynamic": 20
     },
-    "contextual_suggestion_pages": 8,
+    "contextual_suggestion_pages": 9,
     "alias_groups": 9,
-    "alias_entries_total": 244
+    "alias_entries_total": 319
   },
   "cumulative_bank_stats": {
     "part_01_intents": 50,
@@ -51,7 +51,9 @@
     "total_intents": 150,
     "part_01_to_03_utterances": 1333,
     "part_04_utterances": 600,
-    "total_example_utterances": 1933
+    "total_example_utterances": 1933,
+    "intent_count": 158,
+    "utterances_total": 2013
   },
   "routing": {
     "context_state_schema": {
@@ -234,6 +236,20 @@
           "Break the report down by area",
           "What filters apply to this report?"
         ]
+      },
+      "التفاعل والمكافآت": {
+        "ar": [
+          "كم نسبة استمرارية 7 أيام؟",
+          "أي منطقة أعلى في التفاعل؟",
+          "قارن السكان والزوار",
+          "وين أكبر نزول في رحلة المكافآت؟"
+        ],
+        "en": [
+          "What is 7-day streak retention?",
+          "Which area has the highest engagement?",
+          "Compare residents and visitors",
+          "Where is the biggest drop in the reward journey?"
+        ]
       }
     },
     "after_answer_type": {
@@ -344,6 +360,15 @@
         "التقرير",
         "صفحة التقارير",
         "التصدير"
+      ],
+      "التفاعل والمكافآت": [
+        "المكافآت",
+        "التفاعل والمكافآت",
+        "جواز مكة",
+        "engagement rewards",
+        "engagement and rewards",
+        "rewards",
+        "makkah passport"
       ]
     },
     "periods": {
