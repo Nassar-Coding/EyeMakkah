@@ -43,6 +43,8 @@
     ["تجارب ثقافية خاصة","الثقافة",11200,.37,.24],
     ["مزايا الأنشطة والتجارب","التجارب والأنشطة",13600,.46,.27],
     ["عروض التسوق","التسوق",9400,.31,.13],
+    ["مكافآت الترفيه","الترفيه",8800,.36,.19],
+    ["مزايا الخدمات","الخدمات",7600,.30,.14],
     ["مكافآت المجتمعات","المجتمعات",7200,.29,.22],
     ["مزايا الضيافة","الضيافة",6800,.34,.16]
   ].map(x=>({reward:x[0],category:x[1],base:x[2],engagement:x[3],returnLift:x[4]}));
@@ -620,7 +622,7 @@
     "تقرير التفاعل والمكافآت":"Engagement & rewards report","مؤشرات مجمعة للاستمرارية والتفاعل واستخدام المكافآت.":"Aggregated retention, engagement, and reward-usage indicators.","مؤهلون للمكافأة":"Reward eligible","تم فتح مكافأة":"Reward unlocked","تمت مشاهدة المكافأة":"Reward viewed","تم استخدام المكافأة":"Reward used",
     "3 أيام":"3 days","7 أيام":"7 days","14 يومًا":"14 days","30 يومًا":"30 days","1–2 يوم":"1–2 days","3–6 أيام":"3–6 days","7–13 يوم":"7–13 days","14–29 يوم":"14–29 days","30+ يوم":"30+ days",
     "بداية":"Start","أسبوع 1":"Week 1","أسبوع 2":"Week 2","أسبوع 3":"Week 3","أسبوع 4":"Week 4","أسبوع 5":"Week 5","أسبوع 6":"Week 6",
-    "خصومات المطاعم":"Restaurant discounts","تجارب ثقافية خاصة":"Exclusive cultural experiences","مزايا الأنشطة والتجارب":"Activities & experiences benefits","عروض التسوق":"Shopping offers","مكافآت المجتمعات":"Community rewards","مزايا الضيافة":"Hospitality benefits","تفاعل منخفض":"Low engagement","تفاعل متوسط":"Medium engagement","تفاعل مرتفع":"High engagement","مشاركو المكافآت":"Reward participants","غير المشاركين":"Non-participants"
+    "خصومات المطاعم":"Restaurant discounts","تجارب ثقافية خاصة":"Exclusive cultural experiences","مزايا الأنشطة والتجارب":"Activities & experiences benefits","عروض التسوق":"Shopping offers","مكافآت الترفيه":"Entertainment rewards","مزايا الخدمات":"Services benefits","مكافآت المجتمعات":"Community rewards","مزايا الضيافة":"Hospitality benefits","تفاعل منخفض":"Low engagement","تفاعل متوسط":"Medium engagement","تفاعل مرتفع":"High engagement","مشاركو المكافآت":"Reward participants","غير المشاركين":"Non-participants"
   });
   function enText(s){
     let out=String(s);
