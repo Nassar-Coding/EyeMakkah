@@ -71,9 +71,12 @@ for (const langId of ["ar", "en"]) {
   await page.locator("[data-profile-last-name]").fill(langId === "ar" ? "الحربي" : "Alharbi");
   await page.locator("[data-profile-age]").fill("29");
   await page.locator("[data-profile-nationality]").fill(langId === "ar" ? "سعودية" : "Saudi");
+  await page.locator('[data-profile-mode="visitor"]').click();
+  results.push([`${langId}: visitor area is optional`, await page.locator("[data-profile-submit]").isEnabled()]);
   await page.locator('[data-profile-mode="resident"]').click();
+  results.push([`${langId}: resident area is required`, !(await page.locator("[data-profile-submit]").isEnabled())]);
   await page.locator("[data-profile-area]").selectOption("awali");
-  results.push([`${langId}: resident requires area and CTA becomes available`, await page.locator("[data-profile-submit]").isEnabled()]);
+  results.push([`${langId}: resident CTA becomes available after area`, await page.locator("[data-profile-submit]").isEnabled()]);
   await page.screenshot({ path: `${shots}/04-profile-${langId}.png` });
 
   await page.locator("[data-profile-submit]").click();
