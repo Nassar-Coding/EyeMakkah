@@ -9493,6 +9493,222 @@ function ScreenLanguage({ onPick }) {
   );
 }
 
+
+/* ───────── Consumer authentication — language is chosen before this step ───────── */
+
+function AppleMark() {
+  return (
+    <svg viewBox="0 0 24 24" width="21" height="21" aria-hidden="true" style={{ display: "block" }}>
+      <path fill="currentColor" d="M17.05 20.28c-.98.95-2.05.8-3.08.35-1.09-.46-2.09-.48-3.24 0-1.44.62-2.2.44-3.06-.35C2.79 15.25 3.51 7.59 9.05 7.31c1.46-.08 2.48.8 3.34.87 1.28-.26 2.5-1.01 3.87-.91 1.64.13 2.88.78 3.7 1.95-3.38 2.03-2.58 6.49.52 7.74-.62 1.63-1.42 3.25-2.43 4.33zM12.03 7.25C11.88 4.83 13.83 2.84 16.09 2.65c.31 2.79-2.53 4.87-4.06 4.6z" />
+    </svg>
+  );
+}
+
+function GoogleMark() {
+  return (
+    <svg viewBox="0 0 24 24" width="21" height="21" aria-hidden="true" style={{ display: "block" }}>
+      <path fill="#4285F4" d="M21.6 12.23c0-.73-.07-1.43-.19-2.1H12v3.98h5.38a4.6 4.6 0 0 1-1.99 3.02v2.58h3.23c1.89-1.74 2.98-4.31 2.98-7.48z" />
+      <path fill="#34A853" d="M12 22c2.7 0 4.96-.89 6.62-2.29l-3.23-2.58c-.9.6-2.05.96-3.39.96-2.6 0-4.81-1.76-5.6-4.13H3.06v2.66A10 10 0 0 0 12 22z" />
+      <path fill="#FBBC05" d="M6.4 13.96A6.02 6.02 0 0 1 6.08 12c0-.68.12-1.34.32-1.96V7.38H3.06A10 10 0 0 0 2 12c0 1.61.39 3.13 1.06 4.62l3.34-2.66z" />
+      <path fill="#EA4335" d="M12 5.91c1.47 0 2.79.51 3.83 1.5l2.87-2.87C16.96 2.92 14.7 2 12 2A10 10 0 0 0 3.06 7.38l3.34 2.66C7.19 7.67 9.4 5.91 12 5.91z" />
+    </svg>
+  );
+}
+
+function AuthShell({ lang, children }) {
+  const en = lang === "en";
+  return (
+    <div className="fade" style={{ position: "absolute", inset: 0, overflow: "hidden", background: T.deep }}>
+      <div style={{ position: "absolute", inset: 0 }}>
+        <Photo kind="skyline" seed="auth-cover" photo="makkah_city_dusk" ratio="auto" radius={0} scrim="none"
+          style={{ position: "absolute", inset: 0, aspectRatio: "auto", height: "100%" }} />
+      </div>
+      <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, rgba(7,29,24,.68), rgba(7,29,24,.9))" }} />
+      <div className="scroll" style={{ position: "absolute", inset: 0, overflowY: "auto", overflowX: "hidden", padding: "10px" }}>
+        <section dir={en ? "ltr" : "rtl"} style={{
+          minHeight: "calc(100% - 2px)", width: "100%", borderRadius: 24,
+          background: "rgba(255,252,246,.985)", border: "1px solid rgba(232,221,201,.82)",
+          boxShadow: "0 22px 58px -28px rgba(7,29,24,.75)",
+          padding: "calc(24px + var(--safe-top)) 24px calc(24px + var(--safe-bottom))",
+          display: "flex", flexDirection: "column",
+        }}>
+          {children}
+        </section>
+      </div>
+    </div>
+  );
+}
+
+function AuthMethodButton({ kind, label, onClick, surface = "login" }) {
+  const isApple = kind === "apple";
+  const isGoogle = kind === "google";
+  const isMobile = kind === "mobile";
+  const data = surface === "signup" ? { "data-signup-method": kind } : { "data-auth-method": kind };
+  const icon = isApple ? <AppleMark /> : isGoogle ? <GoogleMark /> : isMobile ? <Phone size={20} strokeWidth={2} /> : (
+    <span aria-hidden="true" className="lat" style={{ fontSize: 20, fontWeight: 700, lineHeight: 1 }}>@</span>
+  );
+  return (
+    <button {...data} type="button" className="press" onClick={onClick}
+      style={{
+        width: "100%", minHeight: 52, borderRadius: 12, padding: "12px 16px",
+        display: "grid", gridTemplateColumns: "28px 1fr 28px", alignItems: "center", gap: 8,
+        border: isApple ? "1px solid #111" : "1px solid rgba(33,30,25,.16)",
+        background: isApple ? "#111" : "#FFFDFC",
+        color: isApple ? "#fff" : T.ink, fontSize: 14, fontWeight: 700,
+        boxShadow: isGoogle ? "0 1px 2px rgba(33,30,25,.05)" : "none",
+      }}>
+      <span style={{ display: "grid", placeItems: "center", color: isMobile ? T.deep : "inherit" }}>{icon}</span>
+      <span style={{ textAlign: "center" }}>{label}</span>
+      <span aria-hidden="true" />
+    </button>
+  );
+}
+
+function ScreenLogin({ lang, onAuthenticate, onCreate }) {
+  const en = lang === "en";
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [error, setError] = useState("");
+
+  const submit = (e) => {
+    e.preventDefault();
+    if (!email.trim() || !password) {
+      setError(en ? "Enter your email and password to continue." : "أدخل البريد الإلكتروني وكلمة المرور للمتابعة.");
+      return;
+    }
+    setError("");
+    onAuthenticate("email");
+  };
+
+  const fieldLabel = { display: "block", fontSize: 12.5, fontWeight: 800, marginBottom: 7, color: T.ink };
+  const inputWrap = {
+    width: "100%", minHeight: 52, borderRadius: 11, border: "1px solid rgba(33,30,25,.15)",
+    background: "#FFFDFC", display: "flex", alignItems: "center", overflow: "hidden",
+  };
+  const inputStyle = {
+    flex: 1, minWidth: 0, border: "none", outline: "none", background: "transparent",
+    padding: "14px 15px", fontSize: 14.5, direction: "ltr", textAlign: "left",
+  };
+
+  return (
+    <AuthShell lang={lang}>
+      <div style={{ textAlign: "center", paddingTop: 2 }}>
+        <Wordmark size={31} light={false} />
+        <div style={{ fontSize: 11.5, color: T.muted, marginTop: 12, fontWeight: 600 }}>
+          {en ? "Makkah's digital community" : "مجتمع مكة الرقمي"}
+        </div>
+      </div>
+
+      <div style={{ marginTop: 29 }}>
+        <h1 style={{ margin: 0, color: T.deep, fontSize: 27, lineHeight: 1.25, fontWeight: 800 }}>
+          {en ? "Sign in" : "تسجيل الدخول"}
+        </h1>
+        <p style={{ margin: "9px 0 0", color: T.muted, fontSize: 13.5, lineHeight: 1.8 }}>
+          {en ? "Sign in to continue your plan and experiences in Makkah." : "ادخل إلى حسابك لمتابعة خطتك وتجاربك في مكة."}
+        </p>
+      </div>
+
+      <form onSubmit={submit} style={{ marginTop: 23 }}>
+        <label style={fieldLabel} htmlFor="eyemakkah-login-email">{en ? "Email" : "البريد الإلكتروني"}</label>
+        <div style={inputWrap}>
+          <input id="eyemakkah-login-email" data-auth-email type="email" autoComplete="email" value={email}
+            onChange={(e) => setEmail(e.target.value)} placeholder="name@example.com" style={inputStyle} />
+        </div>
+
+        <label style={{ ...fieldLabel, marginTop: 16 }} htmlFor="eyemakkah-login-password">{en ? "Password" : "كلمة المرور"}</label>
+        <div style={inputWrap}>
+          <input id="eyemakkah-login-password" data-auth-password type={showPassword ? "text" : "password"} autoComplete="current-password"
+            value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" style={inputStyle} />
+          <button type="button" className="press" onClick={() => setShowPassword((v) => !v)}
+            aria-label={en ? (showPassword ? "Hide password" : "Show password") : (showPassword ? "إخفاء كلمة المرور" : "إظهار كلمة المرور")}
+            style={{ width: 48, minHeight: 48, display: "grid", placeItems: "center", color: T.muted }}>
+            {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+          </button>
+        </div>
+
+        <button type="button" className="press" onClick={() => {}}
+          style={{ display: "block", marginTop: 11, color: T.green, fontSize: 12.5, fontWeight: 800, textAlign: "start" }}>
+          {en ? "Forgot password?" : "نسيت كلمة المرور؟"}
+        </button>
+
+        {error && <div role="alert" style={{ marginTop: 11, color: T.warn, fontSize: 11.5, lineHeight: 1.6 }}>{error}</div>}
+
+        <button data-auth-submit type="submit" className="press"
+          style={{
+            width: "100%", minHeight: 54, borderRadius: 11, marginTop: 20,
+            background: T.deep, color: "#FFF8EA", fontSize: 15, fontWeight: 800,
+            boxShadow: "0 14px 28px -18px rgba(14,49,41,.78)",
+          }}>
+          {en ? "Sign in" : "تسجيل الدخول"}
+        </button>
+      </form>
+
+      <div style={{ display: "flex", alignItems: "center", gap: 12, margin: "22px 0 14px", color: T.muted }}>
+        <div style={{ height: 1, background: T.line, flex: 1 }} />
+        <span style={{ fontSize: 11.5, whiteSpace: "nowrap" }}>{en ? "Or continue with" : "أو تابع باستخدام"}</span>
+        <div style={{ height: 1, background: T.line, flex: 1 }} />
+      </div>
+
+      <div style={{ display: "grid", gap: 10 }}>
+        <AuthMethodButton kind="mobile" label={en ? "Continue with mobile number" : "المتابعة برقم الجوال"} onClick={() => onAuthenticate("mobile")} />
+        <AuthMethodButton kind="apple" label={en ? "Continue with Apple" : "المتابعة باستخدام Apple"} onClick={() => onAuthenticate("apple")} />
+        <AuthMethodButton kind="google" label={en ? "Continue with Google" : "المتابعة باستخدام Google"} onClick={() => onAuthenticate("google")} />
+      </div>
+
+      <div style={{ marginTop: "auto", paddingTop: 22, textAlign: "center", fontSize: 12.5, color: T.muted }}>
+        {en ? "Don't have an account? " : "ليس لديك حساب؟ "}
+        <button data-create-account type="button" className="press" onClick={onCreate}
+          style={{ color: T.deep, fontWeight: 800, textDecoration: "underline", textUnderlineOffset: 3 }}>
+          {en ? "Create account" : "إنشاء حساب"}
+        </button>
+      </div>
+    </AuthShell>
+  );
+}
+
+function ScreenCreateAccount({ lang, onBack }) {
+  const en = lang === "en";
+  const [pending, setPending] = useState(null);
+  const choose = (kind) => setPending(kind);
+
+  return (
+    <AuthShell lang={lang}>
+      <div style={{ display: "flex", alignItems: "center", minHeight: 44 }}>
+        <button data-auth-back type="button" className="press" onClick={onBack}
+          aria-label={en ? "Back to sign in" : "الرجوع إلى تسجيل الدخول"}
+          style={{ minWidth: 44, minHeight: 44, display: "grid", placeItems: "center", color: T.deep, borderRadius: R.pill }}>
+          <ChevronRight size={21} />
+        </button>
+        <div style={{ flex: 1, paddingInlineEnd: 44 }}><Wordmark size={27} light={false} /></div>
+      </div>
+
+      <div style={{ marginTop: 42 }}>
+        <h1 style={{ margin: 0, color: T.deep, fontSize: 27, lineHeight: 1.25, fontWeight: 800 }}>
+          {en ? "Create account" : "إنشاء حساب"}
+        </h1>
+        <p style={{ margin: "9px 0 0", color: T.muted, fontSize: 13.5, lineHeight: 1.8 }}>
+          {en ? "Choose how you'd like to create your EyeMakkah account." : "اختر الطريقة التي تفضّلها لإنشاء حسابك في EyeMakkah."}
+        </p>
+      </div>
+
+      <div style={{ display: "grid", gap: 11, marginTop: 28 }}>
+        <AuthMethodButton surface="signup" kind="mobile" label={en ? "Continue with mobile number" : "المتابعة برقم الجوال"} onClick={() => choose("mobile")} />
+        <AuthMethodButton surface="signup" kind="apple" label={en ? "Continue with Apple" : "المتابعة باستخدام Apple"} onClick={() => choose("apple")} />
+        <AuthMethodButton surface="signup" kind="google" label={en ? "Continue with Google" : "المتابعة باستخدام Google"} onClick={() => choose("google")} />
+        <AuthMethodButton surface="signup" kind="email" label={en ? "Continue with email" : "المتابعة باستخدام البريد الإلكتروني"} onClick={() => choose("email")} />
+      </div>
+
+      {pending && (
+        <div role="status" style={{ marginTop: 18, padding: "11px 13px", borderRadius: 10, background: T.limestone, color: T.muted, fontSize: 11.5, lineHeight: 1.7 }}>
+          {en ? "The rest of account creation will be defined in the next onboarding step." : "سيتم تحديد بقية خطوات إنشاء الحساب في مرحلة التسجيل القادمة."}
+        </div>
+      )}
+    </AuthShell>
+  );
+}
+
+
 /* ═══════════════════════════════════════════════════════════════════════════
    SHELL — four jobs in the bottom nav: الرئيسية · اكتشف · المجتمع · خطتي
    Profile lives behind the avatar. No AI tab: AI is horizontal.
@@ -9633,7 +9849,7 @@ class ErrorBoundary extends React.Component {
 export default function EyeMakkahApp() {
   const [state, dispatch] = useReducer(reducer, undefined, () => initialState());
   const [stack, setStack] = useState([{ s: "home" }]);
-  const [entry, setEntry] = useState("landing");        // landing → language → app
+  const [entry, setEntry] = useState("landing");        // landing → language → login/createAccount → app
   const [toastMsg, setToastMsg] = useState(null);
   const scrollRef = useRef(null);
   const phoneRef = useRef(null);
@@ -9641,6 +9857,10 @@ export default function EyeMakkahApp() {
   const view = stack[stack.length - 1];
   const ctx = useMemo(() => deriveContext(state), [state]);
   const toast = useCallback((m) => setToastMsg(m), []);
+  const finishAuth = useCallback(() => {
+    setEntry("app");
+    setStack([{ s: "home" }]);
+  }, []);
 
   const go = useCallback((next) => {
     if (next?.back) { setStack((st) => (st.length > 1 ? st.slice(0, -1) : st)); return; }
@@ -9736,7 +9956,13 @@ export default function EyeMakkahApp() {
               <div style={{ position: "absolute", inset: 0, zIndex: 120 }}>
                 {entry === "landing" && <ScreenLanding lang={lang} onEnter={() => setEntry("language")} />}
                 {entry === "language" && (
-                  <ScreenLanguage onPick={(l) => { dispatch({ type: "profile", patch: { lang: l } }); setLang(l); setEntry("app"); setStack([{ s: "home" }]); }} />
+                  <ScreenLanguage onPick={(l) => { dispatch({ type: "profile", patch: { lang: l } }); setLang(l); setEntry("login"); }} />
+                )}
+                {entry === "login" && (
+                  <ScreenLogin lang={lang} onAuthenticate={finishAuth} onCreate={() => setEntry("createAccount")} />
+                )}
+                {entry === "createAccount" && (
+                  <ScreenCreateAccount lang={lang} onBack={() => setEntry("login")} />
                 )}
               </div>
             )}

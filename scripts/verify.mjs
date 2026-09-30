@@ -22,7 +22,9 @@ const server = createServer(async (req, res) => {
 await new Promise((r) => server.listen(4321, r));
 
 const errors = [];
-const browser = await chromium.launch({ executablePath: "/opt/pw-browsers/chromium-1194/chrome-linux/chrome", args: ["--no-sandbox"] });
+const launch = { args: ["--no-sandbox"] };
+if (process.env.CHROMIUM_PATH) launch.executablePath = process.env.CHROMIUM_PATH;
+const browser = await chromium.launch(launch);
 const page = await browser.newPage({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, deviceScaleFactor: 2 });
 page.on("console", (m) => { if (m.type() === "error") { const t = m.text(); if (!/fonts\.googleapis|ERR_|net::|Failed to load resource/.test(t)) errors.push("console: " + t); } });
 page.on("pageerror", (e) => errors.push("pageerror: " + e.message));
@@ -60,10 +62,14 @@ const openByName = async (name) => {
 
 await page.goto("http://127.0.0.1:4321/", { waitUntil: "networkidle" });
 await page.waitForTimeout(700);
-// Entry flow: Landing -> Language -> transformed app
+// Entry flow: Landing -> Language -> Login -> transformed app
 await page.getByText(/^(ابدأ|Enter EyeMakkah)$/).first().click();
 await page.waitForTimeout(600);
 await page.locator('[data-lang="ar"]').click();
+await page.waitForTimeout(700);
+await page.locator("[data-auth-email]").fill("qa@eyemakkah.local");
+await page.locator("[data-auth-password]").fill("qa-prototype");
+await page.locator("[data-auth-submit]").click();
 await page.waitForTimeout(900);
 
 const steps = JSON.parse(process.env.STEPS || "[]");
