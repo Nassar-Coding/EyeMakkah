@@ -38,7 +38,7 @@ meeting direction and the five transformation groups in `docs/handover/`.
 
 ## Primary navigation
 
-Entry is now **Start → Language → Login / Create Account → app**. Login keeps the consumer flow separate from the BI platform and offers email/password plus mobile, Apple and Google; Create Account currently exposes signup methods only, pending the separately-defined onboarding flow.
+Entry is now **Start → Language → Login / Create Account → Profile Setup → app**. Login keeps the consumer flow separate from the BI platform and offers email/password plus mobile, Apple and Google; every Create Account signup method continues to the same basic personal-information profile setup before Home.
 
 **الرئيسية · اكتشف · المجتمع · خطتي** — Profile sits behind the avatar. There is no AI tab:
 AI is horizontal (relevance, trust, journey continuity, translation, community intelligence).
