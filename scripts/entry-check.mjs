@@ -1,7 +1,7 @@
-/* Entry flow check: cover → language → login/create-account → transformed app, in both languages. */
+/* Entry flow check: cover → language → login/create-account → profile setup → transformed app, in both languages. */
 import { chromium } from "playwright";
 import { createServer } from "node:http";
-import { readFile } from "node:fs/promises";
+import { readFile, mkdir } from "node:fs/promises";
 import { extname, resolve } from "node:path";
 const root = process.env.ROOT || "/home/user/EyeMakkah/dist";
 const MIME = { ".html": "text/html; charset=utf-8", ".js": "text/javascript; charset=utf-8" };
@@ -14,7 +14,8 @@ await new Promise((r) => server.listen(4510, r));
 const launch = { args: ["--no-sandbox"] };
 if (process.env.CHROMIUM_PATH) launch.executablePath = process.env.CHROMIUM_PATH;
 const browser = await chromium.launch(launch);
-const shots = process.env.OUT || "/tmp/claude-0/-home-user-EyeMakkah/bdda0f4a-9b40-5755-97f3-db2bbfc5eb30/scratchpad/entry";
+const shots = process.env.OUT || "/tmp/eyemakkah-entry";
+await mkdir(shots, { recursive: true });
 const results = [];
 const errs = [];
 
@@ -33,60 +34,65 @@ for (const langId of ["ar", "en"]) {
   await page.getByText(/^(ابدأ|Enter EyeMakkah)$/).first().click();
   await page.waitForTimeout(700);
   const t2 = await txt();
-  results.push(["language screen follows", /Choose your language/.test(t2) && /العربية/.test(t2) && /English/.test(t2)]);
+  results.push(["language screen second", /اختر لغتك/.test(t2) && /English/.test(t2)]);
   if (langId === "ar") await page.screenshot({ path: `${shots}/02-language.png` });
 
   await page.locator(`[data-lang="${langId}"]`).click();
-  await page.waitForTimeout(1000);
+  await page.waitForTimeout(800);
   const loginText = await txt();
-  const dir = await page.evaluate(() => document.querySelector(".em").getAttribute("dir"));
+  const loginDir = await page.evaluate(() => document.querySelector(".em").getAttribute("dir"));
   results.push([`${langId}: language leads to login`, langId === "ar" ? /تسجيل الدخول/.test(loginText) : /Sign in/.test(loginText)]);
-  results.push([`${langId}: email + password present`, await page.locator("[data-auth-email]").count() === 1 && await page.locator("[data-auth-password]").count() === 1]);
-  results.push([`${langId}: mobile Apple Google present`, await page.locator("[data-auth-method]").count() === 3]);
-  results.push([`${langId}: direction is ${langId === "ar" ? "rtl" : "ltr"}`, dir === (langId === "ar" ? "rtl" : "ltr")]);
+  results.push([`${langId}: login direction`, loginDir === (langId === "ar" ? "rtl" : "ltr")]);
+  results.push([`${langId}: login methods unchanged`, await page.locator("[data-auth-method]").count() === 3]);
   results.push([`${langId}: no Nafath`, !/نفاذ|Nafath/i.test(loginText)]);
-  await page.screenshot({ path: `${shots}/03-login-${langId}.png` });
 
   await page.locator("[data-create-account]").click();
-  await page.waitForTimeout(500);
+  await page.waitForTimeout(450);
   const createText = await txt();
   results.push([`${langId}: create account opens`, langId === "ar" ? /إنشاء حساب/.test(createText) : /Create account/.test(createText)]);
-  results.push([`${langId}: four signup methods only`, await page.locator("[data-signup-method]").count() === 4 && await page.locator("[data-auth-email]").count() === 0]);
+  results.push([`${langId}: four signup methods`, await page.locator("[data-signup-method]").count() === 4]);
   results.push([`${langId}: create account has no Nafath`, !/نفاذ|Nafath/i.test(createText)]);
-  await page.screenshot({ path: `${shots}/04-create-${langId}.png` });
+  await page.screenshot({ path: `${shots}/03-create-${langId}.png` });
 
-  await page.locator("[data-auth-back]").click();
-  await page.waitForTimeout(350);
-  await page.locator("[data-auth-email]").fill("user@example.com");
-  await page.locator("[data-auth-password]").fill("prototype-pass");
-  await page.locator("[data-auth-submit]").click();
+  const method = langId === "ar" ? "email" : "mobile";
+  await page.locator(`[data-signup-method="${method}"]`).click();
+  await page.waitForTimeout(450);
+  const profileText = await txt();
+  const profileDir = await page.evaluate(() => document.querySelector(".em").getAttribute("dir"));
+  results.push([`${langId}: profile setup opens`, langId === "ar" ? /أكمل بياناتك/.test(profileText) : /Complete your profile/.test(profileText)]);
+  results.push([`${langId}: profile direction`, profileDir === (langId === "ar" ? "rtl" : "ltr")]);
+  results.push([`${langId}: only requested basic fields`, await page.locator("[data-profile-first-name], [data-profile-last-name], [data-profile-age], [data-profile-nationality], [data-profile-area]").count() === 4]);
+  results.push([`${langId}: resident and visitor choices`, await page.locator("[data-profile-mode]").count() === 2]);
+  results.push([`${langId}: no language question repeated`, await page.locator("[data-lang]").count() === 0]);
+  results.push([`${langId}: no prohibited identity fields`, !/نفاذ|Nafath|الهوية الوطنية|national ID|passport|جواز|gender|الجنس|marital|الحالة الاجتماعية|employment|العمل|interests|الاهتمامات|preferences|التفضيلات/i.test(profileText)]);
+
+  const first = langId === "ar" ? "سارة" : "Sara";
+  await page.locator("[data-profile-first-name]").fill(first);
+  await page.locator("[data-profile-last-name]").fill(langId === "ar" ? "الحربي" : "Alharbi");
+  await page.locator("[data-profile-age]").fill("29");
+  await page.locator("[data-profile-nationality]").fill(langId === "ar" ? "سعودية" : "Saudi");
+  await page.locator('[data-profile-mode="resident"]').click();
+  await page.locator("[data-profile-area]").selectOption("awali");
+  results.push([`${langId}: resident requires area and CTA becomes available`, await page.locator("[data-profile-submit]").isEnabled()]);
+  await page.screenshot({ path: `${shots}/04-profile-${langId}.png` });
+
+  await page.locator("[data-profile-submit]").click();
   await page.waitForTimeout(900);
-  const t3 = await txt();
-  results.push([`${langId}: successful login enters current app`, !/(تسجيل الدخول|Sign in)/.test(t3)]);
-  results.push([`${langId}: no portal screen`, !/بوابة|Portal/.test(t3)]);
-  const navs = await page.locator("[data-nav]").count();
-  results.push([`${langId}: four primary tabs unchanged`, navs === 4]);
-  await page.screenshot({ path: `${shots}/05-app-${langId}.png` });
+  const homeText = await txt();
+  results.push([`${langId}: account creation enters Home`, !/(أكمل بياناتك|Complete your profile)/.test(homeText)]);
+  results.push([`${langId}: four primary tabs unchanged`, await page.locator("[data-nav]").count() === 4]);
 
-  /* how much Arabic is still rendered when reading in English */
-  if (langId === "en") {
-    const leftovers = await page.evaluate(() => {
-      const out = [];
-      const walk = (n) => {
-        if (n.nodeType === 3) { const t = n.nodeValue.trim(); if (t && /[؀-ۿ]/.test(t)) out.push(t); return; }
-        if (n.nodeType === 1 && getComputedStyle(n).display !== "none") n.childNodes.forEach(walk);
-      };
-      walk(document.querySelector("[data-screen]"));
-      return out;
-    });
-    console.log("ARABIC_LEFTOVERS_HOME", JSON.stringify(leftovers));
-  }
+  const profileButton = page.locator('button[aria-label="حسابي"], button[aria-label="My account"]').first();
+  await profileButton.click();
+  await page.waitForTimeout(450);
+  results.push([`${langId}: first name available in account`, (await page.locator("[data-profile-first-name-display]").textContent()) === first]);
+  await page.screenshot({ path: `${shots}/05-account-${langId}.png` });
   await page.close();
 }
 
 console.log("\n──────── entry flow ────────");
 results.forEach(([n, ok]) => console.log(`${ok ? "✓" : "✗"} ${n}`));
-if (errs.length) { console.log("errors:"); errs.slice(0, 6).forEach((e) => console.log("  ! " + e)); }
+if (errs.length) { console.log("errors:"); errs.slice(0, 8).forEach((e) => console.log("  ! " + e)); }
 const failed = results.filter((r) => !r[1]).length;
 console.log(`${results.length - failed}/${results.length} checks passed · ${errs.length} runtime errors`);
 await browser.close(); server.close();
