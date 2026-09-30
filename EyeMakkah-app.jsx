@@ -6512,7 +6512,7 @@ function ScreenHome() {
               <Bell size={17} color={T.ink} />
               {unread > 0 && <span style={{ position: "absolute", top: 7, insetInlineEnd: 8, width: 7, height: 7, borderRadius: 99, background: T.clay }} />}
             </button>
-            <button className="press tap" onClick={() => go({ s: "profile" })} aria-label="حسابي"
+            <button data-profile-entry className="press tap" onClick={() => go({ s: "profile" })} aria-label="حسابي"
               style={{ width: 36, height: 36, borderRadius: R.pill, background: T.deep, color: "#F6EFE0", display: "grid", placeItems: "center", fontSize: 13, fontWeight: 800 }}>
               {p.mode === "visitor" ? tx("ز", "V") : tx("م", "R")}
             </button>
