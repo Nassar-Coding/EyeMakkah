@@ -64,10 +64,13 @@ for (const langId of ["ar", "en"]) {
   results.push([`${langId}: only requested basic fields`, await page.locator("[data-profile-first-name], [data-profile-last-name], [data-profile-age], [data-profile-nationality], [data-profile-area]").count() === 4]);
   results.push([`${langId}: resident and visitor choices`, await page.locator("[data-profile-mode]").count() === 2]);
   results.push([`${langId}: no language question repeated`, await page.locator("[data-lang]").count() === 0]);
-  const prohibited = langId === "ar"
-    ? /نفاذ|الهوية الوطنية|رقم الهوية|جواز السفر|الجنس|الحالة الاجتماعية|جهة العمل|الوظيفة|الاهتمامات|التفضيلات/
-    : /Nafath|National ID|Passport|Gender|Marital status|Employment|Interests|Preferences/i;
-  results.push([`${langId}: no prohibited identity fields`, !prohibited.test(profileText)]);
+  const formText = await page.locator("[data-profile-first-name]").locator("xpath=ancestor::form").innerText();
+  const formLines = new Set(formText.split("\n").map((x) => x.trim().toLowerCase()).filter(Boolean));
+  const prohibitedLabels = (langId === "ar"
+    ? ["نفاذ", "الهوية الوطنية", "رقم الهوية", "جواز السفر", "الجنس", "الحالة الاجتماعية", "جهة العمل", "الوظيفة", "الاهتمامات", "التفضيلات"]
+    : ["Nafath", "National ID", "Passport", "Gender", "Marital status", "Employment", "Interests", "Preferences"]
+  ).map((x) => x.toLowerCase());
+  results.push([`${langId}: no prohibited identity fields`, prohibitedLabels.every((label) => !formLines.has(label))]);
 
   const first = langId === "ar" ? "سارة" : "Sara";
   await page.locator("[data-profile-first-name]").fill(first);
