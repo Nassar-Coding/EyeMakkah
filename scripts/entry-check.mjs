@@ -85,7 +85,7 @@ for (const langId of ["ar", "en"]) {
   results.push([`${langId}: account creation enters Home`, !/(أكمل بياناتك|Complete your profile)/.test(homeText)]);
   results.push([`${langId}: four primary tabs unchanged`, await page.locator("[data-nav]").count() === 4]);
 
-  const profileButton = page.locator('button[aria-label="حسابي"], button[aria-label="My account"]').first();
+  const profileButton = page.locator("[data-profile-entry]").first();
   await profileButton.click();
   await page.waitForTimeout(450);
   results.push([`${langId}: first name available in account`, (await page.locator("[data-profile-first-name-display]").textContent()) === first]);
