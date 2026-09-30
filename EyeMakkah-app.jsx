@@ -4599,6 +4599,10 @@ const PLAN_BUCKETS = [
 const initialState = (seed = {}) => ({
   profile: {
     mode: "resident",            // resident | visitor
+    firstName: "",
+    lastName: "",
+    age: null,
+    nationality: "",
     firstTime: false,
     nb: "awali",
     party: "solo",               // solo | family | kids | group
@@ -4861,6 +4865,10 @@ function deriveContext(state, extra = {}) {
 
   return {
     mode: state.profile.mode,
+    firstName: state.profile.firstName,
+    lastName: state.profile.lastName,
+    age: state.profile.age,
+    nationality: state.profile.nationality,
     nb: state.profile.nb,
     from: state.profile.locationGranted ? { x: NB[state.profile.nb]?.x ?? 0.5, y: NB[state.profile.nb]?.y ?? 0.5 } : null,
     locationGranted: state.profile.locationGranted,
@@ -8809,7 +8817,10 @@ function ScreenProfile() {
       <div style={{ padding: "14px 16px 0", paddingTop: "calc(14px + var(--safe-top))" }}>
         <div className="row" style={{ gap: 10 }}>
           <button className="press tap" onClick={() => go({ back: true })} aria-label="رجوع" style={{ width: 36, height: 36, display: "grid", placeItems: "center", marginInlineStart: -6 }}><ChevronRight size={23} /></button>
-          <div style={{ fontSize: 20, fontWeight: 800 }}>حسابي</div>
+          <div>
+            <div style={{ fontSize: 20, fontWeight: 800 }}>حسابي</div>
+            {p.firstName && <div data-profile-first-name-display style={{ fontSize: 12.5, color: T.muted, marginTop: 2, fontWeight: 700 }}>{p.firstName}</div>}
+          </div>
         </div>
       </div>
 
@@ -9667,10 +9678,9 @@ function ScreenLogin({ lang, onAuthenticate, onCreate }) {
   );
 }
 
-function ScreenCreateAccount({ lang, onBack }) {
+function ScreenCreateAccount({ lang, onBack, onMethod }) {
   const en = lang === "en";
-  const [pending, setPending] = useState(null);
-  const choose = (kind) => setPending(kind);
+  const choose = (kind) => onMethod(kind);
 
   return (
     <AuthShell lang={lang}>
@@ -9698,12 +9708,146 @@ function ScreenCreateAccount({ lang, onBack }) {
         <AuthMethodButton surface="signup" kind="google" label={en ? "Continue with Google" : "المتابعة باستخدام Google"} onClick={() => choose("google")} />
         <AuthMethodButton surface="signup" kind="email" label={en ? "Continue with email" : "المتابعة باستخدام البريد الإلكتروني"} onClick={() => choose("email")} />
       </div>
+    </AuthShell>
+  );
+}
 
-      {pending && (
-        <div role="status" style={{ marginTop: 18, padding: "11px 13px", borderRadius: 10, background: T.limestone, color: T.muted, fontSize: 11.5, lineHeight: 1.7 }}>
-          {en ? "The rest of account creation will be defined in the next onboarding step." : "سيتم تحديد بقية خطوات إنشاء الحساب في مرحلة التسجيل القادمة."}
+function ScreenProfileSetup({ lang, onBack, onComplete }) {
+  const en = lang === "en";
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [age, setAge] = useState("");
+  const [nationality, setNationality] = useState("");
+  const [mode, setMode] = useState("");
+  const [area, setArea] = useState("");
+
+  const resident = mode === "resident";
+  const visitor = mode === "visitor";
+  const ready = Boolean(
+    firstName.trim() &&
+    lastName.trim() &&
+    age &&
+    Number(age) > 0 &&
+    nationality.trim() &&
+    mode &&
+    (!resident || area)
+  );
+
+  const labelStyle = { display: "block", fontSize: 12.5, fontWeight: 800, marginBottom: 7, color: T.ink };
+  const fieldStyle = {
+    width: "100%", minHeight: 50, borderRadius: 11, border: "1px solid rgba(33,30,25,.15)",
+    background: "#FFFDFC", color: T.ink, padding: "12px 14px", fontSize: 14,
+    outline: "none", boxSizing: "border-box",
+  };
+
+  const submit = (e) => {
+    e.preventDefault();
+    if (!ready) return;
+    onComplete({
+      firstName: firstName.trim(),
+      lastName: lastName.trim(),
+      age: Number(age),
+      nationality: nationality.trim(),
+      mode,
+      nb: area || null,
+    });
+  };
+
+  return (
+    <AuthShell lang={lang}>
+      <div style={{ display: "flex", alignItems: "center", minHeight: 44 }}>
+        <button data-profile-back type="button" className="press" onClick={onBack}
+          aria-label={en ? "Back" : "رجوع"}
+          style={{ minWidth: 44, minHeight: 44, display: "grid", placeItems: "center", color: T.deep, borderRadius: R.pill }}>
+          <ChevronRight size={21} />
+        </button>
+        <div style={{ flex: 1, paddingInlineEnd: 44 }}><Wordmark size={27} light={false} /></div>
+      </div>
+
+      <div style={{ marginTop: 28 }}>
+        <h1 data-profile-setup-title style={{ margin: 0, color: T.deep, fontSize: 27, lineHeight: 1.25, fontWeight: 800 }}>
+          {en ? "Complete your profile" : "أكمل بياناتك"}
+        </h1>
+        <p style={{ margin: "9px 0 0", color: T.muted, fontSize: 13.5, lineHeight: 1.8 }}>
+          {en ? "Tell us a few basic details to set up your EyeMakkah account." : "ساعدنا ببعض المعلومات الأساسية لإعداد حسابك في EyeMakkah."}
+        </p>
+      </div>
+
+      <form onSubmit={submit} style={{ marginTop: 22, display: "grid", gap: 15 }}>
+        <div>
+          <label style={labelStyle} htmlFor="profile-first-name">{en ? "First name" : "الاسم الأول"}</label>
+          <input id="profile-first-name" data-profile-first-name value={firstName} onChange={(e) => setFirstName(e.target.value)}
+            autoComplete="given-name" placeholder={en ? "Enter your first name" : "أدخل اسمك الأول"} style={fieldStyle} />
         </div>
-      )}
+
+        <div>
+          <label style={labelStyle} htmlFor="profile-last-name">{en ? "Last name" : "اسم العائلة"}</label>
+          <input id="profile-last-name" data-profile-last-name value={lastName} onChange={(e) => setLastName(e.target.value)}
+            autoComplete="family-name" placeholder={en ? "Enter your last name" : "أدخل اسم العائلة"} style={fieldStyle} />
+        </div>
+
+        <div>
+          <label style={labelStyle} htmlFor="profile-age">{en ? "Age" : "العمر"}</label>
+          <input id="profile-age" data-profile-age type="number" min="1" inputMode="numeric" value={age}
+            onChange={(e) => setAge(e.target.value)} placeholder={en ? "Enter your age" : "أدخل عمرك"} style={fieldStyle} />
+        </div>
+
+        <div>
+          <label style={labelStyle} htmlFor="profile-nationality">{en ? "Nationality" : "الجنسية"}</label>
+          <input id="profile-nationality" data-profile-nationality value={nationality} onChange={(e) => setNationality(e.target.value)}
+            autoComplete="country-name" placeholder={en ? "Select nationality" : "اختر الجنسية"} style={fieldStyle} />
+        </div>
+
+        <div>
+          <div style={labelStyle}>{en ? "You are" : "أنت"}</div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 9 }}>
+            {[
+              ["resident", en ? "Makkah resident" : "مقيم في مكة"],
+              ["visitor", en ? "Makkah visitor" : "زائر لمكة"],
+            ].map(([value, label]) => {
+              const active = mode === value;
+              return (
+                <button key={value} data-profile-mode={value} type="button" className="press" aria-pressed={active}
+                  onClick={() => { setMode(value); setArea(""); }}
+                  style={{
+                    minHeight: 50, borderRadius: 11, padding: "10px 12px", fontSize: 13, fontWeight: 800,
+                    border: `1px solid ${active ? T.deep : "rgba(33,30,25,.15)"}`,
+                    background: active ? T.deep : "#FFFDFC", color: active ? "#FFF8EA" : T.ink,
+                  }}>
+                  {label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {(resident || visitor) && (
+          <div>
+            <label style={labelStyle} htmlFor="profile-area">
+              {resident ? (en ? "Neighborhood" : "الحي") : (en ? "Area of stay in Makkah" : "منطقة الإقامة في مكة")}
+            </label>
+            <select id="profile-area" data-profile-area value={area} onChange={(e) => setArea(e.target.value)}
+              style={{ ...fieldStyle, appearance: "auto" }}>
+              <option value="">
+                {resident
+                  ? (en ? "Select your neighborhood in Makkah" : "اختر حيّك في مكة")
+                  : (en ? "Select the area where you are staying" : "اختر المنطقة التي تقيم فيها")}
+              </option>
+              {NEIGHBORHOODS.map((n) => <option key={n.id} value={n.id}>{n.name}</option>)}
+            </select>
+          </div>
+        )}
+
+        <button data-profile-submit type="submit" className="press" disabled={!ready}
+          style={{
+            width: "100%", minHeight: 54, borderRadius: 11, marginTop: 4,
+            background: ready ? T.deep : T.line, color: ready ? "#FFF8EA" : T.muted,
+            fontSize: 15, fontWeight: 800, cursor: ready ? "pointer" : "default",
+            boxShadow: ready ? "0 14px 28px -18px rgba(14,49,41,.78)" : "none",
+          }}>
+          {en ? "Create account" : "إنشاء الحساب"}
+        </button>
+      </form>
     </AuthShell>
   );
 }
@@ -9849,7 +9993,7 @@ class ErrorBoundary extends React.Component {
 export default function EyeMakkahApp() {
   const [state, dispatch] = useReducer(reducer, undefined, () => initialState());
   const [stack, setStack] = useState([{ s: "home" }]);
-  const [entry, setEntry] = useState("landing");        // landing → language → login/createAccount → app
+  const [entry, setEntry] = useState("landing");        // landing → language → login/createAccount → profileSetup → app
   const [toastMsg, setToastMsg] = useState(null);
   const scrollRef = useRef(null);
   const phoneRef = useRef(null);
@@ -9858,6 +10002,11 @@ export default function EyeMakkahApp() {
   const ctx = useMemo(() => deriveContext(state), [state]);
   const toast = useCallback((m) => setToastMsg(m), []);
   const finishAuth = useCallback(() => {
+    setEntry("app");
+    setStack([{ s: "home" }]);
+  }, []);
+  const finishAccount = useCallback((profilePatch) => {
+    dispatch({ type: "profile", patch: profilePatch });
     setEntry("app");
     setStack([{ s: "home" }]);
   }, []);
@@ -9962,7 +10111,10 @@ export default function EyeMakkahApp() {
                   <ScreenLogin lang={lang} onAuthenticate={finishAuth} onCreate={() => setEntry("createAccount")} />
                 )}
                 {entry === "createAccount" && (
-                  <ScreenCreateAccount lang={lang} onBack={() => setEntry("login")} />
+                  <ScreenCreateAccount lang={lang} onBack={() => setEntry("login")} onMethod={() => setEntry("profileSetup")} />
+                )}
+                {entry === "profileSetup" && (
+                  <ScreenProfileSetup lang={lang} onBack={() => setEntry("createAccount")} onComplete={finishAccount} />
                 )}
               </div>
             )}
