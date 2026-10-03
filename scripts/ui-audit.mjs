@@ -5,7 +5,8 @@
    small tap targets, broken images and drawn (non-photo) content media. Screenshots
    of every state are written for visual review.
    Env: VPS=360,390 (subset) LANGS=ar,en OUT=dir ROOT=dist-dir JSON=report.json ONLY=state-regex */
-import { chromium } from "playwright";
+import { launchBrowser, outDir } from "./lib/browser.mjs";
+import { prepareQaAccount, signInQa, closeQaServer } from "./lib/qa-session.mjs";
 import { createServer } from "node:http";
 import { readFile, writeFile, mkdir } from "node:fs/promises";
 import { extname, resolve } from "node:path";
@@ -35,7 +36,7 @@ const server = createServer(async (req, res) => {
   catch { res.writeHead(404); res.end(); }
 });
 await new Promise((r) => server.listen(PORT, r));
-const browser = await chromium.launch({ executablePath: "/opt/pw-browsers/chromium-1194/chrome-linux/chrome", args: ["--no-sandbox"] });
+const browser = await launchBrowser();
 
 /* geometry checks, evaluated in the page */
 const inspect = () => {
@@ -139,10 +140,13 @@ for (const lang of LANGS) {
       try { await fn(); await record(state); } catch (e) { errors.push(`${vp.name}/${lang}/${state}: ${e.message.split("\n")[0]}`); }
     };
 
+    if (!page.__qa) await prepareQaAccount(page);
+
     await page.goto(`http://127.0.0.1:${PORT}/`, { waitUntil: "networkidle" }); await W(700);
     await step("01-landing", async () => {});
     await step("02-language", async () => { await page.getByText(/^(ابدأ|Enter EyeMakkah)$/).first().click(); await W(600); });
-    await page.locator(`[data-lang="${lang}"]`).click(); await W(1000);
+    await step("02b-login", async () => { await page.locator(`[data-lang="${lang}"]`).click(); await page.locator('[data-auth-screen="login"]').waitFor(); await W(700); });
+    await signInQa(page);
     await step("03-home", async () => {});
     await step("03-home-b", async () => scrollTo(0.33));
     await step("03-home-c", async () => scrollTo(0.66));
@@ -178,7 +182,7 @@ for (const lang of LANGS) {
     await step("09-family", async () => { await tab("community"); await page.getByText(T("الأحياء", "Neighbourhoods"), { exact: true }).first().click(); await W(500); });
     await step("09-community-detail", async () => { await page.getByText(T("مجتمع العوالي", "Awali community"), { exact: true }).first().click(); await W(500); });
     await step("09-community-detail-b", async () => scrollTo(0.6));
-    await step("09-thread", async () => { await tab("community"); await page.getByText(/صار فيه سوق مسائي|There's a new evening market/).first().click(); await W(500); });
+    await step("09-thread", async () => { await tab("community"); await page.getByText(T("مجتمع العوالي", "Awali community"), { exact: true }).first().click(); await W(500); await page.getByText(/صار فيه سوق مسائي|There's a new evening market/).first().click(); await W(500); });
     await step("09-clubs", async () => {
       await tab("home");
       await page.getByText(T("ابحث عن مكان أو تجربة أو مجتمع", "Search for a place, an experience or a community"), { exact: false }).first().click(); await W(300);
@@ -207,9 +211,11 @@ for (const lang of LANGS) {
     await step("11-profile", async () => { await tab("home"); await page.getByLabel(T("حسابي", "Profile"), { exact: true }).first().click(); await W(500); });
     await step("11-profile-b", async () => scrollTo(0.5));
     await step("11-profile-c", async () => scrollTo("end"));
-    await step("11-home-visitor", async () => { await scrollTo(0); await page.getByText(T("زائر", "Visitor"), { exact: true }).first().click(); await W(400); await tab("home"); });
+    /* mode and area live in the account details, edited with the sign-up validation */
+    await step("11-account-edit", async () => { await scrollTo(0); await page.locator("[data-account-edit]").click(); await W(400); });
+    await step("11-home-visitor", async () => { await page.locator('[data-profile-mode="visitor"]').click(); await page.locator("#edit-nb").selectOption(""); await page.locator("[data-profile-submit]").click(); await W(700); await tab("home"); });
     await step("11-home-visitor-b", async () => scrollTo(0.4));
-    await step("11-profile-resident", async () => { await tab("home"); await page.getByLabel(T("حسابي", "Profile"), { exact: true }).first().click(); await W(400); await page.getByText(T("مقيم", "Resident"), { exact: true }).first().click(); await W(400); });
+    await step("11-profile-resident", async () => { await tab("home"); await page.getByLabel(T("حسابي", "Profile"), { exact: true }).first().click(); await W(400); await page.locator("[data-account-edit]").click(); await W(300); await page.locator('[data-profile-mode="resident"]').click(); await page.locator("#edit-nb").selectOption("awali"); await page.locator("[data-profile-submit]").click(); await W(700); });
     await step("12-notifications", async () => { await tab("home"); await page.getByLabel(T("الإشعارات", "Notifications"), { exact: true }).first().click(); await W(500); });
     await step("13-provider", async () => { await tab("home"); await page.getByLabel(T("حسابي", "Profile"), { exact: true }).first().click(); await W(400); await scrollTo("end"); await page.getByText(T("أدوات مقدّم التجربة", "Host tools"), { exact: true }).first().click(); await W(500); });
     for (const [st, ar, en] of [["13-provider-participants", "المشاركون", "Participants"], ["13-provider-questions", "الأسئلة", "Questions"], ["13-provider-signals", "الإشارات", "Signals"]]) {
@@ -224,4 +230,4 @@ for (const lang of LANGS) {
 await writeFile(process.env.JSON || `${OUT}/report.json`, JSON.stringify({ report, errors }, null, 1));
 const sum = (k) => report.reduce((a, r) => a + (Array.isArray(r[k]) ? r[k].length : r[k] || 0), 0);
 console.log(`states: ${report.length} | overflowX>1: ${report.filter((r) => r.overX > 1).length} | frame-cut text: ${sum("cut")} | rail-cut text: ${sum("rail")} | faded peeks: ${sum("peek")} | self-clipped: ${sum("clip")} | truncated: ${sum("trunc")} | small targets: ${sum("small")} | broken images: ${sum("broken")} | drawn media: ${sum("drawn")} | photos: ${sum("photos")} | errors: ${errors.length}`);
-await browser.close(); server.close();
+await browser.close(); server.close(); await closeQaServer();

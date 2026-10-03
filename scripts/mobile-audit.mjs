@@ -1,6 +1,7 @@
 /* Mobile-native audit: walks the app at real phone widths and fails on horizontal
    overflow, unreachable rail content, or controls that are too small to tap. */
-import { chromium } from "playwright";
+import { launchBrowser, outDir } from "./lib/browser.mjs";
+import { prepareQaAccount, signInQa, closeQaServer } from "./lib/qa-session.mjs";
 import { createServer } from "node:http";
 import { readFile } from "node:fs/promises";
 import { extname, resolve } from "node:path";
@@ -14,7 +15,7 @@ const server = createServer(async (req, res) => {
 await new Promise((r) => server.listen(4488, r));
 
 const findings = [];
-const browser = await chromium.launch({ executablePath: "/opt/pw-browsers/chromium-1194/chrome-linux/chrome", args: ["--no-sandbox"] });
+const browser = await launchBrowser();
 
 const audit = async (page, label) => {
   const r = await page.evaluate(() => {
@@ -89,11 +90,13 @@ const railReach = async (page, label) => {
 for (const vp of [{ width: 390, height: 844, name: "390" }, { width: 360, height: 740, name: "360" }]) {
   const page = await browser.newPage({ viewport: { width: vp.width, height: vp.height }, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
   page.on("pageerror", (e) => findings.push(`${vp.name} pageerror: ${e.message}`));
+  if (!page.__qa) await prepareQaAccount(page);
   await page.goto("http://127.0.0.1:4488/", { waitUntil: "networkidle" });
   await page.waitForTimeout(600);
   await page.getByText(/^(ابدأ|Enter EyeMakkah)$/).first().click();
   await page.waitForTimeout(500);
   await page.locator('[data-lang="ar"]').click();
+  await signInQa(page);
   await page.waitForTimeout(900);
   await page.waitForTimeout(700);
 
@@ -130,5 +133,5 @@ console.log("\n──────── mobile audit ────────");
 if (!findings.length) console.log("clean: no overflow, no unreachable rail content, no undersized tap targets");
 else findings.slice(0, 40).forEach((f) => console.log("  • " + f));
 console.log(`findings: ${findings.length}`);
-await browser.close(); server.close();
+await browser.close(); server.close(); await closeQaServer();
 process.exit(findings.length ? 1 : 0);

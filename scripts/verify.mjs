@@ -1,6 +1,7 @@
 /* Runtime verification: boots the built app in Chromium, walks core journeys,
    fails on any console error or unhandled rejection. */
-import { chromium } from "playwright";
+import { launchBrowser, outDir } from "./lib/browser.mjs";
+import { prepareQaAccount, signInQa, closeQaServer } from "./lib/qa-session.mjs";
 import { createServer } from "node:http";
 import { readFile } from "node:fs/promises";
 import { extname, resolve, dirname } from "node:path";
@@ -8,7 +9,7 @@ import { fileURLToPath } from "node:url";
 
 const root = process.env.ROOT || resolve(dirname(fileURLToPath(import.meta.url)), "..", "dist");
 const MIME = { ".html": "text/html; charset=utf-8", ".js": "text/javascript; charset=utf-8", ".json": "application/json", ".txt": "text/plain" };
-const shotDir = process.env.SHOT_DIR || "/tmp/claude-0/-home-user-EyeMakkah/bdda0f4a-9b40-5755-97f3-db2bbfc5eb30/scratchpad/shots";
+const shotDir = process.env.SHOT_DIR || outDir("shots");
 
 const server = createServer(async (req, res) => {
   const p = req.url.split("?")[0];
@@ -22,9 +23,7 @@ const server = createServer(async (req, res) => {
 await new Promise((r) => server.listen(4321, r));
 
 const errors = [];
-const launch = { args: ["--no-sandbox"] };
-if (process.env.CHROMIUM_PATH) launch.executablePath = process.env.CHROMIUM_PATH;
-const browser = await chromium.launch(launch);
+const browser = await launchBrowser();
 const page = await browser.newPage({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, deviceScaleFactor: 2 });
 page.on("console", (m) => { if (m.type() === "error") { const t = m.text(); if (!/fonts\.googleapis|ERR_|net::|Failed to load resource/.test(t)) errors.push("console: " + t); } });
 page.on("pageerror", (e) => errors.push("pageerror: " + e.message));
@@ -60,17 +59,15 @@ const openByName = async (name) => {
   await page.waitForTimeout(700);
 };
 
+if (!page.__qa) await prepareQaAccount(page);
+
 await page.goto("http://127.0.0.1:4321/", { waitUntil: "networkidle" });
 await page.waitForTimeout(700);
-// Entry flow: Landing -> Language -> Login -> transformed app
+// Entry flow: Landing -> Language -> Login (seeded test account) -> app
 await page.getByText(/^(ابدأ|Enter EyeMakkah)$/).first().click();
 await page.waitForTimeout(600);
 await page.locator('[data-lang="ar"]').click();
-await page.waitForTimeout(700);
-await page.locator("[data-auth-email]").fill("qa@eyemakkah.local");
-await page.locator("[data-auth-password]").fill("qa-prototype");
-await page.locator("[data-auth-submit]").click();
-await page.waitForTimeout(900);
+await signInQa(page);
 
 const steps = JSON.parse(process.env.STEPS || "[]");
 const results = [];
@@ -327,5 +324,5 @@ for (const [s, n] of results) console.log(`${s === "PASS" ? "✓" : "✗"} ${n}`
 if (errors.length) { console.log("\nRUNTIME ERRORS:"); errors.slice(0, 12).forEach((e) => console.log("  " + e)); }
 const failed = results.filter((r) => r[0] === "FAIL").length;
 console.log(`\n${results.length - failed}/${results.length} steps passed · ${errors.length} runtime errors`);
-await browser.close(); server.close();
+await browser.close(); server.close(); await closeQaServer();
 process.exit(failed || errors.length ? 1 : 0);

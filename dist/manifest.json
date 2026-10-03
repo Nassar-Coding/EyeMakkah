@@ -1,6 +1,6 @@
 {
   "package": "EyeMakkah — مجتمع مكة الرقمي (Groups 1–5, cumulative)",
-  "date": "2026-09-28",
+  "date": "2026-10-03",
   "zero_build": true,
   "deploy": "Vercel drag-and-drop",
   "navigation": [
@@ -22,6 +22,7 @@
   "media": "45 bundled photographs; all content imagery is photographic (0 drawn media). Exact photos only of their own subject (المسجد الحرام، متحف برج الساعة، جبل النور، and the landmarks of محيط الحرم and أجياد); verified Makkah photos captioned as context (13 neighbourhoods, city-level content); generic photos of non-place subjects captioned as generic; no imagery of other cities (see PHOTO_SOURCES.md, docs/MEDIA_AUDIT.md, docs/APP_QUALITY_AUDIT.md)",
   "files": [
     "index.html",
+    "config.js",
     "app.js",
     "vercel.json",
     "robots.txt",
@@ -30,5 +31,7 @@
     "manifest.json"
   ],
   "offers": "64 illustrative offer records (62 live) on one shared model — restaurants, cafés, stays, culture tickets, experiences, activities, events, markets, services; shown on cards, decision pages, Home/Discover deal rails, My Plan and the Assistant; not live commercial offers",
-  "assistant": "Free-text EyeMakkah Assistant over the four-part Intent Bank (150 intents, 2,123 AR/EN examples) — deterministic, on-device, no LLM or external API"
+  "assistant": "Free-text EyeMakkah Assistant over the four-part Intent Bank (150 intents, 2,123 AR/EN examples) — deterministic, on-device, no LLM or external API",
+  "entry": "Start → Language → Sign in / Create account (email, mobile + SMS code, Apple, Google) → Profile setup → Home; Forgot password; Browse without an account",
+  "accounts": "Firebase Authentication + Cloud Firestore over REST, configured in config.js; unconfigured methods refuse instead of signing in"
 }

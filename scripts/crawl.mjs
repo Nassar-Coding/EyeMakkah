@@ -1,6 +1,7 @@
 /* Broad QA crawl: opens a wide sample of objects, communities, families, clubs and
    threads, and fails on runtime errors, blank screens or dead ends. */
-import { chromium } from "playwright";
+import { launchBrowser, outDir } from "./lib/browser.mjs";
+import { prepareQaAccount, signInQa, closeQaServer } from "./lib/qa-session.mjs";
 import { createServer } from "node:http";
 import { readFile } from "node:fs/promises";
 import { extname, resolve } from "node:path";
@@ -14,13 +15,17 @@ const server = createServer(async (req, res) => {
 await new Promise((r) => server.listen(4455, r));
 
 const errors = [], thin = [], dead = [];
-const browser = await chromium.launch({ executablePath: "/opt/pw-browsers/chromium-1194/chrome-linux/chrome", args: ["--no-sandbox"] });
+const browser = await launchBrowser();
 const page = await browser.newPage({ viewport: { width: 460, height: 940 } });
 page.on("console", (m) => { if (m.type() === "error") { const t = m.text(); if (!/fonts\.googleapis|net::|Failed to load resource/.test(t)) errors.push(t); } });
 page.on("pageerror", (e) => errors.push("pageerror: " + e.message));
 const txt = () => page.evaluate(() => document.querySelector(".em")?.innerText || "");
+if (!page.__qa) await prepareQaAccount(page);
 await page.goto("http://127.0.0.1:4455/", { waitUntil: "networkidle" });
 await page.waitForTimeout(700);
+await page.getByText(/^ابدأ$/).first().click();
+await page.locator('[data-lang="ar"]').click();
+await signInQa(page);
 
 /* Crawl by driving the app's own navigation through the search box, which is the
    only public way in — no internal hooks. */
@@ -89,5 +94,5 @@ console.log(`thin screens: ${thin.length}`);
 thin.slice(0, 10).forEach((e) => console.log("  ~ " + e));
 console.log(`dead ends: ${dead.length}`);
 dead.slice(0, 15).forEach((e) => console.log("  x " + e));
-await browser.close(); server.close();
+await browser.close(); server.close(); await closeQaServer();
 process.exit(errors.length || dead.length ? 1 : 0);

@@ -1,4 +1,5 @@
-import { chromium } from "playwright";
+import { launchBrowser, outDir } from "./lib/browser.mjs";
+import { prepareQaAccount, signInQa, closeQaServer } from "./lib/qa-session.mjs";
 import { createServer } from "node:http";
 import { readFile } from "node:fs/promises";
 import { extname, resolve } from "node:path";
@@ -10,14 +11,16 @@ const server = createServer(async (req, res) => {
   catch { res.writeHead(404); res.end(); }
 });
 await new Promise((r) => server.listen(4467, r));
-const out = process.env.OUT || "/tmp/claude-0/-home-user-EyeMakkah/bdda0f4a-9b40-5755-97f3-db2bbfc5eb30/scratchpad/final";
-const browser = await chromium.launch({ executablePath: "/opt/pw-browsers/chromium-1194/chrome-linux/chrome", args: ["--no-sandbox"] });
+const out = process.env.OUT || outDir("final");
+const browser = await launchBrowser();
 const page = await browser.newPage({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
+if (!page.__qa) await prepareQaAccount(page);
 await page.goto("http://127.0.0.1:4467/", { waitUntil: "networkidle" });
 await page.waitForTimeout(800);
 await page.getByText(/^(ابدأ|Enter EyeMakkah)$/).first().click();
 await page.waitForTimeout(600);
 await page.locator(`[data-lang="${process.env.LANG_PICK || "ar"}"]`).click();
+await signInQa(page);
 await page.waitForTimeout(1000);
 const shot = (n) => page.screenshot({ path: `${out}/${n}.png` });
 const home = async () => {
@@ -53,5 +56,5 @@ await home(); await page.getByLabel("حسابي").click(); await page.waitForTim
 await page.mouse.move(195, 480); await page.mouse.wheel(0, 1600); await page.waitForTimeout(500); await shot("L-profile-scrolled");
 await page.getByText("أدوات مقدّم التجربة", { exact: true }).first().click(); await page.waitForTimeout(600); await shot("M-provider");
 await page.getByText("الإشارات", { exact: true }).click(); await page.waitForTimeout(600); await shot("N-signals");
-await browser.close(); server.close();
+await browser.close(); server.close(); await closeQaServer();
 console.log("shots written");

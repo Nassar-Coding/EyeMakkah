@@ -1,5 +1,6 @@
 /* Walks the app in English and collects every Arabic string still rendered. */
-import { chromium } from "playwright";
+import { launchBrowser, outDir } from "./lib/browser.mjs";
+import { prepareQaAccount, signInQa, closeQaServer } from "./lib/qa-session.mjs";
 import { createServer } from "node:http";
 import { readFile, writeFile } from "node:fs/promises";
 import { extname, resolve } from "node:path";
@@ -11,13 +12,15 @@ const server = createServer(async (req, res) => {
   catch { res.writeHead(404); res.end(); }
 });
 await new Promise((r) => server.listen(4520, r));
-const browser = await chromium.launch({ executablePath: "/opt/pw-browsers/chromium-1194/chrome-linux/chrome", args: ["--no-sandbox"] });
+const browser = await launchBrowser();
 const page = await browser.newPage({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
+if (!page.__qa) await prepareQaAccount(page);
 await page.goto("http://127.0.0.1:4520/", { waitUntil: "networkidle" });
 await page.waitForTimeout(700);
 await page.getByText(/^(ابدأ|Enter EyeMakkah)$/).first().click();
 await page.waitForTimeout(600);
 await page.locator('[data-lang="en"]').click();
+await signInQa(page);
 await page.waitForTimeout(1100);
 
 const found = new Set();
@@ -83,6 +86,6 @@ await tab("home");
 try { await page.getByLabel(/الإشعارات|Notifications/).click(); await page.waitForTimeout(600); await scrollAll(); } catch {}
 
 const list = [...found].sort((a, b) => a.length - b.length);
-await writeFile(process.env.OUT_FILE || "/tmp/claude-0/-home-user-EyeMakkah/bdda0f4a-9b40-5755-97f3-db2bbfc5eb30/scratchpad/arabic-leftovers.json", JSON.stringify(list, null, 1));
+await writeFile(process.env.OUT_FILE || outDir("arabic-leftovers.json"), JSON.stringify(list, null, 1));
 console.log("unique Arabic strings still rendered in English:", list.length);
-await browser.close(); server.close();
+await browser.close(); server.close(); await closeQaServer();

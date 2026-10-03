@@ -2,7 +2,8 @@
    main surfaces and several decision pages, reads each decision-page media caption,
    and reports broken images, drawn (non-photographic) media and runtime errors —
    all three must be zero. */
-import { chromium } from "playwright";
+import { launchBrowser, outDir } from "./lib/browser.mjs";
+import { prepareQaAccount, signInQa, closeQaServer } from "./lib/qa-session.mjs";
 import { createServer } from "node:http";
 import { readFile } from "node:fs/promises";
 import { extname, resolve } from "node:path";
@@ -15,7 +16,7 @@ const server = createServer(async (req, res) => {
 });
 await new Promise((r) => server.listen(4620, r));
 const errs = [];
-const browser = await chromium.launch({ executablePath: "/opt/pw-browsers/chromium-1194/chrome-linux/chrome", args: ["--no-sandbox"] });
+const browser = await launchBrowser();
 const page = await browser.newPage({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
 page.on("pageerror", (e) => errs.push("pageerror: " + e.message));
 page.on("console", (m) => { if (m.type() === "error" && !/fonts\.g|ERR_|net::|Failed to load resource/.test(m.text())) errs.push("console: " + m.text()); });
@@ -42,11 +43,13 @@ const open = async (name, label) => {
   report.push(`  ${name} → ${cap}`);
   await shot(label);
 };
+if (!page.__qa) await prepareQaAccount(page);
 await page.goto("http://127.0.0.1:4620/", { waitUntil: "networkidle" }); await page.waitForTimeout(900);
 await shot("01-landing");
 await page.getByText(/^(ابدأ|Enter EyeMakkah)$/).first().click(); await page.waitForTimeout(700);
 await shot("02-language");
 await page.locator('[data-lang="ar"]').click(); await page.waitForTimeout(1100);
+await signInQa(page);
 await shot("03-home");
 await page.mouse.move(195, 500); await page.mouse.wheel(0, 1500); await shot("04-home-scrolled");
 await page.mouse.wheel(0, 1600); await shot("05-home-scrolled-2");
@@ -68,4 +71,4 @@ await page.getByText("أدوات مقدّم التجربة", { exact: true }).fi
 console.log(report.join("\n"));
 console.log("drawn media:", drawnTotal, "· broken images:", brokenTotal, "· illustration captions:", report.filter((l) => l.includes("رسم توضيحي")).length);
 console.log("runtime errors:", errs.length, errs.slice(0, 3));
-await browser.close(); server.close();
+await browser.close(); server.close(); await closeQaServer();
