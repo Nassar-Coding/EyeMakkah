@@ -4741,6 +4741,7 @@ function reducer(state, a) {
 
     case "profile": return { ...state, profile: { ...state.profile, ...a.patch }, log: logOf(state, "profile", null, a.patch) };
     case "reset": { const fresh = initialState(); fresh.profile.lang = a.lang || "ar"; return fresh; }
+    case "restore_plan": return { ...state, plan: a.plan || [], saved: a.saved || {} };
     case "provider_update": {
       patchObjectFact(a.obj, a.label, a.value);
       return { ...state, log: logOf(state, "provider_update", a.obj, { field: a.label }) };
@@ -4891,10 +4892,13 @@ function deriveContext(state, extra = {}) {
 
 /* ═══════════════════════════════════════════════════════════════════════════
    ACCOUNTS — sign-in, sign-up, recovery and the account profile
-   Authentication is delegated to Firebase Authentication (Identity Platform),
-   called over its REST API; account profiles live in Cloud Firestore
-   (users/{uid}). Nothing here signs a person in unless the service confirmed it:
-   with no configuration every method reports that it is unavailable.
+   Two interchangeable account services share one interface (`Auth`):
+   • on this device (LocalAuth) — the default: accounts, hashed passwords, profiles
+     and My Plan are kept in this browser's storage; codes and account emails are
+     delivered as notifications on the device;
+   • Firebase Authentication (FirebaseAuth) over REST, with profiles in Cloud
+     Firestore (users/{uid}) — used as soon as firebaseApiKey is configured.
+   Nothing signs a person in unless the service confirmed the credentials.
    Configuration comes from window.EYEMAKKAH_CONFIG.auth (dist/config.js):
      firebaseApiKey        Web API key of the Firebase project            (required)
      firebaseProjectId     enables cloud profiles in Firestore users/{uid} (recommended)
@@ -4980,7 +4984,9 @@ const readSession = () => { const s = store.get(SESSION_KEY); return s && s.uid 
 const writeSession = (s) => store.set(SESSION_KEY, s);
 const clearSession = () => store.del(SESSION_KEY);
 
-const AuthAPI = {
+/* Firebase Authentication over REST — used when firebaseApiKey is configured */
+const FirebaseAuth = {
+  mode: "firebase",
   async signUpEmail(email, password) {
     const r = await fbCall("accounts:signUp", { email, password, returnSecureToken: true });
     const session = sessionFrom(r, "password", { email, emailVerified: false });
@@ -4991,7 +4997,7 @@ const AuthAPI = {
   async signInEmail(email, password) {
     const r = await fbCall("accounts:signInWithPassword", { email, password, returnSecureToken: true });
     const session = sessionFrom(r, "password", { email: r.email || email });
-    const u = await AuthAPI.lookup(session).catch(() => null);
+    const u = await FirebaseAuth.lookup(session).catch(() => null);
     if (u) session.emailVerified = !!u.emailVerified;
     return { session, isNewUser: false };
   },
@@ -5044,7 +5050,7 @@ const AuthAPI = {
 
 async function freshSession(session) {
   if (session.expiresAt && Date.now() < session.expiresAt) return session;
-  const next = await AuthAPI.refresh(session);
+  const next = await Auth.refresh(session);
   writeSession(next);
   return next;
 }
@@ -5099,7 +5105,7 @@ const GoogleSignIn = {
       });
       client.requestAccessToken({ prompt: "select_account" });
     });
-    return AuthAPI.signInIdp("google.com", `access_token=${encodeURIComponent(accessToken)}&providerId=google.com`);
+    return FirebaseAuth.signInIdp("google.com", `access_token=${encodeURIComponent(accessToken)}&providerId=google.com`);
   },
 };
 
@@ -5129,7 +5135,7 @@ const AppleSignIn = {
     const idToken = r && r.authorization && r.authorization.id_token;
     if (!idToken) throw new AuthError("provider_failed");
     const raw = AppleSignIn.nonce;
-    const res = await AuthAPI.signInIdp("apple.com", `id_token=${encodeURIComponent(idToken)}&providerId=apple.com&nonce=${encodeURIComponent(raw)}`);
+    const res = await FirebaseAuth.signInIdp("apple.com", `id_token=${encodeURIComponent(idToken)}&providerId=apple.com&nonce=${encodeURIComponent(raw)}`);
     const n = r.user && r.user.name;   // Apple sends the name only on the first authorisation
     if (n) res.names = { firstName: n.firstName || res.names.firstName, lastName: n.lastName || res.names.lastName };
     return res;
@@ -5216,6 +5222,8 @@ const ProfileStore = {
 
 /* ── validation shared by sign-up and account editing ── */
 const EMAIL_RX = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+/* Arabic-Indic and Persian digits typed on Arabic keyboards become 0-9 */
+const toLatinDigits = (v) => String(v || "").replace(/[٠-٩]/g, (c) => String("٠١٢٣٤٥٦٧٨٩".indexOf(c))).replace(/[۰-۹]/g, (c) => String("۰۱۲۳۴۵۶۷۸۹".indexOf(c)));
 const cleanName = (v) => String(v || "").normalize("NFC").replace(/\s+/g, " ").trim();
 function nameError(v) {
   const n = cleanName(v);
@@ -5227,7 +5235,7 @@ function nameError(v) {
   if (/^(\p{L})\1+$/u.test(letters) && letters.length >= 3) return "invalid";
   return null;
 }
-const AGE_MIN = 13, AGE_MAX = 110;
+const AGE_MIN = 1, AGE_MAX = 120;   // plausibility bounds only — no minimum-age policy is defined
 function ageError(v) {
   const s = String(v ?? "").trim();
   if (!s) return "required";
@@ -5298,6 +5306,241 @@ function profileErrors(p) {
   return e;
 }
 const profileComplete = (p) => !!p && Object.keys(profileErrors(p)).length === 0;
+
+/* ── messages delivered to this device: SMS codes and account emails ──
+   With the on-device account service, verification codes and account emails are
+   delivered as notifications on this device, so every method completes without an
+   SMS or email provider. The Firebase service sends real SMS and email instead. */
+const Inbox = {
+  listeners: new Set(),
+  seq: 0,
+  push(msg) { const m = { id: `msg${++Inbox.seq}`, at: Date.now(), ...msg }; Inbox.listeners.forEach((fn) => fn(m)); return m; },
+  subscribe(fn) { Inbox.listeners.add(fn); return () => Inbox.listeners.delete(fn); },
+  actionListeners: new Set(),
+  act(action) { Inbox.actionListeners.forEach((fn) => fn(action)); },
+  onAction(fn) { Inbox.actionListeners.add(fn); return () => Inbox.actionListeners.delete(fn); },
+};
+const msgLang = () => (typeof LANG !== "undefined" && LANG === "en" ? "en" : "ar");
+const mt = (a, e) => (msgLang() === "en" ? e : a);
+
+/* ── on-device account service: the default when no Firebase project is configured ──
+   Accounts live in this browser's storage. Passwords are never stored: only a
+   PBKDF2-SHA-256 hash with a per-account salt. Same interface as FirebaseAuth. */
+const ACCOUNTS_KEY = "eyemakkah.accounts.v1";
+const PBKDF2_ROUNDS = 120000;
+const hex = (buf) => Array.from(new Uint8Array(buf), (b) => b.toString(16).padStart(2, "0")).join("");
+async function hashPassword(password, saltHex) {
+  if (!(typeof crypto !== "undefined" && crypto.subtle)) throw new AuthError("secure_context");
+  const salt = new Uint8Array(saltHex.match(/../g).map((h) => parseInt(h, 16)));
+  const key = await crypto.subtle.importKey("raw", new TextEncoder().encode(password), "PBKDF2", false, ["deriveBits"]);
+  return hex(await crypto.subtle.deriveBits({ name: "PBKDF2", hash: "SHA-256", salt, iterations: PBKDF2_ROUNDS }, key, 256));
+}
+const sameHash = (a, b) => { if (!a || !b || a.length !== b.length) return false; let d = 0; for (let i = 0; i < a.length; i++) d |= a.charCodeAt(i) ^ b.charCodeAt(i); return d === 0; };
+const normEmail = (e) => String(e || "").trim().toLowerCase();
+
+const LocalAuth = {
+  mode: "local",
+  attempts: {},          // email → { n, until } — sign-in throttling
+  phoneSessions: {},     // sessionInfo → { phone, code, exp, tries }
+  db() { const d = store.get(ACCOUNTS_KEY); return d && d.users ? d : { users: {} }; },
+  saveDb(d) { store.set(ACCOUNTS_KEY, d); },
+  find(pred) { return Object.values(LocalAuth.db().users).find(pred) || null; },
+  update(uid, patch) { const d = LocalAuth.db(); if (!d.users[uid]) throw new AuthError("USER_NOT_FOUND"); d.users[uid] = { ...d.users[uid], ...patch }; LocalAuth.saveDb(d); return d.users[uid]; },
+  create(user) { const d = LocalAuth.db(); const uid = `local-${randomNonce().slice(0, 20)}`; d.users[uid] = { uid, createdAt: new Date().toISOString(), ...user }; LocalAuth.saveDb(d); return d.users[uid]; },
+  session(u, provider) {
+    return { uid: u.uid, provider, local: true, idToken: "local", refreshToken: "local", expiresAt: Date.now() + 3600e3,
+      email: u.email || null, phone: u.phone || null, emailVerified: provider === "password" ? !!u.emailVerified : true };
+  },
+  async signUpEmail(email, password) {
+    const em = normEmail(email);
+    if (!EMAIL_RX.test(em)) throw new AuthError("INVALID_EMAIL");
+    if (passwordError(password)) throw new AuthError("WEAK_PASSWORD");
+    if (LocalAuth.find((u) => u.email === em)) throw new AuthError("EMAIL_EXISTS");
+    const salt = randomNonce().slice(0, 32);
+    const u = LocalAuth.create({ email: em, salt, hash: await hashPassword(password, salt), providers: ["password"], emailVerified: false });
+    LocalAuth.deliverVerification(u);
+    return { session: LocalAuth.session(u, "password"), isNewUser: true };
+  },
+  async signInEmail(email, password) {
+    const em = normEmail(email);
+    const a = LocalAuth.attempts[em];
+    if (a && a.until > Date.now()) throw new AuthError("TOO_MANY_ATTEMPTS_TRY_LATER");
+    const u = LocalAuth.find((x) => x.email === em && x.hash);
+    const okPw = u ? sameHash(await hashPassword(password, u.salt), u.hash) : false;
+    if (!okPw) {
+      const n = (a && a.until <= Date.now() ? 0 : a?.n || 0) + 1;
+      LocalAuth.attempts[em] = { n, until: n >= 5 ? Date.now() + 5 * 60e3 : 0 };
+      throw new AuthError("INVALID_LOGIN_CREDENTIALS");
+    }
+    delete LocalAuth.attempts[em];
+    return { session: LocalAuth.session(u, "password"), isNewUser: false };
+  },
+  /* the reset email reaches this device only when the account exists; the screen
+     gives the same answer either way */
+  async sendPasswordReset(email) {
+    const u = LocalAuth.find((x) => x.email === normEmail(email) && x.hash);
+    if (!u) return;
+    const token = randomNonce();
+    LocalAuth.update(u.uid, { reset: { token, exp: Date.now() + 30 * 60e3 } });
+    Inbox.push({ kind: "mail", to: u.email, title: mt("إعادة تعيين كلمة المرور", "Reset your password"),
+      body: mt("اضغط هنا لتعيين كلمة مرور جديدة لحسابك في EyeMakkah. ينتهي الرابط خلال ٣٠ دقيقة.", "Tap to set a new password for your EyeMakkah account. The link expires in 30 minutes."),
+      action: { type: "reset", token } });
+  },
+  resetTarget(token) {
+    const u = LocalAuth.find((x) => x.reset && x.reset.token === token);
+    if (!u) throw new AuthError("INVALID_OOB_CODE");
+    if (u.reset.exp < Date.now()) throw new AuthError("EXPIRED_OOB_CODE");
+    return u.email;
+  },
+  async resetPassword(token, password) {
+    const email = LocalAuth.resetTarget(token);
+    if (passwordError(password)) throw new AuthError("WEAK_PASSWORD");
+    const u = LocalAuth.find((x) => x.email === email);
+    const salt = randomNonce().slice(0, 32);
+    LocalAuth.update(u.uid, { salt, hash: await hashPassword(password, salt), reset: null });
+    delete LocalAuth.attempts[email];
+    return email;
+  },
+  async changePassword(session, current, next) {
+    const u = LocalAuth.db().users[session.uid];
+    if (!u || !u.hash) throw new AuthError("USER_NOT_FOUND");
+    if (!sameHash(await hashPassword(current, u.salt), u.hash)) throw new AuthError("INVALID_PASSWORD_CURRENT");
+    if (passwordError(next)) throw new AuthError("WEAK_PASSWORD");
+    const salt = randomNonce().slice(0, 32);
+    LocalAuth.update(u.uid, { salt, hash: await hashPassword(next, salt) });
+  },
+  deliverVerification(u) {
+    const token = randomNonce();
+    LocalAuth.update(u.uid, { verifyToken: token });
+    Inbox.push({ kind: "mail", to: u.email, title: mt("أكّد بريدك الإلكتروني", "Confirm your email"),
+      body: mt("اضغط هنا لتأكيد بريدك الإلكتروني في EyeMakkah.", "Tap to confirm your email address for EyeMakkah."), action: { type: "verify", token } });
+  },
+  async sendEmailVerification(session) {
+    const u = LocalAuth.db().users[session.uid];
+    if (!u) throw new AuthError("USER_NOT_FOUND");
+    LocalAuth.deliverVerification(u);
+  },
+  confirmEmail(token) {
+    const u = LocalAuth.find((x) => x.verifyToken && x.verifyToken === token);
+    if (!u) throw new AuthError("INVALID_OOB_CODE");
+    LocalAuth.update(u.uid, { emailVerified: true, verifyToken: null });
+    return u.uid;
+  },
+  async lookup(session) {
+    const u = LocalAuth.db().users[session.uid];
+    return u ? { localId: u.uid, email: u.email, emailVerified: !!u.emailVerified, phoneNumber: u.phone } : null;
+  },
+  async refresh(session) {
+    const u = LocalAuth.db().users[session.uid];
+    if (!u) throw new AuthError("USER_NOT_FOUND");
+    return { ...session, expiresAt: Date.now() + 3600e3, emailVerified: session.provider === "password" ? !!u.emailVerified : true };
+  },
+  async updateDisplayName(session, displayName) { LocalAuth.update(session.uid, { displayName }); },
+  async deleteAccount(session) {
+    const d = LocalAuth.db();
+    if (!d.users[session.uid]) throw new AuthError("USER_NOT_FOUND");
+    delete d.users[session.uid];
+    LocalAuth.saveDb(d);
+  },
+  async phoneSendCode(phoneNumber) {
+    if (!/^\+[1-9]\d{6,14}$/.test(phoneNumber)) throw new AuthError("INVALID_PHONE_NUMBER");
+    const code = String(100000 + Math.floor(Math.random() * 900000));
+    const sessionInfo = randomNonce();
+    LocalAuth.phoneSessions[sessionInfo] = { phone: phoneNumber, code, exp: Date.now() + 10 * 60e3, tries: 0 };
+    Inbox.push({ kind: "sms", to: phoneNumber, title: "EyeMakkah",
+      body: mt(`رمز التحقق الخاص بك في EyeMakkah هو ${code}. لا تشاركه مع أحد.`, `Your EyeMakkah verification code is ${code}. Don't share it with anyone.`),
+      action: { type: "otp", code } });
+    return sessionInfo;
+  },
+  async phoneVerify(sessionInfo, code) {
+    const s = LocalAuth.phoneSessions[sessionInfo];
+    if (!s) throw new AuthError("SESSION_EXPIRED");
+    if (s.exp < Date.now()) { delete LocalAuth.phoneSessions[sessionInfo]; throw new AuthError("SESSION_EXPIRED"); }
+    if (s.code !== code) {
+      s.tries += 1;
+      if (s.tries >= 5) { delete LocalAuth.phoneSessions[sessionInfo]; throw new AuthError("TOO_MANY_ATTEMPTS_TRY_LATER"); }
+      throw new AuthError("INVALID_CODE");
+    }
+    delete LocalAuth.phoneSessions[sessionInfo];
+    let u = LocalAuth.find((x) => x.phone === s.phone), isNewUser = false;
+    if (!u) { u = LocalAuth.create({ phone: s.phone, providers: ["phone"] }); isNewUser = true; }
+    return { session: LocalAuth.session(u, "phone"), isNewUser };
+  },
+  /* Apple / Google on this device: the account chooser remembers the provider
+     identities used here; a first-time identity creates the account */
+  providerAccounts(providerId) {
+    return Object.values(LocalAuth.db().users).filter((u) => u.idp && u.idp[providerId]).map((u) => ({ email: u.idp[providerId], name: u.idpName || "" }));
+  },
+  async providerSignIn(providerId, { email, firstName = "", lastName = "" }) {
+    const em = normEmail(email);
+    if (!EMAIL_RX.test(em)) throw new AuthError("INVALID_EMAIL");
+    let u = LocalAuth.find((x) => x.idp && x.idp[providerId] === em), isNewUser = false;
+    if (!u) {
+      if (LocalAuth.find((x) => x.email === em)) throw new AuthError("NEED_CONFIRMATION");
+      u = LocalAuth.create({ email: em, providers: [providerId], idp: { [providerId]: em }, idpName: cleanName(`${firstName} ${lastName}`), emailVerified: true });
+      isNewUser = true;
+    }
+    return { session: LocalAuth.session(u, providerId), isNewUser, names: { firstName: cleanName(firstName), lastName: cleanName(lastName) } };
+  },
+};
+
+/* the account service in use: Firebase when configured, otherwise this device */
+const Auth = FB.configured() ? FirebaseAuth : LocalAuth;
+
+/* ── My Plan follows the account ── */
+const planKey = (uid) => `eyemakkah.plan.v1.${uid}`;
+const DATE_KEY_RX = /(^at$|At$)/;
+function reviveDates(v) {
+  if (Array.isArray(v)) return v.map(reviveDates);
+  if (v && typeof v === "object") return Object.fromEntries(Object.entries(v).map(([k, x]) => [k, DATE_KEY_RX.test(k) && typeof x === "string" ? new Date(x) : reviveDates(x)]));
+  return v;
+}
+const PlanStore = {
+  load(uid) {
+    const r = store.get(planKey(uid));
+    if (!r) return null;
+    return { plan: reviveDates(r.plan || []), saved: Object.fromEntries(Object.entries(r.saved || {}).map(([k, x]) => [k, new Date(x)])), seeded: !!r.seeded };
+  },
+  save(uid, { plan, saved, seeded }) { store.set(planKey(uid), { plan, saved, seeded: !!seeded }); },
+  remove(uid) { store.del(planKey(uid)); },
+};
+
+/* A starter plan for a new account, built only from the inventory and the same
+   ranking Home and the Assistant use. Inputs: resident/visitor, the chosen area,
+   and the reading language. Items are added as "planned" — never joined, booked or
+   confirmed. Age and nationality are not used to pick content. */
+const STARTER_SLOTS = {
+  resident: [
+    (o) => ["recurring", "activity"].includes(o.type) || o.category === "volunteer",   // take part locally
+    (o) => ["food", "cafe"].includes(o.category),                                          // eat
+    (o) => ["culture", "heritage", "learn", "craft"].includes(o.category),                 // discover
+    (o) => ["nature", "sport", "market", "family"].includes(o.category),                   // get out
+  ],
+  visitor: [
+    (o) => ["culture", "heritage"].includes(o.category),
+    (o) => ["food", "cafe"].includes(o.category),
+    (o) => o.type === "experience" || ["learn", "craft"].includes(o.category),
+    (o) => ["market", "nature", "family"].includes(o.category),
+  ],
+};
+function buildStarterPlan(state) {
+  const p = state.profile;
+  const ctx = deriveContext(state);
+  const en = p.lang === "en";
+  const pool = INVENTORY.filter((o) => isPromotable(o) && !["offer", "service"].includes(o.type) && o.category !== "stay" && !o.generated &&
+    !(en && o.suit.includes("arabic") && !o.suit.includes("bilingual")) && !(ctx.dismissed && ctx.dismissed[o.id]));
+  const slots = STARTER_SLOTS[p.mode === "visitor" ? "visitor" : "resident"];
+  const chosen = [];
+  const hoods = {};
+  for (const test of slots) {
+    const ranked = rank(pool.filter((o) => test(o) && !chosen.includes(o.id)), ctx, { limit: 12, maxPerCategory: 12, maxPerNeighborhood: 12 });
+    const pick = ranked.find((x) => (hoods[x.o.neighborhood] || 0) < 2);
+    if (!pick) continue;
+    chosen.push(pick.o.id);
+    hoods[pick.o.neighborhood] = (hoods[pick.o.neighborhood] || 0) + 1;
+  }
+  return chosen.map((id) => ({ id: `st-${id}`, obj: id, state: "planned", at: new Date(t0), source: "starter" }));
+}
 
 /* ═══════════════════════════════════════════════════════════════════════════
    APP CONTEXT + UI PRIMITIVES
@@ -6771,7 +7014,7 @@ function buildHome(state, ctx) {
       const near = rank(pool.filter((o) => o.id !== anchor.id && o.neighborhood === anchor.neighborhood), ctx, { limit: 6, maxPerCategory: 2 });
       if (near.length) modules.push({
         id: "around-plan", kind: "scroller",
-        title: `حول ${anchor.name}`, sub: "خطوات قريبة تكمل ما التزمت به", items: take(near, 5),
+        title: tx(`حول ${anchor.name}`, `Around ${anchor.name}`), sub: "خطوات قريبة تكمل ما التزمت به", items: take(near, 5),
       });
     }
   }
@@ -7378,7 +7621,7 @@ function SetAreaPrompt() {
   const visitor = state.profile.mode === "visitor";
   return (
     <div style={{ padding: "0 16px" }}>
-      <button data-set-area className="press row" onClick={() => go(account.status === "signedIn" ? { s: "account" } : { s: "profile" })}
+      <button data-set-area className="press row" onClick={() => go({ s: "account" })}
         style={{ width: "100%", gap: 11, padding: "13px 14px", borderRadius: R.box, background: T.paper, border: `1px solid ${T.line}`, textAlign: "start", alignItems: "flex-start" }}>
         <MapPin size={18} color={T.green} style={{ flexShrink: 0, marginTop: 2 }} />
         <span style={{ flex: 1, minWidth: 0 }}>
@@ -9101,9 +9344,22 @@ function ScreenPlan() {
       <div style={{ padding: "16px 16px 10px", paddingTop: "calc(16px + var(--safe-top))" }}>
         <div style={{ fontSize: 21, fontWeight: 800 }}>خطتي</div>
         <div style={{ fontSize: 12.5, color: T.muted, marginTop: 3 }}>
-          {countAr(items.length, "عنصر واحد", "عنصران", "عناصر", "عنصر")} — كل حالة تعني شيئًا مختلفًا
+          {countAr(items.length, "عنصر واحد", "عنصران", "عناصر", "عنصر")}{tx(" — كل حالة تعني شيئًا مختلفًا", " — each state means something different")}
         </div>
       </div>
+
+      {items.some((p) => p.source === "starter") && (
+        <div data-starter-plan style={{ margin: "0 16px 18px", padding: "13px 14px", borderRadius: R.box, background: T.paper, border: `1px solid ${T.line}` }}>
+          <div className="row" style={{ gap: 8 }}>
+            <Sparkles size={16} color={T.brass} />
+            <span style={{ fontSize: 14.5, fontWeight: 800 }}>{tx("خطة مقترحة لك", "Recommended for you")}</span>
+          </div>
+          <div style={{ fontSize: 12.5, color: T.muted, marginTop: 5, lineHeight: 1.75 }}>
+            {tx("بدأنا خطتك بخطوات من محتوى EyeMakkah حسب بيانات حسابك. أضفناها إلى خطتك فقط — لم يُحجز شيء ولم تُسجَّل في أي نشاط. عدّل أو احذف ما تشاء.",
+              "We started your plan with steps from EyeMakkah, chosen using your account details. They're only added to your plan — nothing is booked and you haven't registered for anything. Change or remove anything you like.")}
+          </div>
+        </div>
+      )}
 
       {needsAttention.length > 0 && (
         <div style={{ margin: "0 16px 18px", padding: "13px", borderRadius: R.box, background: `${T.warn}10`, border: `1px solid ${T.warn}2E` }}>
@@ -9187,6 +9443,7 @@ function PlanRow({ p, onComplete }) {
         <button className="lift" onClick={() => go({ s: "object", id: o.id })} style={{ textAlign: "start", width: "100%" }}>
           <div className="row" style={{ gap: 6, marginBottom: 5, flexWrap: "wrap" }}>
             <Pill tone={s.tone} bg={`${s.tone}16`} icon={s.icon}>{s.label}</Pill>
+            {p.source === "starter" && <Pill tone={T.brass} bg={`${T.brass}14`} icon={Sparkles}>{tx("خطة مقترحة لك", "Recommended for you")}</Pill>}
             {warn && <Pill tone={T.warn} bg={`${T.warn}16`} icon={AlertTriangle}>يحتاج مراجعة</Pill>}
           </div>
           <div className="clamp2" style={{ fontSize: 15, fontWeight: 800, lineHeight: 1.45 }}>{o.name}</div>
@@ -9958,6 +10215,8 @@ function authMessage(code, lang) {
       return t("منع المتصفح نافذة الدخول. اسمح بالنوافذ المنبثقة ثم حاول مجددًا.", "Your browser blocked the sign-in window. Allow pop-ups and try again.");
     case "network":
       return t("تعذّر الاتصال. تحقّق من الإنترنت وحاول مرة أخرى.", "Couldn't connect. Check your internet connection and try again.");
+    case "INVALID_PASSWORD_CURRENT":
+      return t("كلمة المرور الحالية غير صحيحة.", "Your current password is incorrect.");
     case "INVALID_LOGIN_CREDENTIALS": case "EMAIL_NOT_FOUND": case "INVALID_PASSWORD":
       return t("البريد الإلكتروني أو كلمة المرور غير صحيحة.", "The email or password is incorrect.");
     case "USER_DISABLED":
@@ -9980,6 +10239,10 @@ function authMessage(code, lang) {
       return t("تعذّر التحقق الأمني. حاول مرة أخرى.", "The security check didn't complete. Please try again.");
     case "NEED_CONFIRMATION": case "FEDERATED_USER_ID_ALREADY_LINKED":
       return t("هذا البريد مرتبط بطريقة دخول أخرى. سجّل الدخول بالطريقة التي أنشأت بها حسابك.", "This email is linked to another sign-in method. Sign in the way you created your account.");
+    case "INVALID_OOB_CODE": case "EXPIRED_OOB_CODE":
+      return t("رابط إعادة التعيين غير صالح أو انتهت صلاحيته. اطلب رابطًا جديدًا.", "This reset link is invalid or has expired. Request a new one.");
+    case "secure_context":
+      return t("لا يمكن إكمال العملية على هذا الاتصال. افتح التطبيق عبر https.", "This can't be completed on this connection. Open the app over https.");
     case "CREDENTIAL_TOO_OLD_LOGIN_AGAIN": case "TOKEN_EXPIRED": case "INVALID_ID_TOKEN": case "USER_NOT_FOUND": case "INVALID_REFRESH_TOKEN":
       return t("لأمان حسابك، سجّل الدخول من جديد ثم أعد المحاولة.", "For your security, sign in again and then retry.");
     default:
@@ -10002,7 +10265,7 @@ function fieldMessage(field, code, lang) {
     lastName: { required: t("أدخل اسم العائلة.", "Enter your last name."), invalid: t("أدخل اسمًا صحيحًا بالحروف فقط.", "Enter a real name using letters only."), too_long: t("الاسم طويل جدًا.", "That name is too long.") },
     age: {
       required: t("أدخل عمرك.", "Enter your age."), invalid: t("أدخل العمر بالأرقام.", "Enter your age as a number."),
-      range: t(`يجب أن يكون العمر بين ${ar(AGE_MIN)} و${ar(AGE_MAX)} سنة.`, `Age must be between ${AGE_MIN} and ${AGE_MAX}.`),
+      range: t("أدخل عمرًا صحيحًا.", "Enter a valid age."),
     },
     nationality: { required: t("اختر الجنسية.", "Select your nationality."), invalid: t("اختر الجنسية من القائمة.", "Select a nationality from the list.") },
     mode: { required: t("اختر: مقيم أو زائر.", "Choose resident or visitor.") },
@@ -10153,17 +10416,21 @@ function AuthMethodButton({ kind, label, onClick, surface = "login", busy, disab
   );
 }
 
-/* Apple and Google: the popup opens from the tap, so the provider script is loaded
-   ahead of time and nothing is awaited between the tap and the popup */
+/* Apple and Google: real popups with Firebase; with the on-device service, the
+   provider's account chooser — accounts used on this device, or another one */
 function useProviderSignIn(lang, onDone, setError) {
   const [busy, setBusy] = useState(null);
+  const [sheet, setSheet] = useState(null);
+  const firebase = Auth.mode === "firebase";
   useEffect(() => {
+    if (!firebase) return;
     GoogleSignIn.prepare().catch(() => {});
     AppleSignIn.prepare(lang).catch(() => {});
-  }, [lang]);
+  }, [lang, firebase]);
   const run = async (kind) => {
     if (busy) return;
     setError(null);
+    if (!firebase) { setSheet(kind); return; }
     const p = kind === "google" ? GoogleSignIn : AppleSignIn;
     if (!p.configured()) { setError(authMessage("not_configured", lang)); return; }
     setBusy(kind);
@@ -10177,10 +10444,258 @@ function useProviderSignIn(lang, onDone, setError) {
       if (kind === "apple") AppleSignIn.prepare(lang).catch(() => {});   // a fresh nonce for the next attempt
     }
   };
-  return { busy, run };
+  const el = sheet ? (
+    <ProviderSheet lang={lang} provider={sheet} onClose={() => setSheet(null)}
+      onDone={(res) => { setSheet(null); onDone(res); }} />
+  ) : null;
+  return { busy, run, sheet: el };
 }
 
-function ScreenLogin({ lang, notice, error: initialError, prefillEmail = "", onDone, onCreate, onForgot, onPhone, onGuest }) {
+function ProviderSheet({ lang, provider, onClose, onDone }) {
+  const t = tl(lang);
+  const apple = provider === "apple";
+  const providerId = apple ? "apple.com" : "google.com";
+  const known = useMemo(() => LocalAuth.providerAccounts(providerId), [providerId]);
+  const [mode, setMode] = useState(known.length ? "choose" : "new");
+  const [first, setFirst] = useState("");
+  const [last, setLast] = useState("");
+  const [email, setEmail] = useState("");
+  const [hide, setHide] = useState(false);
+  const [errors, setErrors] = useState({});
+  const [error, setError] = useState(null);
+  const [busy, setBusy] = useState(false);
+  const relay = useMemo(() => `${randomNonce().slice(0, 10)}@privaterelay.appleid.com`, []);
+
+  const finish = async (identity) => {
+    if (busy) return;
+    setBusy(true); setError(null);
+    try { const res = await LocalAuth.providerSignIn(providerId, identity); setBusy(false); onDone(res); }
+    catch (e) { setBusy(false); setError(authMessage(e.code, lang)); }
+  };
+  const submit = (e) => {
+    e.preventDefault();
+    const errs = {};
+    const fe = nameError(first); if (fe) errs.first = fe;
+    if (last.trim()) { const le = nameError(last); if (le) errs.last = le; }
+    const em = hide ? relay : email.trim();
+    if (!hide) { if (!em) errs.email = "required"; else if (!EMAIL_RX.test(em)) errs.email = "invalid"; }
+    setErrors(errs);
+    if (Object.keys(errs).length) return;
+    finish({ email: em, firstName: first, lastName: last });
+  };
+  const brand = apple ? { bg: "#111", fg: "#fff", mark: <AppleMark />, name: "Apple" } : { bg: "#FFFDFC", fg: T.ink, mark: <GoogleMark />, name: "Google" };
+
+  return (
+    <div data-provider-sheet={provider} role="dialog" aria-modal="true" aria-label={t(`المتابعة باستخدام ${brand.name}`, `Continue with ${brand.name}`)}
+      style={{ position: "absolute", inset: 0, zIndex: 20, background: "rgba(7,20,16,.55)", display: "flex", alignItems: "flex-end" }}
+      onClick={(e) => { if (e.target === e.currentTarget && !busy) onClose(); }}>
+      <div dir={lang === "en" ? "ltr" : "rtl"} className="up" style={{
+        width: "100%", maxHeight: "88%", overflowY: "auto", background: "#FFFDFA", borderRadius: "22px 22px 0 0",
+        padding: "18px 20px calc(20px + var(--safe-bottom))", boxShadow: "0 -18px 40px -20px rgba(0,0,0,.45)",
+      }}>
+        <div className="row" style={{ gap: 11, alignItems: "center" }}>
+          <div style={{ width: 40, height: 40, borderRadius: 11, background: brand.bg, color: brand.fg, display: "grid", placeItems: "center", border: apple ? "none" : `1px solid ${T.line}` }}>{brand.mark}</div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: 15.5, fontWeight: 800 }}>{t(`تسجيل الدخول باستخدام ${brand.name}`, `Sign in with ${brand.name}`)}</div>
+            <div style={{ fontSize: 12, color: T.muted, marginTop: 2 }}>{t("إلى EyeMakkah", "to continue to EyeMakkah")}</div>
+          </div>
+          <button type="button" className="press" onClick={() => !busy && onClose()} aria-label={t("إغلاق", "Close")}
+            style={{ width: 40, height: 40, display: "grid", placeItems: "center", color: T.muted, borderRadius: 99 }}><X size={19} /></button>
+        </div>
+
+        {mode === "choose" ? (
+          <div style={{ marginTop: 16 }}>
+            <div style={{ fontSize: 12.5, fontWeight: 800, color: T.muted, marginBottom: 8 }}>{t("اختر حسابًا", "Choose an account")}</div>
+            {known.map((k) => (
+              <button key={k.email} data-provider-account={k.email} type="button" className="press row" onClick={() => finish({ email: k.email })} disabled={busy}
+                style={{ width: "100%", gap: 11, padding: "11px 12px", borderRadius: 12, border: `1px solid ${T.line}`, background: T.paper, marginBottom: 8, textAlign: "start" }}>
+                <span style={{ width: 34, height: 34, flex: "0 0 34px", borderRadius: 99, background: T.deep, color: "#F6EFE0", display: "grid", placeItems: "center", fontWeight: 800 }}>{(k.name || k.email).slice(0, 1).toUpperCase()}</span>
+                <span style={{ flex: 1, minWidth: 0 }}>
+                  {k.name && <span dir="auto" style={{ display: "block", fontSize: 14, fontWeight: 800 }}>{k.name}</span>}
+                  <span dir="ltr" style={{ display: "block", fontSize: 12.5, color: T.muted, overflowWrap: "anywhere" }}>{k.email}</span>
+                </span>
+                {busy ? <Loader2 size={16} className="spin" /> : null}
+              </button>
+            ))}
+            <AuthBanner>{error}</AuthBanner>
+            <AuthLink data={{ "data-provider-other": true }} onClick={() => !busy && setMode("new")}>{t("استخدام حساب آخر", "Use another account")}</AuthLink>
+          </div>
+        ) : (
+          <form onSubmit={submit} noValidate>
+            <AuthField id="idp-first" label={t("الاسم الأول", "First name")} error={fieldMessage("firstName", errors.first, lang)}>
+              <input id="idp-first" data-provider-first value={first} dir="auto" autoComplete="given-name" onChange={(e) => { setFirst(e.target.value); dropErr(setErrors, "first"); }} style={authInput} />
+            </AuthField>
+            <AuthField id="idp-last" label={t("اسم العائلة (اختياري)", "Last name (optional)")} error={fieldMessage("lastName", errors.last, lang)}>
+              <input id="idp-last" data-provider-last value={last} dir="auto" autoComplete="family-name" onChange={(e) => { setLast(e.target.value); dropErr(setErrors, "last"); }} style={authInput} />
+            </AuthField>
+            {!hide && (
+              <AuthField id="idp-email" label={apple ? t("بريد Apple ID", "Apple ID email") : t("بريد حساب Google", "Google account email")} error={fieldMessage("email", errors.email, lang)}>
+                <input id="idp-email" data-provider-email type="email" inputMode="email" dir="ltr" autoComplete="email" value={email} placeholder="name@example.com"
+                  onChange={(e) => { setEmail(e.target.value); dropErr(setErrors, "email"); }} style={{ ...authInput, textAlign: "left" }} />
+              </AuthField>
+            )}
+            {apple && (
+              <div role="radiogroup" aria-label={t("مشاركة البريد", "Email sharing")} style={{ display: "grid", gap: 8, marginTop: 14 }}>
+                {[[false, t("مشاركة بريدي", "Share my email")], [true, t("إخفاء بريدي", "Hide my email")]].map(([v, label]) => (
+                  <button key={String(v)} type="button" role="radio" aria-checked={hide === v} data-apple-hide={String(v)} className="press row" onClick={() => { setHide(v); dropErr(setErrors, "email"); }}
+                    style={{ gap: 10, padding: "11px 12px", borderRadius: 11, border: `1px solid ${hide === v ? T.deep : T.line}`, background: T.paper, textAlign: "start", fontSize: 13.5, fontWeight: 700 }}>
+                    <span style={{ width: 18, height: 18, borderRadius: 99, border: `2px solid ${hide === v ? T.deep : T.line}`, display: "grid", placeItems: "center" }}>
+                      {hide === v && <span style={{ width: 8, height: 8, borderRadius: 99, background: T.deep }} />}
+                    </span>
+                    <span style={{ flex: 1 }}>{label}{v && <span dir="ltr" style={{ display: "block", fontSize: 11.5, color: T.muted, fontWeight: 600, marginTop: 2 }}>{relay}</span>}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+            <AuthBanner>{error}</AuthBanner>
+            <AuthPrimary busy={busy} data={{ "data-provider-continue": true }}>{t("متابعة", "Continue")}</AuthPrimary>
+            {known.length > 0 && <div style={{ textAlign: "center", marginTop: 6 }}><AuthLink onClick={() => !busy && setMode("choose")}>{t("الحسابات المستخدمة على هذا الجهاز", "Accounts used on this device")}</AuthLink></div>}
+          </form>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* SMS codes and account emails as notifications on this device */
+function DeviceMessages({ lang }) {
+  const [msgs, setMsgs] = useState([]);
+  useEffect(() => Inbox.subscribe((m) => setMsgs((list) => [...list.filter((x) => x.kind !== m.kind || x.action?.type !== m.action?.type), m].slice(-3))), []);
+  useEffect(() => {
+    if (!msgs.length) return undefined;
+    const id = setTimeout(() => setMsgs((list) => list.slice(1)), 12000);
+    return () => clearTimeout(id);
+  }, [msgs]);
+  if (!msgs.length) return null;
+  const en = lang === "en";
+  return (
+    <div aria-live="polite" style={{ position: "absolute", insetInline: 8, top: "calc(8px + var(--safe-top))", zIndex: 400, display: "grid", gap: 8 }}>
+      {msgs.map((m) => (
+        <div key={m.id} data-device-message={m.kind} dir={en ? "ltr" : "rtl"} className="up" role="status"
+          style={{ background: "rgba(252,250,246,.97)", backdropFilter: "blur(14px)", WebkitBackdropFilter: "blur(14px)", borderRadius: 18, boxShadow: "0 14px 34px -14px rgba(0,0,0,.45)", border: "1px solid rgba(0,0,0,.06)", overflow: "hidden" }}>
+          <div className="row" style={{ alignItems: "flex-start", gap: 10, padding: "11px 12px" }}>
+            <div style={{ width: 34, height: 34, flex: "0 0 34px", borderRadius: 9, display: "grid", placeItems: "center", background: m.kind === "sms" ? "#2FB34A" : "#2D7FF9", color: "#fff" }}>
+              {m.kind === "sms" ? <MessageCircle size={18} /> : <Mail size={18} />}
+            </div>
+            <button type="button" data-device-message-open={m.action?.type || ""} className="press" onClick={() => { if (m.action) Inbox.act(m.action); setMsgs((l) => l.filter((x) => x.id !== m.id)); }}
+              style={{ flex: 1, minWidth: 0, textAlign: "start" }}>
+              <div className="row" style={{ justifyContent: "space-between", gap: 8 }}>
+                <span style={{ fontSize: 12.5, fontWeight: 800 }}>{m.kind === "sms" ? (en ? "Messages" : "الرسائل") : (en ? "Mail" : "البريد")} · {m.title}</span>
+                <span style={{ fontSize: 11, color: T.muted, flexShrink: 0 }}>{en ? "now" : "الآن"}</span>
+              </div>
+              <div style={{ fontSize: 13, lineHeight: 1.55, marginTop: 2, color: T.ink }}>{m.body}</div>
+              {m.to && <div dir="ltr" style={{ fontSize: 11, color: T.muted, marginTop: 2, textAlign: en ? "left" : "right" }}>{m.to}</div>}
+            </button>
+            <button type="button" className="press" aria-label={en ? "Dismiss" : "إغلاق"} onClick={() => setMsgs((l) => l.filter((x) => x.id !== m.id))}
+              style={{ width: 32, height: 32, flex: "0 0 32px", display: "grid", placeItems: "center", color: T.muted }}><X size={15} /></button>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function ScreenResetPassword({ lang, token, onDone, onBack }) {
+  const t = tl(lang);
+  const [password, setPassword] = useState("");
+  const [confirm, setConfirm] = useState("");
+  const [show, setShow] = useState(false);
+  const [errors, setErrors] = useState({});
+  const [error, setError] = useState(null);
+  const [busy, setBusy] = useState(false);
+  const email = useMemo(() => { try { return LocalAuth.resetTarget(token); } catch (e) { return null; } }, [token]);
+  const submit = async (e) => {
+    e.preventDefault();
+    if (busy) return;
+    const errs = {};
+    const pe = passwordError(password); if (pe) errs.password = pe;
+    if (!confirm) errs.confirm = "required"; else if (confirm !== password) errs.confirm = "mismatch";
+    setErrors(errs); setError(null);
+    if (Object.keys(errs).length) return;
+    setBusy(true);
+    try { const em = await LocalAuth.resetPassword(token, password); setBusy(false); onDone(em); }
+    catch (err) { setBusy(false); setError(authMessage(err.code, lang)); }
+  };
+  return (
+    <AuthShell lang={lang} label="reset-password">
+      <AuthTop lang={lang} onBack={() => !busy && onBack()} backLabel={t("الرجوع إلى تسجيل الدخول", "Back to sign in")} />
+      <AuthTitle id="reset-password" title={t("تعيين كلمة مرور جديدة", "Set a new password")}
+        sub={email ? <>{t("لحساب", "For")} <span dir="ltr" style={{ fontWeight: 800, color: T.ink }}>{email}</span></> : null} />
+      {!email ? (
+        <>
+          <AuthBanner>{authMessage("EXPIRED_OOB_CODE", lang)}</AuthBanner>
+          <AuthPrimary type="button" onClick={onBack}>{t("العودة إلى تسجيل الدخول", "Back to sign in")}</AuthPrimary>
+        </>
+      ) : (
+        <form onSubmit={submit} noValidate>
+          <AuthField id="reset-new" label={t("كلمة المرور الجديدة", "New password")} error={fieldMessage("password", errors.password, lang)}
+            hint={t("٨ أحرف على الأقل، تجمع بين حروف وأرقام.", "At least 8 characters, with letters and numbers.")}>
+            <PasswordInput id="reset-new" data={{ "data-reset-password": true }} value={password} onChange={(x) => { setPassword(x); dropErr(setErrors, "password"); }} show={show}
+              onToggle={() => setShow((v) => !v)} autoComplete="new-password" lang={lang} invalid={!!errors.password} />
+          </AuthField>
+          <AuthField id="reset-confirm" label={t("تأكيد كلمة المرور", "Confirm password")} error={fieldMessage("confirm", errors.confirm, lang)}>
+            <PasswordInput id="reset-confirm" data={{ "data-reset-confirm": true }} value={confirm} onChange={(x) => { setConfirm(x); dropErr(setErrors, "confirm"); }} show={show}
+              onToggle={() => setShow((v) => !v)} autoComplete="new-password" lang={lang} invalid={!!errors.confirm} />
+          </AuthField>
+          <AuthBanner>{error}</AuthBanner>
+          <AuthPrimary busy={busy} data={{ "data-reset-submit": true }}>{t("حفظ كلمة المرور", "Save password")}</AuthPrimary>
+        </form>
+      )}
+    </AuthShell>
+  );
+}
+
+function ScreenChangePassword() {
+  const { state, go, toast, account } = useApp();
+  const lang = state.profile.lang || "ar";
+  const t = tl(lang);
+  const [v, setV] = useState({ current: "", next: "", confirm: "" });
+  const [show, setShow] = useState(false);
+  const [errors, setErrors] = useState({});
+  const [error, setError] = useState(null);
+  const [busy, setBusy] = useState(false);
+  if (account.status !== "signedIn") return null;
+  const set = (k) => (x) => { setV((s) => ({ ...s, [k]: x })); dropErr(setErrors, k); };
+  const submit = async (e) => {
+    e.preventDefault();
+    if (busy) return;
+    const errs = {};
+    if (!v.current) errs.current = "required";
+    const pe = passwordError(v.next); if (pe) errs.next = pe;
+    if (!v.confirm) errs.confirm = "required"; else if (v.confirm !== v.next) errs.confirm = "mismatch";
+    setErrors(errs); setError(null);
+    if (Object.keys(errs).length) return;
+    setBusy(true);
+    try { await LocalAuth.changePassword(account.session, v.current, v.next); setBusy(false); toast(tx("غُيّرت كلمة المرور.", "Your password has been changed.")); go({ back: true }); }
+    catch (err) { setBusy(false); setError(authMessage(err.code, lang)); }
+  };
+  return (
+    <div className="screen scroll" data-change-password-screen style={{ paddingBottom: 40 }}>
+      <div style={{ padding: "14px 16px 0", paddingTop: "calc(14px + var(--safe-top))" }}>
+        <div className="row" style={{ gap: 10 }}>
+          <button className="press tap" onClick={() => !busy && go({ back: true })} aria-label="رجوع" style={{ width: 40, height: 40, display: "grid", placeItems: "center", marginInlineStart: -8 }}><ChevronRight size={23} /></button>
+          <div style={{ fontSize: 20, fontWeight: 800 }}>{t("تغيير كلمة المرور", "Change password")}</div>
+        </div>
+      </div>
+      <form onSubmit={submit} noValidate style={{ padding: "0 16px" }}>
+        <AuthField id="pw-current" label={t("كلمة المرور الحالية", "Current password")} error={fieldMessage("password", errors.current, lang)}>
+          <PasswordInput id="pw-current" data={{ "data-pw-current": true }} value={v.current} onChange={set("current")} show={show} onToggle={() => setShow((x) => !x)} autoComplete="current-password" lang={lang} invalid={!!errors.current} />
+        </AuthField>
+        <AuthField id="pw-new" label={t("كلمة المرور الجديدة", "New password")} error={fieldMessage("password", errors.next, lang)}
+          hint={t("٨ أحرف على الأقل، تجمع بين حروف وأرقام.", "At least 8 characters, with letters and numbers.")}>
+          <PasswordInput id="pw-new" data={{ "data-pw-new": true }} value={v.next} onChange={set("next")} show={show} onToggle={() => setShow((x) => !x)} autoComplete="new-password" lang={lang} invalid={!!errors.next} />
+        </AuthField>
+        <AuthField id="pw-confirm" label={t("تأكيد كلمة المرور", "Confirm password")} error={fieldMessage("confirm", errors.confirm, lang)}>
+          <PasswordInput id="pw-confirm" data={{ "data-pw-confirm": true }} value={v.confirm} onChange={set("confirm")} show={show} onToggle={() => setShow((x) => !x)} autoComplete="new-password" lang={lang} invalid={!!errors.confirm} />
+        </AuthField>
+        <AuthBanner>{error}</AuthBanner>
+        <AuthPrimary busy={busy} data={{ "data-pw-submit": true }}>{t("حفظ كلمة المرور", "Save password")}</AuthPrimary>
+      </form>
+    </div>
+  );
+}
+
+function ScreenLogin({ lang, notice, error: initialError, prefillEmail = "", onDone, onCreate, onForgot, onPhone }) {
   const t = tl(lang);
   const [email, setEmail] = useState(prefillEmail);
   const [password, setPassword] = useState("");
@@ -10202,7 +10717,7 @@ function ScreenLogin({ lang, notice, error: initialError, prefillEmail = "", onD
     if (Object.keys(errs).length) return;
     setBusy(true);
     try {
-      const res = await AuthAPI.signInEmail(em, password);
+      const res = await Auth.signInEmail(em, password);
       setBusy(false);
       onDone(res);
     } catch (err) {
@@ -10251,10 +10766,8 @@ function ScreenLogin({ lang, notice, error: initialError, prefillEmail = "", onD
       <div style={{ marginTop: "auto", paddingTop: 20, textAlign: "center", fontSize: 13, color: T.muted }}>
         {t("ليس لديك حساب؟", "Don't have an account?")}{" "}
         <AuthLink strong data={{ "data-create-account": true }} onClick={() => !locked && onCreate()}>{t("إنشاء حساب", "Create account")}</AuthLink>
-        <div>
-          <AuthLink data={{ "data-auth-guest": true }} onClick={() => !locked && onGuest()}>{t("تصفّح بدون حساب", "Browse without an account")}</AuthLink>
-        </div>
       </div>
+      {provider.sheet}
     </AuthShell>
   );
 }
@@ -10279,6 +10792,7 @@ function ScreenCreateAccount({ lang, onBack, onEmail, onPhone, onDone }) {
         {t("لديك حساب؟", "Already have an account?")}{" "}
         <AuthLink strong onClick={() => !locked && onBack()}>{t("تسجيل الدخول", "Sign in")}</AuthLink>
       </div>
+      {provider.sheet}
     </AuthShell>
   );
 }
@@ -10306,7 +10820,7 @@ function ScreenEmailSignup({ lang, onBack, onDone, onSignIn }) {
     if (Object.keys(errs).length) return;
     setBusy(true);
     try {
-      const res = await AuthAPI.signUpEmail(em, password);
+      const res = await Auth.signUpEmail(em, password);
       setBusy(false);
       onDone(res);
     } catch (err) {
@@ -10369,6 +10883,7 @@ function ScreenPhoneAuth({ lang, purpose, onBack, onDone }) {
   const [left, restart] = useCountdown();
   const captchaRef = useRef(null);
   const codeRef = useRef(null);
+  useEffect(() => Inbox.onAction((act) => { if (act.type === "otp") { setCode(act.code); setFieldErr(null); } }), []);
   const dials = useMemo(() => {
     const coll = (() => { try { return new Intl.Collator(lang === "en" ? "en" : "ar"); } catch { return null; } })();
     const rest = DIAL_CODES.filter((d) => d.cc !== "SA").map((d) => ({ ...d, name: countryName(d.cc, lang) }));
@@ -10379,9 +10894,8 @@ function ScreenPhoneAuth({ lang, purpose, onBack, onDone }) {
   const send = async (number) => {
     setBusy(true); setError(null); setInfo(null);
     try {
-      if (!FB.configured()) throw new AuthError("not_configured");
-      const token = await PhoneVerifier.token(captchaRef.current);
-      const si = await AuthAPI.phoneSendCode(number, token);
+      const token = Auth.mode === "firebase" ? await PhoneVerifier.token(captchaRef.current) : null;
+      const si = await Auth.phoneSendCode(number, token);
       setSessionInfo(si); setE164(number); setCode(""); restart();
       setBusy(false);
       return true;
@@ -10407,7 +10921,7 @@ function ScreenPhoneAuth({ lang, purpose, onBack, onDone }) {
     if (!/^\d{6}$/.test(c)) { setFieldErr("invalid"); return; }
     setFieldErr(null); setError(null); setBusy(true);
     try {
-      const res = await AuthAPI.phoneVerify(sessionInfo, c);
+      const res = await Auth.phoneVerify(sessionInfo, c);
       setBusy(false);
       onDone(res);
     } catch (err) {
@@ -10437,7 +10951,7 @@ function ScreenPhoneAuth({ lang, purpose, onBack, onDone }) {
                 </select>
                 <input id="phone-number" data-phone-number type="tel" inputMode="tel" autoComplete="tel-national" value={national}
                   aria-invalid={fieldErr ? "true" : undefined} aria-describedby={fieldErr ? "phone-number-error" : undefined}
-                  onChange={(e) => { setNational(e.target.value); setFieldErr(null); }} style={{ ...authInput, textAlign: "left" }} />
+                  onChange={(e) => { setNational(toLatinDigits(e.target.value).replace(/[^\d ]/g, "").slice(0, 15)); setFieldErr(null); }} maxLength={15} style={{ ...authInput, textAlign: "left" }} />
               </div>
             </AuthField>
             <AuthBanner>{error}</AuthBanner>
@@ -10455,7 +10969,7 @@ function ScreenPhoneAuth({ lang, purpose, onBack, onDone }) {
             <AuthField id="otp-code" label={t("رمز التحقق", "Verification code")} error={fieldMessage("code", fieldErr, lang)}>
               <input id="otp-code" ref={codeRef} data-otp-code inputMode="numeric" autoComplete="one-time-code" maxLength={6} dir="ltr" value={code}
                 aria-invalid={fieldErr ? "true" : undefined} aria-describedby={fieldErr ? "otp-code-error" : undefined}
-                onChange={(e) => { setCode(e.target.value.replace(/[^\d٠-٩]/g, "").slice(0, 6)); setFieldErr(null); }}
+                onChange={(e) => { setCode(toLatinDigits(e.target.value).replace(/\D/g, "").slice(0, 6)); setFieldErr(null); }} pattern="[0-9]*"
                 style={{ ...authInput, textAlign: "center", letterSpacing: ".5em", fontSize: 20, fontWeight: 800 }} />
             </AuthField>
             <AuthBanner>{error}</AuthBanner>
@@ -10488,7 +11002,7 @@ function ScreenForgotPassword({ lang, initialEmail = "", onBack }) {
   const send = async (addr) => {
     setBusy(true); setError(null); setInfo(null);
     try {
-      await AuthAPI.sendPasswordReset(addr);
+      await Auth.sendPasswordReset(addr);
       setBusy(false); restart();
       return true;
     } catch (err) {
@@ -10591,7 +11105,7 @@ function ProfileForm({ lang, initial = {}, submitLabel, busy, error, onSubmit, i
       </AuthField>
       <AuthField id={`${idPrefix}-age`} label={t("العمر", "Age")} error={fieldMessage("age", errors.age, lang)}>
         <input id={`${idPrefix}-age`} data-profile-age inputMode="numeric" maxLength={3} value={v.age} {...aria("age")}
-          onChange={(e) => set("age", e.target.value.replace(/[^\d٠-٩]/g, "").slice(0, 3))} placeholder={t("أدخل عمرك", "Enter your age")} style={field} />
+          onChange={(e) => set("age", toLatinDigits(e.target.value).replace(/\D/g, "").slice(0, 3))} pattern="[0-9]*" placeholder={t("أدخل عمرك", "Enter your age")} style={field} />
       </AuthField>
       <AuthField id={`${idPrefix}-nationality`} label={t("الجنسية", "Nationality")} error={fieldMessage("nationality", errors.nationality, lang)}>
         <select id={`${idPrefix}-nationality`} data-profile-nationality value={v.nationality} onChange={(e) => set("nationality", e.target.value)} {...aria("nationality")}
@@ -10705,35 +11219,7 @@ function AccountSection() {
   const [sending, setSending] = useState(false);
   const s = account.session;
 
-  if (account.status !== "signedIn") {
-    return (
-      <div data-account-guest style={{ padding: "16px 16px 0" }}>
-        <div style={{ borderRadius: R.box, border: `1px solid ${T.line}`, background: T.paper, padding: "15px 14px" }}>
-          <div className="row" style={{ gap: 11, alignItems: "flex-start" }}>
-            <div style={{ width: 44, height: 44, flex: "0 0 44px", borderRadius: 99, background: T.sand, display: "grid", placeItems: "center", color: T.green }}><User size={20} /></div>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 15, fontWeight: 800 }}>{tx("تتصفّح بدون حساب", "You're browsing without an account")}</div>
-              <div style={{ fontSize: 12.5, color: T.muted, marginTop: 4, lineHeight: 1.75 }}>
-                {tx("سجّل الدخول أو أنشئ حسابًا لحفظ بياناتك وخطتك على حسابك.", "Sign in or create an account to keep your details and plan with your account.")}
-              </div>
-            </div>
-          </div>
-          <div className="row" style={{ gap: 8, marginTop: 13 }}>
-            <button data-account-signin className="press" onClick={() => account.openAuth("login")}
-              style={{ flex: 1, minHeight: 44, borderRadius: R.ctl, background: T.deep, color: "#FFF8EA", fontWeight: 800, fontSize: 13.5 }}>{tx("تسجيل الدخول", "Sign in")}</button>
-            <button className="press" onClick={() => account.openAuth("createAccount")}
-              style={{ flex: 1, minHeight: 44, borderRadius: R.ctl, background: T.paper, border: `1px solid ${T.line}`, fontWeight: 800, fontSize: 13.5 }}>{tx("إنشاء حساب", "Create account")}</button>
-          </div>
-        </div>
-        <div style={{ fontSize: 13.5, fontWeight: 800, margin: "18px 0 8px" }}>{tx("حيّك أو منطقتك (لهذه الجلسة)", "Your area (this session)")}</div>
-        <div className="row" style={{ gap: 8, flexWrap: "wrap" }}>
-          <Chip active={!p.nb} onClick={() => dispatch({ type: "profile", patch: { nb: null } })}>{tx("بدون تحديد", "Not specified")}</Chip>
-          {NEIGHBORHOODS.map((n) => <Chip key={n.id} active={p.nb === n.id} onClick={() => dispatch({ type: "profile", patch: { nb: n.id } })}>{n.name}</Chip>)}
-        </div>
-        <LanguageChoice />
-      </div>
-    );
-  }
+  if (account.status !== "signedIn") return null;
 
   const fullName = [p.firstName, p.lastName].filter(Boolean).join(" ");
   const identifier = s.provider === "phone" ? s.phone : s.email;
@@ -10793,7 +11279,7 @@ function AccountSection() {
 
       <div style={{ marginTop: 16, borderRadius: R.box, border: `1px solid ${T.line}`, background: T.paper, overflow: "hidden" }}>
         {s.provider === "password" && (
-          <button data-account-reset className="press row" onClick={() => { setError(null); setConfirm("reset"); }}
+          <button data-account-reset className="press row" onClick={() => { setError(null); if (Auth.mode === "local") go({ s: "password" }); else setConfirm("reset"); }}
             style={{ width: "100%", gap: 10, padding: "13px 14px", borderBottom: `1px solid ${T.lineSoft}`, textAlign: "start", fontSize: 13.5, fontWeight: 700 }}>
             <KeyRound size={16} color={T.green} />{tx("تغيير كلمة المرور", "Change password")}
           </button>
@@ -10815,7 +11301,7 @@ function AccountSection() {
       <ConfirmSheet open={confirm === "reset"} onClose={() => setConfirm(null)} busy={busy} error={error} data={{ "data-confirm-reset": true }}
         title={tx("تغيير كلمة المرور", "Change password")}
         body={<>{tx("سنرسل رابطًا لتعيين كلمة مرور جديدة إلى", "We'll send a link to set a new password to")} <span dir="ltr" style={{ fontWeight: 800 }}>{s.email}</span>.</>}
-        confirmLabel={tx("إرسال الرابط", "Send link")} onConfirm={() => run(() => AuthAPI.sendPasswordReset(s.email), tx("أرسلنا الرابط إلى بريدك.", "We've sent the link to your email."))} />
+        confirmLabel={tx("إرسال الرابط", "Send link")} onConfirm={() => run(() => Auth.sendPasswordReset(s.email), tx("أرسلنا الرابط إلى بريدك.", "We've sent the link to your email."))} />
       <ConfirmSheet open={confirm === "delete"} onClose={() => setConfirm(null)} busy={busy} error={error} danger data={{ "data-confirm-delete": true }}
         title={tx("حذف الحساب نهائيًا؟", "Delete your account permanently?")}
         body={tx("سيُحذف حسابك وبياناتك الشخصية ولا يمكن التراجع عن ذلك.", "Your account and personal details will be deleted. This can't be undone.")}
@@ -11043,6 +11529,9 @@ export default function EyeMakkahApp() {
   const phoneRef = useRef(null);
   const authRef = useRef(auth);
   authRef.current = auth;
+  const stateRef = useRef(state);
+  stateRef.current = state;
+  const [resetToken, setResetToken] = useState(null);
   useRailFades(phoneRef);
   const view = stack[stack.length - 1];
   const ctx = useMemo(() => deriveContext(state), [state]);
@@ -11051,6 +11540,22 @@ export default function EyeMakkahApp() {
   useEffect(() => { store.set(LANG_KEY, langNow); }, [langNow]);
 
   const enterApp = useCallback(() => { setStack([{ s: "home" }]); setEntry("app"); }, []);
+  /* restore the account's My Plan; a plan that was never created gets the starter plan once */
+  const enterWithPlan = useCallback((uid, prof) => {
+    const rec = PlanStore.load(uid);
+    if (rec && (rec.seeded || rec.plan.length)) {
+      dispatch({ type: "restore_plan", plan: rec.plan, saved: rec.saved });
+    } else {
+      const cur = stateRef.current;
+      const patch = {};
+      for (const k of ACCOUNT_FIELDS) if (k !== "lang") patch[k] = prof[k] ?? null;
+      const starter = buildStarterPlan({ ...cur, plan: [], profile: { ...cur.profile, ...patch } });
+      const saved = (rec && rec.saved) || {};
+      dispatch({ type: "restore_plan", plan: starter, saved });
+      PlanStore.save(uid, { plan: starter, saved, seeded: true });
+    }
+    enterApp();
+  }, [enterApp]);
   const applyAccount = useCallback((prof, withLang) => {
     const patch = {};
     for (const k of ACCOUNT_FIELDS) if (k !== "lang") patch[k] = prof[k] ?? null;
@@ -11079,12 +11584,12 @@ export default function EyeMakkahApp() {
     if (profileComplete(prof)) {
       applyAccount(prof, false);
       lastSaved.current = null;
-      enterApp();
+      enterWithPlan(session.uid, prof);
     } else {
       setSetup({ busy: false, error: null, initial: { ...(prof || {}), firstName: (prof && prof.firstName) || res.names?.firstName || "", lastName: (prof && prof.lastName) || res.names?.lastName || "" } });
       setEntry("profileSetup");
     }
-  }, [applyAccount, enterApp, langNow]);
+  }, [applyAccount, enterWithPlan, langNow]);
 
   const completeSetup = useCallback(async (profile) => {
     setSetup((st) => ({ ...st, busy: true, error: null }));
@@ -11092,19 +11597,19 @@ export default function EyeMakkahApp() {
       const ses = await freshSession(authRef.current.session);
       setAuth({ status: "signedIn", session: ses });
       const saved = await ProfileStore.save(ses, { ...profile, lang: langNow });
-      AuthAPI.updateDisplayName(ses, `${profile.firstName} ${profile.lastName}`).catch(() => {});
+      Auth.updateDisplayName(ses, `${profile.firstName} ${profile.lastName}`).catch(() => {});
       applyAccount(saved, false);
       lastSaved.current = accountSig(saved);
       setSetup({ initial: {}, busy: false, error: null });
-      enterApp();
+      enterWithPlan(ses.uid, saved);
     } catch (e) {
       setSetup((st) => ({ ...st, busy: false, error: authMessage(e.code, langNow) }));
     }
-  }, [applyAccount, enterApp, langNow]);
+  }, [applyAccount, enterWithPlan, langNow]);
 
   const endSession = useCallback((notice) => {
     const ses = authRef.current.session;
-    if (ses) store.del(profileKey(ses.uid));
+    if (ses && !ses.local) store.del(profileKey(ses.uid));   // on-device accounts keep their profile for the next sign-in
     clearSession();
     resetAgentSession();
     setAuth({ status: "signedOut", session: null });
@@ -11118,7 +11623,8 @@ export default function EyeMakkahApp() {
   const deleteAccount = useCallback(async () => {
     const ses = await freshSession(authRef.current.session);
     await ProfileStore.remove(ses);
-    await AuthAPI.deleteAccount(ses);
+    await Auth.deleteAccount(ses);
+    PlanStore.remove(ses.uid);
     endSession(tx("حُذف حسابك وبياناتك الشخصية.", "Your account and personal details were deleted."));
   }, [endSession]);
   const saveProfile = useCallback(async (next) => {
@@ -11132,19 +11638,8 @@ export default function EyeMakkahApp() {
   }, [applyAccount, langNow]);
   const resendVerification = useCallback(async () => {
     const ses = await freshSession(authRef.current.session);
-    await AuthAPI.sendEmailVerification(ses);
+    await Auth.sendEmailVerification(ses);
   }, []);
-  const openAuth = useCallback((target) => {
-    setAuth({ status: "signedOut", session: null });
-    setLoginNotice(null);
-    setCreateReturn("login");
-    setEntry(target === "createAccount" ? "createAccount" : "login");
-  }, []);
-  const continueAsGuest = useCallback(() => {
-    setAuth({ status: "guest", session: null });
-    setLoginNotice(null);
-    enterApp();
-  }, [enterApp]);
 
   /* restore a saved session on launch */
   useEffect(() => {
@@ -11158,8 +11653,8 @@ export default function EyeMakkahApp() {
         try { prof = await ProfileStore.load(ses); } catch { prof = ProfileStore.local(ses.uid); }
         if (!alive) return;
         setAuth({ status: "signedIn", session: ses });
-        if (ses.provider === "password") AuthAPI.lookup(ses).then((u) => { if (u && alive) setAuth((a) => (a.session ? { ...a, session: { ...a.session, emailVerified: !!u.emailVerified } } : a)); }).catch(() => {});
-        if (profileComplete(prof)) { applyAccount(prof, true); lastSaved.current = accountSig(prof); enterApp(); }
+        if (ses.provider === "password") Auth.lookup(ses).then((u) => { if (u && alive) setAuth((a) => (a.session ? { ...a, session: { ...a.session, emailVerified: !!u.emailVerified } } : a)); }).catch(() => {});
+        if (profileComplete(prof)) { applyAccount(prof, true); lastSaved.current = accountSig(prof); enterWithPlan(ses.uid, prof); }
         else { setSetup({ initial: prof || {}, busy: false, error: null }); setEntry("profileSetup"); }
       } catch (e) {
         if (!alive) return;
@@ -11168,7 +11663,7 @@ export default function EyeMakkahApp() {
           setAuth({ status: "signedIn", session: stored });
           applyAccount(cached, true);
           lastSaved.current = accountSig(cached);
-          enterApp();
+          enterWithPlan(stored.uid, cached);
           return;
         }
         clearSession();
@@ -11195,7 +11690,31 @@ export default function EyeMakkahApp() {
     }, 600);
     return () => clearTimeout(id);
   }, [sig]); // eslint-disable-line react-hooks/exhaustive-deps
-  const account = { status: auth.status, session: auth.session, signOut, deleteAccount, saveProfile, resendVerification, openAuth };
+  /* My Plan is kept with the account */
+  const planUid = auth.status === "signedIn" && entry === "app" ? auth.session.uid : null;
+  useEffect(() => {
+    if (!planUid) return;
+    PlanStore.save(planUid, { plan: state.plan, saved: state.saved, seeded: true });
+  }, [planUid, state.plan, state.saved]);
+
+  /* links and codes delivered to this device */
+  useEffect(() => Inbox.onAction((act) => {
+    if (act.type === "reset") {
+      if (authRef.current.status === "signedIn") return;
+      setResetToken(act.token);
+      setEntry("resetPassword");
+    }
+    if (act.type === "verify") {
+      try {
+        const uid = LocalAuth.confirmEmail(act.token);
+        setAuth((a) => (a.session && a.session.uid === uid ? { ...a, session: { ...a.session, emailVerified: true } } : a));
+        const ses = readSession();
+        if (ses && ses.uid === uid) writeSession({ ...ses, emailVerified: true });
+        setToastMsg(tx("تم تأكيد بريدك الإلكتروني.", "Your email is confirmed."));
+      } catch { setToastMsg(tx("رابط التأكيد غير صالح.", "That confirmation link isn't valid.")); }
+    }
+  }), []);
+  const account = { status: auth.status, session: auth.session, signOut, deleteAccount, saveProfile, resendVerification };
 
   const go = useCallback((next) => {
     if (next?.back) { setStack((st) => (st.length > 1 ? st.slice(0, -1) : st)); return; }
@@ -11209,8 +11728,8 @@ export default function EyeMakkahApp() {
   const askDismiss = useCallback((o) => setDismissTarget(o), []);
   const api = { state, dispatch, ctx, go, setTab, toast, askDismiss, account };
   const planCount = state.plan.filter((p) => ["planned", "going", "registered", "confirmed", "active", "awaiting"].includes(p.state)).length;
-  const tab = TAB_OF[view.s] || (["object", "search", "assistant", "profile", "account", "notifications", "provider"].includes(view.s) ? TAB_OF[stack[0]?.s] || "home" : "home");
-  const hideNav = ["search", "thread", "object", "assistant", "account"].includes(view.s);
+  const tab = TAB_OF[view.s] || (["object", "search", "assistant", "profile", "account", "password", "notifications", "provider"].includes(view.s) ? TAB_OF[stack[0]?.s] || "home" : "home");
+  const hideNav = ["search", "thread", "object", "assistant", "account", "password"].includes(view.s);
   const ts = state.profile.textScale || 1;
   const device = useDeviceViewport();
   const lang = state.profile.lang || "ar";
@@ -11239,6 +11758,7 @@ export default function EyeMakkahApp() {
       case "assistant": return <ScreenAssistant params={view} />;
       case "profile": return <ScreenProfile />;
       case "account": return <ScreenAccountEdit />;
+      case "password": return <ScreenChangePassword />;
       case "notifications": return <ScreenNotifications />;
       case "provider": return <ScreenProvider />;
       default: return <ScreenHome />;
@@ -11286,7 +11806,6 @@ export default function EyeMakkahApp() {
             <Localize>
               {!hideNav && <BottomNav tab={tab} onTab={setTab} planCount={planCount} safeBottom={safeBottom} />}
               <DismissSheet o={dismissTarget} onClose={() => setDismissTarget(null)} />
-              <Toast msg={toastMsg} onDone={() => setToastMsg(null)} />
             </Localize>
             </>) : (
               <div data-entry={entry} style={{ position: "absolute", inset: 0, zIndex: 120, background: T.deep }}>
@@ -11301,7 +11820,7 @@ export default function EyeMakkahApp() {
                     onCreate={() => { setLoginNotice(null); setCreateReturn("login"); setEntry("createAccount"); }}
                     onForgot={(em) => { setLoginNotice(null); setLoginEmail(em); setEntry("forgot"); }}
                     onPhone={(p) => { setLoginNotice(null); setPhonePurpose(p); setEntry("phone"); }}
-                    onGuest={continueAsGuest} />
+                  />
                 )}
                 {entry === "createAccount" && (
                   <ScreenCreateAccount lang={lang} onBack={() => setEntry(createReturn)} onDone={afterSignIn}
@@ -11318,12 +11837,18 @@ export default function EyeMakkahApp() {
                 {entry === "forgot" && (
                   <ScreenForgotPassword lang={lang} initialEmail={loginEmail} onBack={(em) => { if (em) setLoginEmail(em); setEntry("login"); }} />
                 )}
+                {entry === "resetPassword" && (
+                  <ScreenResetPassword lang={lang} token={resetToken} onBack={() => setEntry("login")}
+                    onDone={(em) => { setLoginEmail(em); setResetToken(null); setLoginNotice({ tone: "success", text: tx("حُدّثت كلمة المرور. سجّل الدخول بها الآن.", "Your password was updated. Sign in with it now.") }); setEntry("login"); }} />
+                )}
                 {entry === "profileSetup" && (
                   <ScreenProfileSetup lang={lang} initial={setup.initial} busy={setup.busy} error={setup.error}
                     onSubmit={completeSetup} onCancel={() => endSession(null)} />
                 )}
               </div>
             )}
+            <DeviceMessages lang={lang} />
+            <Toast msg={toastMsg} onDone={() => setToastMsg(null)} />
           </div>
         </div>
       </div>

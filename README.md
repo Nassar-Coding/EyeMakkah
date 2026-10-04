@@ -23,13 +23,13 @@ meeting direction and the five transformation groups in `docs/handover/`.
 | `release/` | The packaged drag-and-drop ZIP. |
 | `dist/` | **Zero-build Vercel package** (`index.html` + prebuilt `app.js`), the ZIP's contents. |
 | `src/main.jsx`, `build/build.mjs` | Mount entry + esbuild bundler that produces `dist/app.js`. |
-| `scripts/verify.mjs` | Runtime verification: signs in to a seeded test account and walks 23 journeys. |
-| `scripts/auth-check.mjs`, `scripts/entry-check.mjs` | Account flows in Arabic and English against `scripts/lib/firebase-test-server.mjs`, a local service with the same REST contract as Firebase. |
+| `scripts/verify.mjs` | Runtime verification: creates an account through the sign-up screens and walks 23 journeys. |
+| `scripts/auth-check.mjs`, `scripts/entry-check.mjs` | Account flows in Arabic and English with on-device accounts; the Firebase adapter is checked against `scripts/lib/firebase-test-server.mjs`, a local service with the same REST contract as Firebase. |
 | `scripts/lib/browser.mjs`, `scripts/package.mjs` | The shared Chromium launcher and static server for every QA script (`CHROMIUM_PATH` optional), and the release packager. |
 | `scripts/crawl.mjs` | QA crawl for blank screens, dead ends and console errors. |
 | `scripts/shots.mjs` | Screenshot sweep of the main surfaces. |
 | `docs/JOURNEYS.md` | The 48 validated Makkah journeys. |
-| `docs/ACCOUNTS.md`, `dist/config.js` | Sign-in, sign-up, recovery and account profile: the flows, the configuration file, and the Firebase / Google / Apple setup still required. |
+| `docs/ACCOUNTS.md`, `dist/config.js` | Accounts: the flows, on-device storage, the starter plan, and the optional Firebase / Google / Apple configuration. |
 | `docs/AGENT_AND_OFFERS.md` | The shared offers model and the free-text EyeMakkah Assistant (Intent Bank pipeline, follow-ups, actions, limits). |
 | `assets/agent/`, `scripts/agent-sync.mjs` | The four Agent Bank JSON files (150 intents, 2,123 AR/EN examples) and the step that inlines them into the app. |
 | `baseline/` | The canonical **current** EyeMakkah (`EyeMakkah-app.current.tsx`, `eyemakkah-vercel.current.zip`) kept for comparison. |
@@ -41,7 +41,7 @@ meeting direction and the five transformation groups in `docs/handover/`.
 
 ## Primary navigation
 
-Entry is **Start → Language → Sign in / Create account → (email, mobile + SMS code, Apple or Google) → Profile setup → Home**, plus *Forgot password* and *Browse without an account*. Accounts use Firebase Authentication and Firestore, configured in `dist/config.js`. While that file is empty, no method signs anyone in. The app shell is not mounted until someone is signed in or browsing as a guest. The account screen covers details, editing, password change, sign-out and deletion. See `docs/ACCOUNTS.md`.
+Entry is account-first: **Start → Language → Sign in / Create account → (email, mobile + SMS code, Apple or Google) → Profile setup → Home**, plus *Forgot password*. There is no guest entry. As shipped, accounts run on the device with no external service: hashed passwords, and per-account profile and My Plan. Codes and account emails arrive as notifications on the device. Filling `dist/config.js` switches accounts to Firebase Authentication and Firestore. A new account starts with a starter plan, «خطة مقترحة لك» / *Recommended for you*, built from the inventory. The app shell is not mounted until someone is signed in. See `docs/ACCOUNTS.md`.
 
 **الرئيسية · اكتشف · المجتمع · خطتي** — Profile sits behind the avatar. There is no AI tab:
 AI is horizontal (relevance, trust, journey continuity, translation, community intelligence).

@@ -1,32 +1,48 @@
 /* QA scripts reach the app the way a person does: landing → language → sign in.
-   They sign in to a seeded account on the local Firebase-compatible test server
-   (resident of Al-Awali), so every journey runs as a real authenticated user. */
-import { startFirebaseTestServer, useTestConfig } from "./firebase-test-server.mjs";
+   With the build as shipped (on-device accounts) the first sign-in in a browser
+   profile creates the QA account through the real sign-up screens (resident of
+   Al-Awali); later page loads in that profile sign in to it. */
+let seq = 0;
+export const QA_PROFILE = { firstName: "نورة", lastName: "الغامدي", age: "32", nationality: "SA", mode: "resident", nb: "awali" };
 
-let server = null, seq = 0;
-export const QA_PROFILE = { firstName: "نورة", lastName: "الغامدي", age: 32, nationality: "SA", mode: "resident", nb: "awali", lang: "ar" };
-
-/* call before page.goto(): points config.js at the test server, seeds an account, and
-   starts every page load signed out so scripts always begin at the landing screen */
-export async function prepareQaAccount(page, profile = QA_PROFILE) {
-  server = server || (await startFirebaseTestServer());
-  const email = `qa${++seq}.${Date.now()}@example.com`, password = "qa-makkah-2026";
-  await server.seedUser({ email, password, emailVerified: true, profile });
-  await useTestConfig(page, server.config);
+/* call before page.goto(): every page load starts signed out, so scripts always
+   begin at the landing screen; the account itself persists in the browser profile */
+export async function prepareQaAccount(page) {
+  page.__qa = { email: `qa${++seq}.${Date.now()}@example.com`, password: "qa-makkah-2026", created: false };
   await page.addInitScript(() => { try { localStorage.removeItem("eyemakkah.session.v1"); } catch { /* storage unavailable */ } });
-  page.__qa = { email, password };
   return page.__qa;
 }
 
-/* on the login screen: sign in and wait for Home */
+/* on the login screen: sign in (creating the account the first time) and wait for Home */
 export async function signInQa(page) {
-  const { email, password } = page.__qa;
+  const qa = page.__qa;
   await page.locator("[data-auth-email]").waitFor({ timeout: 10000 });
-  await page.locator("[data-auth-email]").fill(email);
-  await page.locator("[data-auth-password]").fill(password);
-  await page.locator("[data-auth-submit]").click();
+  if (!qa.created) {
+    await page.locator("[data-create-account]").click();
+    await page.locator('[data-signup-method="email"]').click();
+    await page.locator("[data-signup-email]").fill(qa.email);
+    await page.locator("[data-signup-password]").fill(qa.password);
+    await page.locator("[data-signup-confirm]").fill(qa.password);
+    await page.locator("[data-signup-submit]").click();
+    await page.locator('[data-auth-screen="profile-setup"]').waitFor({ timeout: 10000 });
+    const p = QA_PROFILE;
+    await page.locator("#profile-firstName").fill(p.firstName);
+    await page.locator("#profile-lastName").fill(p.lastName);
+    await page.locator("#profile-age").fill(p.age);
+    await page.locator("#profile-nationality").selectOption(p.nationality);
+    await page.locator(`[data-profile-mode="${p.mode}"]`).click();
+    await page.locator("#profile-nb").selectOption(p.nb);
+    await page.locator("[data-profile-submit]").click();
+    qa.created = true;
+  } else {
+    await page.locator("[data-auth-email]").fill(qa.email);
+    await page.locator("[data-auth-password]").fill(qa.password);
+    await page.locator("[data-auth-submit]").click();
+  }
   await page.locator("[data-home-greeting]").waitFor({ timeout: 10000 });
+  /* account emails delivered to the device would sit over the top of the screen */
+  for (const b of await page.locator("[data-device-message] button[aria-label]").all()) await b.click().catch(() => {});
   await page.waitForTimeout(400);
 }
 
-export async function closeQaServer() { if (server) { await server.close(); server = null; } }
+export async function closeQaServer() { /* nothing to close: accounts live on the device */ }

@@ -102,21 +102,21 @@ await step("back returns", async () => {
   if (!/كم معك وقت الآن؟/.test(b)) throw new Error("home not restored");
 });
 
-await step("discover tab loads", async () => { await tapText("اكتشف"); const b = await appText(); if (!/الليلة في مكة|نتيجة/.test(b)) throw new Error("discover empty"); });
+await step("discover tab loads", async () => { await goTab("اكتشف"); const b = await appText(); if (!/الليلة في مكة|نتيجة/.test(b)) throw new Error("discover empty"); });
 await shot("03-discover");
 
 await step("map mode renders pins", async () => {
   await page.locator("svg").first().waitFor({ timeout: 4000 });
 });
 
-await step("community tab loads", async () => { await tapText("المجتمع"); const b = await appText(); if (!/من المجتمع، إلى المجتمع/.test(b)) throw new Error("community empty"); });
+await step("community tab loads", async () => { await goTab("المجتمع"); const b = await appText(); if (!/من المجتمع، إلى المجتمع/.test(b)) throw new Error("community empty"); });
 await shot("04-community");
 
-await step("plan tab loads", async () => { await tapText("خطتي"); const b = await appText(); if (!/خطتي/.test(b)) throw new Error("plan empty"); });
+await step("plan tab loads", async () => { await goTab("خطتي"); const b = await appText(); if (!/خطتي/.test(b)) throw new Error("plan empty"); });
 await shot("05-plan");
 
 await step("search finds mixed objects", async () => {
-  await tapText("الرئيسية");
+  await goTab("الرئيسية");
   await tapText("ابحث عن مكان أو تجربة أو مجتمع");
   await page.keyboard.type("أكل مكي");
   await page.waitForTimeout(700);
@@ -128,7 +128,7 @@ await shot("06-search");
 await step("community: open a family then a community", async () => {
   await page.getByLabel("رجوع").first().click().catch(() => {});   // leave search
   await page.waitForTimeout(400);
-  await tapText("المجتمع");
+  await goTab("المجتمع");
   await tapText("الأحياء", { wait: 500 });
   const b = await appText();
   if (!/مجتمع داخل هذه العائلة/.test(b)) throw new Error("family screen missing");
@@ -152,7 +152,7 @@ await step("community: join then post a question", async () => {
 await shot("08-contributed");
 
 await step("community: open a thread and answer", async () => {
-  await tapText("المجتمع");
+  await goTab("المجتمع");
   await page.waitForTimeout(400);
   const q = page.getByText(/صار فيه سوق مسائي|العرض ينتهي الليلة|هل يوجد مكان هادئ/).first();
   await q.click();

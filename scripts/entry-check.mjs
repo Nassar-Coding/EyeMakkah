@@ -1,13 +1,11 @@
 /* Entry flow: Landing → Language → Login → Create account → method → Profile setup → Home,
-   in Arabic and English, against the local Firebase-compatible test server. */
+   in Arabic and English, with the build exactly as shipped (on-device accounts). */
 import { mkdir } from "node:fs/promises";
 import { launchBrowser, serveBuild, outDir } from "./lib/browser.mjs";
-import { startFirebaseTestServer, useTestConfig } from "./lib/firebase-test-server.mjs";
 
 const shots = outDir("entry");
 await mkdir(shots, { recursive: true });
 const site = await serveBuild();
-const fb = await startFirebaseTestServer();
 const browser = await launchBrowser();
 const results = [];
 const errs = [];
@@ -16,7 +14,6 @@ for (const langId of ["ar", "en"]) {
   const page = await browser.newPage({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
   page.on("console", (m) => { if (m.type() === "error") { const t = m.text(); if (!/fonts\.googleapis|ERR_|net::|Failed to load resource/.test(t)) errs.push(t); } });
   page.on("pageerror", (e) => errs.push("pageerror: " + e.message));
-  await useTestConfig(page, fb.config);
   await page.route(/fonts\.(googleapis|gstatic)\.com/, (r) => r.abort());
   await page.goto(site.url, { waitUntil: "networkidle" });
   await page.waitForTimeout(600);
@@ -39,6 +36,7 @@ for (const langId of ["ar", "en"]) {
   results.push([`${langId}: language leads to login`, langId === "ar" ? /تسجيل الدخول/.test(loginText) : /Sign in/.test(loginText)]);
   results.push([`${langId}: no app shell behind login`, (await shell()) === 0]);
   results.push([`${langId}: login direction`, (await page.locator("[data-auth-screen] section").getAttribute("dir")) === (langId === "ar" ? "rtl" : "ltr")]);
+  results.push([`${langId}: account-first (no guest entry)`, (await page.locator("[data-auth-guest]").count()) === 0]);
   results.push([`${langId}: login offers email, mobile, Apple, Google`, (await page.locator("[data-auth-email]").count()) === 1 && (await page.locator("[data-auth-method]").count()) === 3]);
   results.push([`${langId}: no Nafath`, !/نفاذ|Nafath/i.test(loginText)]);
 
@@ -94,5 +92,5 @@ results.forEach(([n, ok]) => console.log(`${ok ? "✓" : "✗"} ${n}`));
 if (errs.length) { console.log("errors:"); errs.slice(0, 8).forEach((e) => console.log("  ! " + e)); }
 const failed = results.filter((r) => !r[1]).length;
 console.log(`${results.length - failed}/${results.length} checks passed · ${errs.length} runtime errors`);
-await browser.close(); await site.close(); await fb.close();
+await browser.close(); await site.close();
 process.exit(failed || errs.length ? 1 : 0);

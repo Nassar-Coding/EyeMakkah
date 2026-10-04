@@ -1,6 +1,6 @@
 {
   "package": "EyeMakkah — مجتمع مكة الرقمي (Groups 1–5, cumulative)",
-  "date": "2026-10-03",
+  "date": "2026-10-04",
   "zero_build": true,
   "deploy": "Vercel drag-and-drop",
   "navigation": [
@@ -32,6 +32,7 @@
   ],
   "offers": "64 illustrative offer records (62 live) on one shared model — restaurants, cafés, stays, culture tickets, experiences, activities, events, markets, services; shown on cards, decision pages, Home/Discover deal rails, My Plan and the Assistant; not live commercial offers",
   "assistant": "Free-text EyeMakkah Assistant over the four-part Intent Bank (150 intents, 2,123 AR/EN examples) — deterministic, on-device, no LLM or external API",
-  "entry": "Start → Language → Sign in / Create account (email, mobile + SMS code, Apple, Google) → Profile setup → Home; Forgot password; Browse without an account",
-  "accounts": "Firebase Authentication + Cloud Firestore over REST, configured in config.js; unconfigured methods refuse instead of signing in"
+  "entry": "Account-first: Start → Language → Sign in / Create account (email, mobile + code, Apple, Google) → Profile setup → Home; Forgot password; no guest entry",
+  "accounts": "On-device by default (hashed passwords, per-account profile and My Plan, codes and emails delivered as device notifications; no external service). Optional Firebase Authentication + Firestore via config.js",
+  "starter_plan": "New accounts start with «خطة مقترحة لك» / Recommended for you: 3–4 planned items from the inventory, from resident/visitor, chosen area and language"
 }
